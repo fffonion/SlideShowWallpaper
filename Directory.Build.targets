@@ -1,0 +1,20 @@
+<Project>
+  <Target Name="GetWindowsAppSDKNativePlatform">
+    <PropertyGroup>
+      <NativePlatform>Invalid</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'x86'">x86</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'Win32'">x86</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'x64'">x64</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'AMD64'">x64</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'arm64'">arm64</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' == 'arm64ec'">arm64ec</NativePlatform>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">
+      <NativePlatform Condition="'$(RuntimeIdentifier)' == 'win10-x64' or '$(RuntimeIdentifier)' == 'win-x64'">x64</NativePlatform>
+      <NativePlatform Condition="'$(RuntimeIdentifier)' == 'win10-x86' or '$(RuntimeIdentifier)' == 'win-x86'">x86</NativePlatform>
+      <NativePlatform Condition="'$(RuntimeIdentifier)' == 'win10-arm64' or '$(RuntimeIdentifier)' == 'win-arm64'">arm64</NativePlatform>
+      <NativePlatform Condition="'$(RuntimeIdentifier)' == 'win-arm'">arm</NativePlatform>
+    </PropertyGroup>
+    <Error Condition="'$(NativePlatform)' == 'Invalid'" Text="WindowsAppSDKSelfContained requires a supported Windows architecture." />
+  </Target>
+</Project>

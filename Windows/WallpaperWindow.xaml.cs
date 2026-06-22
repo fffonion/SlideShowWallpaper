@@ -9,6 +9,7 @@ using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Storage;
 using WinRT.Interop;
 
 namespace SlideShowWallpaper.Windows;
@@ -116,11 +117,11 @@ public sealed partial class WallpaperWindow : Window
         CommitImage(bitmap, path);
     }
 
-    public Task ShowVideoAsync(string path, bool loop)
+    public async Task ShowVideoAsync(string path, bool loop)
     {
         if (!File.Exists(path))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         ClearImageSources();
@@ -128,15 +129,14 @@ public sealed partial class WallpaperWindow : Window
         _currentImagePath = path;
         VideoPlayer.Visibility = Visibility.Visible;
         _mediaPlayer.IsLoopingEnabled = loop;
-        _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(path));
+        StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+        _mediaPlayer.Source = MediaSource.CreateFromStorageFile(file);
         ApplyProfile(_profile);
         _mediaPlayer.Play();
         if (_videoPausedByCoverage)
         {
             _mediaPlayer.Pause();
         }
-
-        return Task.CompletedTask;
     }
 
     public void SetVideoPausedByCoverage(bool isPaused)
