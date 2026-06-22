@@ -45,6 +45,7 @@ public sealed class ThumbnailCacheService
         string thumbnailPath = GetThumbnailPath(metadata);
         if (File.Exists(thumbnailPath))
         {
+            File.SetLastWriteTimeUtc(thumbnailPath, DateTime.UtcNow);
             return thumbnailPath;
         }
 

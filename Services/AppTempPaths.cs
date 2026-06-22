@@ -15,8 +15,11 @@ public static class AppTempPaths
 
     public static void Cleanup()
     {
-        DeleteOldFiles(Root, DateTime.UtcNow - MaxTempAge);
+        DateTime cutoffUtc = DateTime.UtcNow - MaxTempAge;
+        DeleteOldFiles(NdfCache, cutoffUtc);
+        DeleteOldFiles(ThumbnailMedia, cutoffUtc);
         TrimDirectory(NdfCache, MaxCacheBytes);
+        TrimDirectory(ThumbnailCache, MaxCacheBytes);
         TrimDirectory(ThumbnailMedia, MaxCacheBytes / 2);
     }
 

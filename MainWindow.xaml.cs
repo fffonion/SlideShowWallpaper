@@ -1277,7 +1277,6 @@ public sealed partial class MainWindow : Window
         SettingsNavigationPanel.Children.Clear();
         MonitorContent.Content = null;
         UnloadPreviewState();
-        _imageOrderService.ClearCache();
         _settingsUiUnloadedForBackground = true;
         ProcessMemoryTrimmer.TrimCurrentProcess();
     }
