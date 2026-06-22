@@ -18,6 +18,7 @@ namespace SlideShowWallpaper;
 public sealed partial class MainWindow : Window
 {
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
+    private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
 
     private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
@@ -68,8 +69,11 @@ public sealed partial class MainWindow : Window
     private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TextBlock> _currentIndexTexts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TextBlock> _loopRemainingTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherQueueTimer _currentImageCheckpointTimer;
+    private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
     private bool _exitRequested;
@@ -101,6 +105,10 @@ public sealed partial class MainWindow : Window
         _currentImageCheckpointTimer.Interval = CurrentImageCheckpointInterval;
         _currentImageCheckpointTimer.IsRepeating = true;
         _currentImageCheckpointTimer.Tick += (_, _) => SaveCurrentImageCheckpoint();
+        _playbackStatusTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _playbackStatusTimer.Interval = PlaybackStatusRefreshInterval;
+        _playbackStatusTimer.IsRepeating = true;
+        _playbackStatusTimer.Tick += (_, _) => UpdateAllPlaybackStatusTexts();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -116,6 +124,7 @@ public sealed partial class MainWindow : Window
         RenderTabs();
         ApplySettings();
         _currentImageCheckpointTimer.Start();
+        _playbackStatusTimer.Start();
     }
 
     private MonitorProfile? SelectedProfile => MonitorTabs.SelectedItem is TabViewItem { Tag: MonitorProfile profile }
@@ -195,7 +204,10 @@ public sealed partial class MainWindow : Window
         var root = new Grid
         {
             ColumnSpacing = 16,
+            RowSpacing = 8,
         };
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -211,7 +223,38 @@ public sealed partial class MainWindow : Window
         Grid.SetColumn(scrollViewer, 1);
         root.Children.Add(scrollViewer);
 
+        FrameworkElement statusBar = BuildPlaybackStatusBar(profile);
+        Grid.SetRow(statusBar, 1);
+        Grid.SetColumnSpan(statusBar, 2);
+        root.Children.Add(statusBar);
+
         return root;
+    }
+
+    private FrameworkElement BuildPlaybackStatusBar(MonitorProfile profile)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 18,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+
+        var currentIndexText = new TextBlock();
+        AutomationProperties.SetName(currentIndexText, LocalizedStrings.Get("CurrentIndexAutomation"));
+        _currentIndexTexts[profile.Id] = currentIndexText;
+        panel.Children.Add(currentIndexText);
+
+        var loopRemainingText = new TextBlock
+        {
+            Opacity = 0.72,
+        };
+        AutomationProperties.SetName(loopRemainingText, LocalizedStrings.Get("LoopRemainingAutomation"));
+        _loopRemainingTexts[profile.Id] = loopRemainingText;
+        panel.Children.Add(loopRemainingText);
+
+        UpdatePlaybackStatusText(profile);
+        return panel;
     }
 
     private FrameworkElement BuildPreviewPane(MonitorProfile profile)
@@ -327,7 +370,9 @@ public sealed partial class MainWindow : Window
 
             ImagePreviewCollectionUpdater.Apply(items, images, reusableItems);
 
+            profile.TotalMediaCount = items.Count;
             metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
+            UpdatePlaybackStatusText(profile);
         }
         catch (OperationCanceledException)
         {
@@ -692,6 +737,13 @@ public sealed partial class MainWindow : Window
 
         ImagePreviewItem[] reusableItems = [.. items];
         ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems);
+        MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
+        if (profile is not null)
+        {
+            profile.TotalMediaCount = items.Count;
+            UpdatePlaybackStatusText(profile);
+        }
+
         if (_previewMetadataTexts.TryGetValue(args.MonitorId, out TextBlock? metadataText))
         {
             metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
@@ -701,6 +753,16 @@ public sealed partial class MainWindow : Window
     private void Coordinator_CurrentWallpaperChanged(object? sender, CurrentWallpaperChangedEventArgs args)
     {
         _ = CurrentWallpaperSelectionUpdater.Update(_viewModel.Profiles, args.MonitorId, args.ImagePath);
+        MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
+        if (profile is null)
+        {
+            return;
+        }
+
+        profile.CurrentMediaIndex = args.CurrentIndex;
+        profile.TotalMediaCount = args.TotalCount;
+        profile.CurrentMediaStartedAt = DateTimeOffset.Now;
+        UpdatePlaybackStatusText(profile);
     }
 
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -821,6 +883,7 @@ public sealed partial class MainWindow : Window
         if (_exitRequested || !_viewModel.CloseToTray)
         {
             _currentImageCheckpointTimer.Stop();
+            _playbackStatusTimer.Stop();
             UnloadPreviewState();
             ShutdownApplication();
             return;
@@ -924,6 +987,35 @@ public sealed partial class MainWindow : Window
 
         _previewItems.Clear();
         _previewMetadataTexts.Clear();
+        _currentIndexTexts.Clear();
+        _loopRemainingTexts.Clear();
+    }
+
+    private void UpdateAllPlaybackStatusTexts()
+    {
+        foreach (MonitorProfile profile in _viewModel.Profiles)
+        {
+            UpdatePlaybackStatusText(profile);
+        }
+    }
+
+    private void UpdatePlaybackStatusText(MonitorProfile profile)
+    {
+        if (_currentIndexTexts.TryGetValue(profile.Id, out TextBlock? currentIndexText))
+        {
+            currentIndexText.Text = PlaybackStatusFormatter.FormatCurrentIndex(profile.CurrentMediaIndex, profile.TotalMediaCount);
+        }
+
+        if (_loopRemainingTexts.TryGetValue(profile.Id, out TextBlock? loopRemainingText))
+        {
+            int remainingSeconds = PlaybackStatusFormatter.CalculateLoopRemainingSeconds(
+                profile.CurrentMediaIndex,
+                profile.TotalMediaCount,
+                profile.IntervalSeconds,
+                profile.CurrentMediaStartedAt,
+                DateTimeOffset.Now);
+            loopRemainingText.Text = PlaybackStatusFormatter.FormatLoopRemaining(remainingSeconds);
+        }
     }
 
     private static double ToDisplaySeconds(int seconds, TimeUnit unit)

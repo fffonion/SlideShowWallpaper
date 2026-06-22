@@ -40,6 +40,11 @@
   <data name="VideoLoop" xml:space="preserve"><value>循环播放视频</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 张图片</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 张图片</value></data>
+  <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
+  <data name="LoopRemainingFormat" xml:space="preserve"><value>剩余 {0}</value></data>
+  <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}小时 {1:00}分钟</value></data>
+  <data name="CurrentIndexAutomation" xml:space="preserve"><value>当前媒体序号</value></data>
+  <data name="LoopRemainingAutomation" xml:space="preserve"><value>循环剩余时长</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>正在加载图片...</value></data>
   <data name="UnableToLoadImages" xml:space="preserve"><value>无法加载图片</value></data>
   <data name="LoadingImagePreviews" xml:space="preserve"><value>正在加载图片预览</value></data>

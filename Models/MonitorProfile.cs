@@ -35,4 +35,10 @@ public sealed class MonitorProfile
     public bool IsStopped { get; set; }
 
     public string SelectedImagePath { get; set; } = string.Empty;
+
+    public int CurrentMediaIndex { get; set; }
+
+    public int TotalMediaCount { get; set; }
+
+    public DateTimeOffset? CurrentMediaStartedAt { get; set; }
 }

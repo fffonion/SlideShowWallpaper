@@ -21,6 +21,25 @@ public sealed class PlaybackQueueTests
     }
 
     [Fact]
+    public void Next_updates_current_index_as_one_based_position()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+        ],
+        PlaybackOrder.SequentialLoop);
+
+        _ = queue.Next();
+        Assert.Equal(1, queue.CurrentIndex);
+        Assert.Equal(3, queue.Count);
+
+        _ = queue.Next();
+        Assert.Equal(2, queue.CurrentIndex);
+    }
+
+    [Fact]
     public void Next_returns_null_for_empty_queue()
     {
         var queue = new PlaybackQueue([], PlaybackOrder.SequentialLoop);

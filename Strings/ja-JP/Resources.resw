@@ -40,6 +40,11 @@
   <data name="VideoLoop" xml:space="preserve"><value>動画をループ再生</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 枚の画像</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 枚の画像</value></data>
+  <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
+  <data name="LoopRemainingFormat" xml:space="preserve"><value>残り {0}</value></data>
+  <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}時間 {1:00}分</value></data>
+  <data name="CurrentIndexAutomation" xml:space="preserve"><value>現在のメディア番号</value></data>
+  <data name="LoopRemainingAutomation" xml:space="preserve"><value>ループ残り時間</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>画像を読み込み中...</value></data>
   <data name="UnableToLoadImages" xml:space="preserve"><value>画像を読み込めません</value></data>
   <data name="LoadingImagePreviews" xml:space="preserve"><value>画像プレビューを読み込み中</value></data>

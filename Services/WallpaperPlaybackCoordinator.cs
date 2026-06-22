@@ -278,6 +278,7 @@ public sealed class WallpaperPlaybackCoordinator
             if (selectedImageShown)
             {
                 queue.StartAfter(profile.SelectedImagePath);
+                PublishCurrentWallpaperChanged(profile.Id, profile.SelectedImagePath);
             }
             else
             {
@@ -374,7 +375,7 @@ public sealed class WallpaperPlaybackCoordinator
             await window.ShowImageAsync(item.Path);
         }
 
-        CurrentWallpaperChanged?.Invoke(this, new CurrentWallpaperChangedEventArgs(monitorId, item.Path));
+        PublishCurrentWallpaperChanged(monitorId, item.Path);
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)
@@ -400,6 +401,13 @@ public sealed class WallpaperPlaybackCoordinator
     private static ImagePlaybackItem CreatePlaybackItem(string path)
     {
         return new ImagePlaybackItem(path, ImageLibrary.IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image);
+    }
+
+    private void PublishCurrentWallpaperChanged(string monitorId, string path)
+    {
+        int currentIndex = _queues.TryGetValue(monitorId, out PlaybackQueue? queue) ? queue.CurrentIndex : 0;
+        int totalCount = queue?.Count ?? 0;
+        CurrentWallpaperChanged?.Invoke(this, new CurrentWallpaperChangedEventArgs(monitorId, path, currentIndex, totalCount));
     }
 
     private void ConfigureTimer(MonitorProfile profile)
@@ -436,4 +444,4 @@ public sealed class WallpaperPlaybackCoordinator
 
 public sealed record OrderedImagesChangedEventArgs(string MonitorId, IReadOnlyList<ImageMetadata> Images);
 
-public sealed record CurrentWallpaperChangedEventArgs(string MonitorId, string ImagePath);
+public sealed record CurrentWallpaperChangedEventArgs(string MonitorId, string ImagePath, int CurrentIndex, int TotalCount);

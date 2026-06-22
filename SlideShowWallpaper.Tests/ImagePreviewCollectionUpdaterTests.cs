@@ -71,6 +71,39 @@ public sealed class ImagePreviewCollectionUpdaterTests
 
         Assert.Null(item.Thumbnail);
         Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
-        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.VideoPlaceholderVisibility);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.PlaceholderVisibility);
+    }
+
+    [Fact]
+    public async Task Thumbnail_WhenImageDecodeFails_KeepsPlaceholderInsteadOfLoadingOriginalImage()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(path, [1, 2, 3]);
+        var metadata = new ImageMetadata(path, "bad.png", DateTime.UnixEpoch, 1);
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) => throw new InvalidDataException("decode failed"));
+        try
+        {
+            var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(ImagePreviewItem.Thumbnail))
+                {
+                    changed.TrySetResult();
+                }
+            };
+
+            _ = item.Thumbnail;
+            await changed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.Null(item.Thumbnail);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.PlaceholderVisibility);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 }

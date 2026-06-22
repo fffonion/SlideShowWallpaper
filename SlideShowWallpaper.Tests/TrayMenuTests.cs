@@ -10,7 +10,7 @@ public sealed class TrayMenuTests
     {
         MonitorProfile[] profiles =
         [
-            new() { Id = "display1", DisplayName = "Dell U2723QE", FolderPath = @"C:\Wallpapers" },
+            new() { Id = "display1", DisplayName = "Dell U2723QE", FolderPath = @"C:\Wallpapers", CurrentMediaIndex = 2, TotalMediaCount = 5 },
         ];
 
         IReadOnlyList<TrayMenuItem> items = TrayIconService.BuildMenuItems(profiles, GetTestString);
@@ -18,6 +18,7 @@ public sealed class TrayMenuTests
         TrayMenuItem header = Assert.Single(items, item => item.Kind == TrayMenuItemKind.Header);
         Assert.Equal("Dell U2723QE", header.Text);
         Assert.False(header.IsEnabled);
+        Assert.Contains(items, item => item.Text == "2/5" && !item.IsEnabled);
         Assert.Contains(items, item => item.Text == "Stop" && item.MonitorId == "display1");
         Assert.Contains(items, item => item.Text == "Pause" && item.MonitorId == "display1");
         Assert.Contains(items, item => item.Text == "Next" && item.MonitorId == "display1");
@@ -36,9 +37,9 @@ public sealed class TrayMenuTests
 
         IReadOnlyList<TrayMenuItem> items = TrayIconService.BuildMenuItems(profiles, GetTestString);
 
-        Assert.Equal(TrayMenuItemKind.Separator, items[4].Kind);
-        Assert.Equal(TrayMenuItemKind.Header, items[5].Kind);
-        Assert.Equal("LG UltraFine", items[5].Text);
+        Assert.Equal(TrayMenuItemKind.Separator, items[5].Kind);
+        Assert.Equal(TrayMenuItemKind.Header, items[6].Kind);
+        Assert.Equal("LG UltraFine", items[6].Text);
         Assert.Equal(TrayMenuItemKind.Separator, items[^1].Kind);
     }
 
@@ -69,6 +70,7 @@ public sealed class TrayMenuTests
             "Resume" => "Resume",
             "Next" => "Next",
             "NotLoaded" => "Not Loaded",
+            "CurrentIndexFormat" => "{0}/{1}",
             _ => key,
         };
     }

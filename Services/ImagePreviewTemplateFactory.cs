@@ -22,7 +22,7 @@ public static class ImagePreviewTemplateFactory
                             Glyph="&#xE768;"
                             FontSize="30"
                             Opacity="0.72"
-                            Visibility="{Binding VideoPlaceholderVisibility}" />
+                            Visibility="{Binding PlaceholderVisibility}" />
                     </Grid>
                 </Border>
                 <TextBlock Grid.Row="1" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" FontSize="12" />

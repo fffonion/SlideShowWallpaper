@@ -192,6 +192,7 @@ public sealed class TrayIconService : IDisposable
             }
             else
             {
+                items.Add(TrayMenuItem.DisabledCommand(PlaybackStatusFormatter.FormatCurrentIndex(profile.CurrentMediaIndex, profile.TotalMediaCount, getString("CurrentIndexFormat")), profile.Id));
                 items.Add(TrayMenuItem.CreateCommand(2000 + i, profile.IsStopped ? getString("Start") : getString("Stop"), profile.Id));
                 items.Add(TrayMenuItem.CreateCommand(3000 + i, profile.IsPaused ? getString("Resume") : getString("Pause"), profile.Id));
                 items.Add(TrayMenuItem.CreateCommand(4000 + i, getString("Next"), profile.Id));

@@ -40,6 +40,11 @@
   <data name="VideoLoop" xml:space="preserve"><value>Loop video</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 images</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} images</value></data>
+  <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
+  <data name="LoopRemainingFormat" xml:space="preserve"><value>Remaining {0}</value></data>
+  <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}h {1:00}m</value></data>
+  <data name="CurrentIndexAutomation" xml:space="preserve"><value>Current media index</value></data>
+  <data name="LoopRemainingAutomation" xml:space="preserve"><value>Remaining loop time</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>Loading images...</value></data>
   <data name="UnableToLoadImages" xml:space="preserve"><value>Unable to load images</value></data>
   <data name="LoadingImagePreviews" xml:space="preserve"><value>Loading image previews</value></data>

@@ -10,14 +10,22 @@ namespace SlideShowWallpaper.ViewModels;
 public sealed class ImagePreviewItem : INotifyPropertyChanged
 {
     private static readonly ThumbnailCacheService ThumbnailCache = new();
+    private readonly Func<ImageMetadata, CancellationToken, Task<string>> _thumbnailLoader;
     private ImageSource? _thumbnail;
     private CancellationTokenSource? _thumbnailCancellation;
     private int _thumbnailLoadVersion;
     private bool _thumbnailLoadStarted;
+    private bool _thumbnailFailed;
 
     public ImagePreviewItem(ImageMetadata metadata)
+        : this(metadata, ThumbnailCache.GetOrCreateThumbnailAsync)
+    {
+    }
+
+    public ImagePreviewItem(ImageMetadata metadata, Func<ImageMetadata, CancellationToken, Task<string>> thumbnailLoader)
     {
         Metadata = metadata;
+        _thumbnailLoader = thumbnailLoader;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -30,9 +38,9 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
     public string Details => $"{Metadata.ModifiedUtc.ToLocalTime():g}";
 
-    public Visibility ImageVisibility => Metadata.Kind == MediaKind.Image ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImageVisibility => Metadata.Kind == MediaKind.Image && !_thumbnailFailed ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility VideoPlaceholderVisibility => Metadata.Kind == MediaKind.Video ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PlaceholderVisibility => Metadata.Kind == MediaKind.Video || _thumbnailFailed ? Visibility.Visible : Visibility.Collapsed;
 
     public ImageSource? Thumbnail
     {
@@ -58,8 +66,11 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         _thumbnailCancellation?.Cancel();
         _thumbnailCancellation = null;
         _thumbnailLoadStarted = false;
+        _thumbnailFailed = false;
         _thumbnail = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
     }
 
     private async void StartThumbnailLoad()
@@ -76,13 +87,14 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         _thumbnailCancellation = cancellation;
         try
         {
-            string thumbnailPath = await ThumbnailCache.GetOrCreateThumbnailAsync(Metadata, cancellation.Token);
+            string thumbnailPath = await _thumbnailLoader(Metadata, cancellation.Token);
             if (version != _thumbnailLoadVersion)
             {
                 return;
             }
 
             _thumbnail = new BitmapImage(new Uri(thumbnailPath));
+            _thumbnailFailed = false;
         }
         catch (OperationCanceledException)
         {
@@ -96,11 +108,8 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
                 return;
             }
 
-            _thumbnail = new BitmapImage
-            {
-                DecodePixelWidth = 128,
-                UriSource = new Uri(Path),
-            };
+            _thumbnailFailed = true;
+            _thumbnail = null;
         }
         finally
         {
@@ -113,5 +122,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         }
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
     }
 }
