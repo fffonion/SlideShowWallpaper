@@ -22,6 +22,7 @@ public sealed partial class WallpaperWindow : Window
     private MonitorProfile _profile;
     private string _currentImagePath = string.Empty;
     private MediaKind _currentKind = MediaKind.Image;
+    private bool _videoPausedByCoverage;
 
     public WallpaperWindow(MonitorProfile profile)
     {
@@ -128,7 +129,35 @@ public sealed partial class WallpaperWindow : Window
         _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(path));
         ApplyProfile(_profile);
         _mediaPlayer.Play();
+        if (_videoPausedByCoverage)
+        {
+            _mediaPlayer.Pause();
+        }
+
         return Task.CompletedTask;
+    }
+
+    public void SetVideoPausedByCoverage(bool isPaused)
+    {
+        if (_videoPausedByCoverage == isPaused)
+        {
+            return;
+        }
+
+        _videoPausedByCoverage = isPaused;
+        if (_currentKind != MediaKind.Video || VideoPlayer.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        if (isPaused)
+        {
+            _mediaPlayer.Pause();
+        }
+        else
+        {
+            _mediaPlayer.Play();
+        }
     }
 
     public async Task UpdateProfileWithTransitionAsync(MonitorProfile profile)

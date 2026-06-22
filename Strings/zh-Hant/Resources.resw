@@ -44,6 +44,7 @@
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>轉場時間長度</value></data>
   <data name="VideoLoop" xml:space="preserve"><value>循環播放影片</value></data>
   <data name="VideoSound" xml:space="preserve"><value>播放聲音</value></data>
+  <data name="PauseVideoWhenOtherAppMaximized" xml:space="preserve"><value>其他應用程式最大化或全螢幕時暫停影片</value></data>
   <data name="MediaFilterImages" xml:space="preserve"><value>圖片</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>影片</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>圖片和影片</value></data>

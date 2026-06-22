@@ -10,7 +10,9 @@ public sealed class WallpaperPlaybackCoordinator
     private readonly DesktopHostService _desktopHostService;
     private readonly ImageOrderService _imageOrderService;
     private readonly FolderChangeWatcherService _folderChangeWatcherService;
+    private readonly ForegroundWindowService _foregroundWindowService;
     private readonly DispatcherQueue _dispatcherQueue;
+    private readonly DispatcherQueueTimer _videoCoverageTimer;
     private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
@@ -24,13 +26,19 @@ public sealed class WallpaperPlaybackCoordinator
         MonitorService monitorService,
         DesktopHostService desktopHostService,
         ImageOrderService imageOrderService,
-        FolderChangeWatcherService folderChangeWatcherService)
+        FolderChangeWatcherService folderChangeWatcherService,
+        ForegroundWindowService? foregroundWindowService = null)
     {
         _monitorService = monitorService;
         _desktopHostService = desktopHostService;
         _imageOrderService = imageOrderService;
         _folderChangeWatcherService = folderChangeWatcherService;
+        _foregroundWindowService = foregroundWindowService ?? new ForegroundWindowService();
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        _videoCoverageTimer = _dispatcherQueue.CreateTimer();
+        _videoCoverageTimer.Interval = TimeSpan.FromSeconds(1);
+        _videoCoverageTimer.IsRepeating = true;
+        _videoCoverageTimer.Tick += (_, _) => ApplyVideoCoverageState();
     }
 
     public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
@@ -108,6 +116,9 @@ public sealed class WallpaperPlaybackCoordinator
 
             ConfigureTimer(profile);
         }
+
+        ConfigureVideoCoverageTimer();
+        ApplyVideoCoverageState();
     }
 
     public void PauseOrResume(string monitorId, bool isPaused)
@@ -206,6 +217,7 @@ public sealed class WallpaperPlaybackCoordinator
         _profiles.Clear();
         _profileChanges.Clear();
         _folderChangeWatcherService.Clear();
+        _videoCoverageTimer.Stop();
     }
 
     private void CloseWindow(string monitorId)
@@ -379,6 +391,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         PublishCurrentWallpaperChanged(monitorId, item.Path);
+        ApplyVideoCoverageState();
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)
@@ -437,6 +450,43 @@ public sealed class WallpaperPlaybackCoordinator
         if (!profile.IsPaused && !profile.IsStopped)
         {
             timer.Start();
+        }
+    }
+
+    private void ConfigureVideoCoverageTimer()
+    {
+        bool shouldRun = _playbackEnabled
+            && _windows.Count > 0
+            && _profiles.Values.Any(profile => profile.PauseVideoWhenOtherAppMaximized && !profile.IsStopped);
+        if (shouldRun)
+        {
+            _videoCoverageTimer.Start();
+            return;
+        }
+
+        _videoCoverageTimer.Stop();
+        foreach (WallpaperWindow window in _windows.Values)
+        {
+            window.SetVideoPausedByCoverage(false);
+        }
+    }
+
+    private void ApplyVideoCoverageState()
+    {
+        if (!_playbackEnabled || _windows.Count == 0)
+        {
+            return;
+        }
+
+        ForegroundWindowInfo? foregroundWindow = _foregroundWindowService.GetForegroundWindowInfo();
+        foreach ((string monitorId, WallpaperWindow window) in _windows)
+        {
+            bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
+                && profile.PauseVideoWhenOtherAppMaximized
+                && !profile.IsStopped
+                && _monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
+                && WindowCoveragePolicy.ShouldPauseVideo(foregroundWindow, monitorRect, Environment.ProcessId);
+            window.SetVideoPausedByCoverage(shouldPause);
         }
     }
 

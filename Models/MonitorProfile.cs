@@ -32,6 +32,8 @@ public sealed class MonitorProfile
 
     public bool VideoSoundEnabled { get; set; }
 
+    public bool PauseVideoWhenOtherAppMaximized { get; set; } = true;
+
     public PlaybackMediaFilter MediaFilter { get; set; } = PlaybackMediaFilter.ImagesAndVideos;
 
     public bool IsPaused { get; set; }

@@ -65,6 +65,7 @@ public sealed class SettingsStore
                     TransitionDurationUnit = GetEnum(sections, section, nameof(MonitorProfile.TransitionDurationUnit), TimeUnit.Seconds),
                     VideoLoop = GetBool(sections, section, nameof(MonitorProfile.VideoLoop), true),
                     VideoSoundEnabled = GetBool(sections, section, nameof(MonitorProfile.VideoSoundEnabled), false),
+                    PauseVideoWhenOtherAppMaximized = GetBool(sections, section, nameof(MonitorProfile.PauseVideoWhenOtherAppMaximized), true),
                     MediaFilter = GetEnum(sections, section, nameof(MonitorProfile.MediaFilter), PlaybackMediaFilter.ImagesAndVideos),
                     IsPaused = GetBool(sections, section, nameof(MonitorProfile.IsPaused), false),
                     IsStopped = GetBool(sections, section, nameof(MonitorProfile.IsStopped), false),
@@ -116,6 +117,7 @@ public sealed class SettingsStore
             AppendValue(builder, nameof(MonitorProfile.TransitionDurationUnit), monitor.TransitionDurationUnit);
             AppendValue(builder, nameof(MonitorProfile.VideoLoop), monitor.VideoLoop);
             AppendValue(builder, nameof(MonitorProfile.VideoSoundEnabled), monitor.VideoSoundEnabled);
+            AppendValue(builder, nameof(MonitorProfile.PauseVideoWhenOtherAppMaximized), monitor.PauseVideoWhenOtherAppMaximized);
             AppendValue(builder, nameof(MonitorProfile.MediaFilter), monitor.MediaFilter);
             AppendValue(builder, nameof(MonitorProfile.IsPaused), monitor.IsPaused);
             AppendValue(builder, nameof(MonitorProfile.IsStopped), monitor.IsStopped);

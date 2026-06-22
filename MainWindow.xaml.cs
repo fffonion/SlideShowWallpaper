@@ -445,6 +445,7 @@ public sealed partial class MainWindow : Window
         }, LocalizedStrings.Get("PlaybackOrderAutomation")));
         AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
         AddRow(form, row++, LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound")));
+        AddRow(form, row++, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized"), CreateCheckBox(profile.PauseVideoWhenOtherAppMaximized, value => profile.PauseVideoWhenOtherAppMaximized = value, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized")));
         AddSectionHeader(form, row++, LocalizedStrings.Get("PlaybackSettingsGroup"));
         AddRow(form, row++, LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
             ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),

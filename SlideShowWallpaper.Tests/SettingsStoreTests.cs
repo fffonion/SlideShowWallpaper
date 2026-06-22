@@ -47,6 +47,7 @@ public sealed class SettingsStoreTests
                     TransitionDurationUnit = TimeUnit.Seconds,
                     VideoLoop = true,
                     VideoSoundEnabled = true,
+                    PauseVideoWhenOtherAppMaximized = true,
                     MediaFilter = PlaybackMediaFilter.ImagesOnly,
                     IsPaused = true,
                     IsStopped = true,
@@ -70,6 +71,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(TimeUnit.Minutes, monitor.IntervalUnit);
         Assert.True(monitor.VideoLoop);
         Assert.True(monitor.VideoSoundEnabled);
+        Assert.True(monitor.PauseVideoWhenOtherAppMaximized);
         Assert.Equal(PlaybackMediaFilter.ImagesOnly, monitor.MediaFilter);
         Assert.True(monitor.IsStopped);
     }
@@ -176,6 +178,38 @@ public sealed class SettingsStoreTests
         var profile = new MonitorProfile();
 
         Assert.False(profile.VideoSoundEnabled);
+    }
+
+    [Fact]
+    public void MonitorProfile_WithDefaultConstructor_PausesVideoWhenOtherAppMaximized()
+    {
+        var profile = new MonitorProfile();
+
+        Assert.True(profile.PauseVideoWhenOtherAppMaximized);
+    }
+
+    [Fact]
+    public void Load_WithMissingPauseVideoWhenOtherAppMaximized_UsesTrue()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, "SlideShowWallpaper.ini");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(
+            path,
+            """
+            [Settings]
+            MonitorCount=1
+
+            [Monitor0]
+            Id=display1
+            DisplayName=Display 1
+            """);
+        var store = new SettingsStore(path);
+
+        WallpaperConfig config = store.Load();
+
+        MonitorProfile monitor = Assert.Single(config.Monitors);
+        Assert.True(monitor.PauseVideoWhenOtherAppMaximized);
     }
 
     [Fact]
