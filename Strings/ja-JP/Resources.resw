@@ -18,6 +18,7 @@
   <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>ダーク</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>ランダム</value></data>
+  <data name="PlaybackSingleLoop" xml:space="preserve"><value>単一ループ</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>名前 昇順</value></data>
   <data name="PlaybackNameDesc" xml:space="preserve"><value>名前 降順</value></data>
   <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>更新日時 昇順</value></data>

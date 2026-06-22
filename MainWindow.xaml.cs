@@ -24,6 +24,7 @@ public sealed partial class MainWindow : Window
     private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
     [
         new(PlaybackOrder.Random, LocalizedStrings.Get("PlaybackRandom")),
+        new(PlaybackOrder.SingleLoop, LocalizedStrings.Get("PlaybackSingleLoop")),
         new(PlaybackOrder.NameAsc, LocalizedStrings.Get("PlaybackNameAsc")),
         new(PlaybackOrder.NameDesc, LocalizedStrings.Get("PlaybackNameDesc")),
         new(PlaybackOrder.ModifiedDateAsc, LocalizedStrings.Get("PlaybackModifiedDateAsc")),
@@ -441,6 +442,11 @@ public sealed partial class MainWindow : Window
         AddRow(form, row++, LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
         {
             profile.PlaybackOrder = value;
+            if (value == PlaybackOrder.SingleLoop)
+            {
+                profile.VideoLoop = true;
+            }
+
             RenderTabs(profile.Id);
         }, LocalizedStrings.Get("PlaybackOrderAutomation")));
         AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));

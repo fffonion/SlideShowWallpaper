@@ -18,6 +18,7 @@
   <data name="ThemeLight" xml:space="preserve"><value>浅色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>随机</value></data>
+  <data name="PlaybackSingleLoop" xml:space="preserve"><value>单曲循环</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>名称升序</value></data>
   <data name="PlaybackNameDesc" xml:space="preserve"><value>名称降序</value></data>
   <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>修改日期升序</value></data>

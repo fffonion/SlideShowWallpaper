@@ -21,6 +21,40 @@ public sealed class PlaybackQueueTests
     }
 
     [Fact]
+    public void Next_WithSingleLoop_ReturnsFirstItemRepeatedly()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+        ],
+        PlaybackOrder.SingleLoop);
+
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+        Assert.Equal(1, queue.CurrentIndex);
+    }
+
+    [Fact]
+    public void StartAfter_WithSingleLoop_ReturnsSelectedItemRepeatedly()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+        ],
+        PlaybackOrder.SingleLoop);
+
+        queue.StartAfter(@"C:\A\b.jpg");
+
+        Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
+        Assert.Equal(2, queue.CurrentIndex);
+    }
+
+    [Fact]
     public void Next_updates_current_index_as_one_based_position()
     {
         var queue = new PlaybackQueue(

@@ -51,6 +51,10 @@ public sealed class PlaybackQueue
         ImagePlaybackItem item = _items[_nextIndex];
         _currentPath = item.Path;
         _currentIndex = _nextIndex + 1;
+        if (_order == PlaybackOrder.SingleLoop)
+        {
+            return item;
+        }
 
         _nextIndex = (_nextIndex + 1) % _items.Count;
         if (_nextIndex == 0)
@@ -101,7 +105,7 @@ public sealed class PlaybackQueue
         {
             _currentPath = _items[index].Path;
             _currentIndex = index + 1;
-            _nextIndex = (index + 1) % _items.Count;
+            _nextIndex = _order == PlaybackOrder.SingleLoop ? index : (index + 1) % _items.Count;
         }
     }
 

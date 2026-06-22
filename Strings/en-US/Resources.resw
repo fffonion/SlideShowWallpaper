@@ -18,6 +18,7 @@
   <data name="ThemeLight" xml:space="preserve"><value>Light</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>Dark</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>Random</value></data>
+  <data name="PlaybackSingleLoop" xml:space="preserve"><value>Single Loop</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>Name Asc</value></data>
   <data name="PlaybackNameDesc" xml:space="preserve"><value>Name Desc</value></data>
   <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>Modified Date Asc</value></data>

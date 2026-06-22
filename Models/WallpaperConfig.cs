@@ -17,6 +17,7 @@ public enum PlaybackOrder
 {
     SequentialLoop,
     Random,
+    SingleLoop,
     NameAsc,
     NameDesc,
     ModifiedDateAsc,
