@@ -3,13 +3,21 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using SlideShowWallpaper.ViewModels;
+using Windows.Foundation;
 using Windows.Graphics;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using Windows.Storage;
 using WinRT.Interop;
 
 namespace SlideShowWallpaper;
@@ -20,6 +28,9 @@ public sealed partial class MainWindow : Window
     private const double DefaultPreviewPaneWidth = 250;
     private const double MinimumPreviewPaneWidth = 160;
     private const double MaximumPreviewPaneWidth = 520;
+    private const double PreviewPopupWidth = 420;
+    private const double PreviewPopupHeight = 260;
+    private const double PreviewPopupGap = 8;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
@@ -94,8 +105,17 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _currentImageCheckpointTimer;
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
+    private readonly DispatcherQueueTimer _previewPopupTimer;
     private readonly IntPtr _hwnd;
     private readonly bool _disableCloseToTray;
+    private Popup? _previewPopup;
+    private Microsoft.UI.Xaml.Controls.Image? _previewPopupImage;
+    private MediaPlayerElement? _previewPopupVideo;
+    private MediaPlayer? _previewPopupPlayer;
+    private CancellationTokenSource? _previewPopupCancellation;
+    private ImagePreviewItem? _previewPopupPendingItem;
+    private ListViewItem? _previewPopupPendingContainer;
+    private MonitorProfile? _previewPopupPendingProfile;
     private int _previewSessionVersion;
     private string? _selectedMonitorId;
     private bool _exitRequested;
@@ -139,6 +159,10 @@ public sealed partial class MainWindow : Window
         _playbackStatusTimer.Interval = PlaybackStatusRefreshInterval;
         _playbackStatusTimer.IsRepeating = true;
         _playbackStatusTimer.Tick += (_, _) => UpdateAllPlaybackStatusTexts();
+        _previewPopupTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _previewPopupTimer.Interval = PreviewPopupPolicy.HoverDelay;
+        _previewPopupTimer.IsRepeating = false;
+        _previewPopupTimer.Tick += PreviewPopupTimer_Tick;
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -560,6 +584,7 @@ public sealed partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Stretch,
         };
         AutomationProperties.SetName(previewList, LocalizedStrings.Format("MonitorPreviewsAutomationFormat", profile.DisplayName));
+        previewList.ContainerContentChanging += PreviewList_ContainerContentChanging;
         previewList.SelectionChanged += PreviewList_SelectionChanged;
         previewHost.Children.Add(previewList);
 
@@ -593,6 +618,302 @@ public sealed partial class MainWindow : Window
     private static DataTemplate CreatePreviewTemplate()
     {
         return ImagePreviewTemplateFactory.Create();
+    }
+
+    private void PreviewList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer is not ListViewItem itemContainer)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(itemContainer, _previewPopupPendingContainer) && !ReferenceEquals(args.Item, _previewPopupPendingItem))
+        {
+            CancelPreviewPopup();
+        }
+
+        itemContainer.Tag = args.Item;
+        itemContainer.PointerEntered -= PreviewItem_PointerEntered;
+        itemContainer.PointerExited -= PreviewItem_PointerExited;
+        itemContainer.Unloaded -= PreviewItem_Unloaded;
+        itemContainer.PointerEntered += PreviewItem_PointerEntered;
+        itemContainer.PointerExited += PreviewItem_PointerExited;
+        itemContainer.Unloaded += PreviewItem_Unloaded;
+    }
+
+    private void PreviewItem_PointerEntered(object sender, PointerRoutedEventArgs args)
+    {
+        if (sender is not ListViewItem { Tag: ImagePreviewItem item } itemContainer || SelectedProfile is not { } profile)
+        {
+            return;
+        }
+
+        _previewPopupTimer.Stop();
+        HidePreviewPopup();
+        _previewPopupPendingItem = item;
+        _previewPopupPendingContainer = itemContainer;
+        _previewPopupPendingProfile = profile;
+        _previewPopupTimer.Start();
+    }
+
+    private void PreviewItem_PointerExited(object sender, PointerRoutedEventArgs args)
+    {
+        if (ReferenceEquals(sender, _previewPopupPendingContainer))
+        {
+            CancelPreviewPopup();
+        }
+    }
+
+    private void PreviewItem_Unloaded(object sender, RoutedEventArgs args)
+    {
+        if (ReferenceEquals(sender, _previewPopupPendingContainer))
+        {
+            CancelPreviewPopup();
+        }
+    }
+
+    private async void PreviewPopupTimer_Tick(DispatcherQueueTimer sender, object args)
+    {
+        if (_previewPopupPendingItem is not { } item
+            || _previewPopupPendingContainer is not { } itemContainer
+            || _previewPopupPendingProfile is not { } profile)
+        {
+            return;
+        }
+
+        await ShowPreviewPopupAsync(item, itemContainer, profile);
+    }
+
+    private async Task ShowPreviewPopupAsync(ImagePreviewItem item, ListViewItem itemContainer, MonitorProfile profile)
+    {
+        if (!File.Exists(item.Path) || itemContainer.XamlRoot is null)
+        {
+            return;
+        }
+
+        CancellationTokenSource cancellation = ReplacePreviewPopupCancellation();
+        try
+        {
+            string playbackPath = await NdfMediaService.MaterializeForPlaybackAsync(item.Path, cancellation.Token);
+            if (cancellation.IsCancellationRequested
+                || !ReferenceEquals(item, _previewPopupPendingItem)
+                || !ReferenceEquals(itemContainer, _previewPopupPendingContainer))
+            {
+                return;
+            }
+
+            EnsurePreviewPopup();
+            if (item.Metadata.Kind == MediaKind.Video)
+            {
+                await ShowPreviewPopupVideoAsync(playbackPath, profile, cancellation.Token);
+            }
+            else
+            {
+                ShowPreviewPopupImage(playbackPath);
+            }
+
+            PositionPreviewPopup(itemContainer);
+            if (_previewPopup is not null)
+            {
+                _previewPopup.XamlRoot = Root.XamlRoot;
+                _previewPopup.IsOpen = true;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            HidePreviewPopup();
+        }
+        finally
+        {
+            if (ReferenceEquals(_previewPopupCancellation, cancellation))
+            {
+                _previewPopupCancellation = null;
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private CancellationTokenSource ReplacePreviewPopupCancellation()
+    {
+        _previewPopupCancellation?.Cancel();
+        _previewPopupCancellation = new CancellationTokenSource();
+        return _previewPopupCancellation;
+    }
+
+    private void EnsurePreviewPopup()
+    {
+        if (_previewPopup is not null)
+        {
+            return;
+        }
+
+        _previewPopupPlayer = new MediaPlayer
+        {
+            IsLoopingEnabled = true,
+            IsMuted = true,
+        };
+        _previewPopupPlayer.MediaFailed += PreviewPopupPlayer_MediaFailed;
+        _previewPopupImage = new Microsoft.UI.Xaml.Controls.Image
+        {
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+        AutomationProperties.SetAccessibilityView(_previewPopupImage, AccessibilityView.Raw);
+        _previewPopupVideo = new MediaPlayerElement
+        {
+            AreTransportControlsEnabled = false,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Visibility = Visibility.Collapsed,
+        };
+        _previewPopupVideo.SetMediaPlayer(_previewPopupPlayer);
+
+        var content = new Grid();
+        content.Children.Add(_previewPopupImage);
+        content.Children.Add(_previewPopupVideo);
+
+        var surface = new Border
+        {
+            Width = PreviewPopupWidth,
+            Height = PreviewPopupHeight,
+            Padding = new Thickness(8),
+            CornerRadius = new CornerRadius(8),
+            Background = GetThemeBrush("CardBackgroundFillColorDefaultBrush"),
+            BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
+            BorderThickness = new Thickness(1),
+            Child = content,
+        };
+
+        _previewPopup = new Popup
+        {
+            Child = surface,
+            IsLightDismissEnabled = false,
+        };
+    }
+
+    private async Task ShowPreviewPopupVideoAsync(string playbackPath, MonitorProfile profile, CancellationToken cancellationToken)
+    {
+        if (_previewPopupPlayer is null || _previewPopupVideo is null || _previewPopupImage is null)
+        {
+            return;
+        }
+
+        StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath).AsTask(cancellationToken);
+        _previewPopupImage.Source = null;
+        _previewPopupImage.Visibility = Visibility.Collapsed;
+        _previewPopupVideo.Visibility = Visibility.Visible;
+        _previewPopupPlayer.IsLoopingEnabled = true;
+        _previewPopupPlayer.IsMuted = PreviewPopupPolicy.ShouldMuteVideo(_viewModel.GlobalMute, profile);
+        _previewPopupPlayer.Source = MediaSource.CreateFromStorageFile(file);
+        _previewPopupPlayer.Play();
+    }
+
+    private void ShowPreviewPopupImage(string playbackPath)
+    {
+        if (_previewPopupPlayer is null || _previewPopupVideo is null || _previewPopupImage is null)
+        {
+            return;
+        }
+
+        _previewPopupPlayer.Pause();
+        _previewPopupPlayer.Source = null;
+        _previewPopupVideo.Visibility = Visibility.Collapsed;
+        _previewPopupImage.Source = new BitmapImage(new Uri(playbackPath));
+        _previewPopupImage.Visibility = Visibility.Visible;
+    }
+
+    private void PositionPreviewPopup(FrameworkElement anchor)
+    {
+        if (_previewPopup is null)
+        {
+            return;
+        }
+
+        Point anchorPoint = anchor.TransformToVisual(Root).TransformPoint(new Point());
+        double rootWidth = Root.ActualWidth > 0 ? Root.ActualWidth : AppWindow.Size.Width;
+        double rootHeight = Root.ActualHeight > 0 ? Root.ActualHeight : AppWindow.Size.Height;
+        double x = anchorPoint.X + anchor.ActualWidth + PreviewPopupGap;
+        if (x + PreviewPopupWidth > rootWidth)
+        {
+            x = Math.Max(0, anchorPoint.X - PreviewPopupWidth - PreviewPopupGap);
+        }
+
+        double y = Math.Clamp(anchorPoint.Y, 0, Math.Max(0, rootHeight - PreviewPopupHeight));
+        _previewPopup.HorizontalOffset = x;
+        _previewPopup.VerticalOffset = y;
+    }
+
+    private void PreviewPopupPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+    {
+        string errorMessage = string.IsNullOrWhiteSpace(args.ErrorMessage)
+            ? args.Error.ToString()
+            : $"{args.Error}: {args.ErrorMessage}";
+        AppLog.Write($"Preview media failed: {errorMessage}");
+    }
+
+    private void CancelPreviewPopup()
+    {
+        _previewPopupTimer.Stop();
+        _previewPopupPendingItem = null;
+        _previewPopupPendingContainer = null;
+        _previewPopupPendingProfile = null;
+        HidePreviewPopup();
+    }
+
+    private void HidePreviewPopup()
+    {
+        _previewPopupCancellation?.Cancel();
+        _previewPopupCancellation = null;
+        if (_previewPopupPlayer is not null)
+        {
+            _previewPopupPlayer.Pause();
+            _previewPopupPlayer.Source = null;
+        }
+
+        if (_previewPopupImage is not null)
+        {
+            _previewPopupImage.Source = null;
+        }
+
+        if (_previewPopupVideo is not null)
+        {
+            _previewPopupVideo.Visibility = Visibility.Collapsed;
+        }
+
+        if (_previewPopup is not null)
+        {
+            _previewPopup.IsOpen = false;
+        }
+    }
+
+    private void UpdatePreviewPopupMute()
+    {
+        if (_previewPopupPlayer is not null && _previewPopupPendingProfile is not null)
+        {
+            _previewPopupPlayer.IsMuted = PreviewPopupPolicy.ShouldMuteVideo(_viewModel.GlobalMute, _previewPopupPendingProfile);
+        }
+    }
+
+    private void DisposePreviewPopup()
+    {
+        CancelPreviewPopup();
+        if (_previewPopupPlayer is not null)
+        {
+            _previewPopupPlayer.MediaFailed -= PreviewPopupPlayer_MediaFailed;
+            _previewPopupPlayer.Dispose();
+            _previewPopupPlayer = null;
+        }
+
+        _previewPopupVideo = null;
+        _previewPopupImage = null;
+        _previewPopup = null;
     }
 
     private ObservableCollection<ImagePreviewItem> GetPreviewItems(MonitorProfile profile)
@@ -1397,6 +1718,7 @@ public sealed partial class MainWindow : Window
         WallpaperConfig config = CreateConfig();
         _settingsStore.Save(config);
         _coordinator.ApplyProfiles(config.Monitors, config.PlaybackEnabled, config.AutoTrackNewFiles, config.GlobalMute);
+        UpdatePreviewPopupMute();
     }
 
     private void ScheduleApplySettings()
@@ -1474,6 +1796,7 @@ public sealed partial class MainWindow : Window
 
     private void ShutdownApplication()
     {
+        DisposePreviewPopup();
         _coordinator.OrderedImagesChanged -= Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged -= Coordinator_CurrentWallpaperChanged;
         _trayIconService.Dispose();
@@ -1558,6 +1881,7 @@ public sealed partial class MainWindow : Window
 
     private void CancelSelectedPreviewLoad()
     {
+        CancelPreviewPopup();
         if (!string.IsNullOrWhiteSpace(_selectedMonitorId))
         {
             CancelPreviewLoad(_selectedMonitorId);
@@ -1611,6 +1935,7 @@ public sealed partial class MainWindow : Window
 
     private void UnloadPreviewState()
     {
+        CancelPreviewPopup();
         foreach (ObservableCollection<ImagePreviewItem> items in _previewItems.Values)
         {
             ImagePreviewCollectionUpdater.Clear(items);
