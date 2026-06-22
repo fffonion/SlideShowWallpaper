@@ -99,7 +99,7 @@
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
-                    CornerRadius="8">
+                    CornerRadius="8,0,0,0">
                     <ContentControl x:Name="MonitorContent" />
                 </Border>
             </Grid>
