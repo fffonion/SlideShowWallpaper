@@ -55,15 +55,23 @@
                     </AppBarToggleButton>
                 </CommandBar>
 
-                <ComboBox
-                    x:Name="ThemeComboBox"
-                    x:Uid="ThemeComboBox"
+                <StackPanel
                     Grid.Column="1"
-                    MinWidth="150"
+                    Orientation="Horizontal"
+                    Spacing="8"
                     HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    AutomationProperties.AutomationId="ThemeComboBox"
-                    SelectionChanged="ThemeComboBox_SelectionChanged" />
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        x:Uid="ThemeLabel"
+                        VerticalAlignment="Center" />
+                    <ComboBox
+                        x:Name="ThemeComboBox"
+                        x:Uid="ThemeComboBox"
+                        MinWidth="150"
+                        VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="ThemeComboBox"
+                        SelectionChanged="ThemeComboBox_SelectionChanged" />
+                </StackPanel>
             </Grid>
 
             <TabView

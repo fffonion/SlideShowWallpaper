@@ -13,6 +13,7 @@
   <data name="AutostartButton.Label" xml:space="preserve"><value>自動起動</value></data>
   <data name="CloseToTrayButton.Label" xml:space="preserve"><value>トレイに閉じる</value></data>
   <data name="CloseToTrayButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>トレイに閉じる</value></data>
+  <data name="ThemeLabel.Text" xml:space="preserve"><value>テーマ</value></data>
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>テーマ</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
