@@ -12,6 +12,7 @@ public sealed class ThumbnailCacheService
 {
     private const uint DefaultMaxPixelSize = 320;
     private const string ThumbnailExtension = ".jpg";
+    private static readonly TimeSpan PreferredVideoThumbnailTime = TimeSpan.FromSeconds(3);
     private readonly string _cacheRoot;
     private readonly Func<ImageMetadata, string, uint, CancellationToken, Task> _thumbnailWriter;
 
@@ -121,12 +122,30 @@ public sealed class ThumbnailCacheService
             composition.Clips.Add(clip);
             var properties = clip.GetVideoEncodingProperties();
             (uint width, uint height) = GetScaledSize(properties.Width, properties.Height, maxPixelSize);
-            using IRandomAccessStream sourceStream = await composition.GetThumbnailAsync(TimeSpan.Zero, (int)width, (int)height, VideoFramePrecision.NearestFrame).AsTask(cancellationToken);
+            TimeSpan thumbnailTime = GetVideoThumbnailTime(composition.Duration);
+            using IRandomAccessStream sourceStream = await GetVideoThumbnailStreamAsync(composition, thumbnailTime, width, height, cancellationToken);
             await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
         }
         finally
         {
             DeleteIfExists(temporaryMediaPath);
+        }
+    }
+
+    private static async Task<IRandomAccessStream> GetVideoThumbnailStreamAsync(
+        MediaComposition composition,
+        TimeSpan thumbnailTime,
+        uint width,
+        uint height,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await composition.GetThumbnailAsync(thumbnailTime, (int)width, (int)height, VideoFramePrecision.NearestKeyFrame).AsTask(cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return await composition.GetThumbnailAsync(thumbnailTime, (int)width, (int)height, VideoFramePrecision.NearestFrame).AsTask(cancellationToken);
         }
     }
 
@@ -164,6 +183,11 @@ public sealed class ThumbnailCacheService
 
         double scale = Math.Min(1.0, maxPixelSize / (double)Math.Max(sourceWidth, sourceHeight));
         return ((uint)Math.Max(1, Math.Round(sourceWidth * scale)), (uint)Math.Max(1, Math.Round(sourceHeight * scale)));
+    }
+
+    internal static TimeSpan GetVideoThumbnailTime(TimeSpan duration)
+    {
+        return duration > PreferredVideoThumbnailTime ? PreferredVideoThumbnailTime : TimeSpan.Zero;
     }
 
     internal static bool ShouldDeleteThumbnailMedia(string sourcePath)

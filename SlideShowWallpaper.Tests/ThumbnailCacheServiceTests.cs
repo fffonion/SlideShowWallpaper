@@ -141,4 +141,15 @@ public sealed class ThumbnailCacheServiceTests
             File.Delete(path);
         }
     }
+
+    [Theory]
+    [InlineData(4, 3)]
+    [InlineData(3, 0)]
+    [InlineData(1, 0)]
+    public void GetVideoThumbnailTime_WithDuration_UsesThreeSecondOffsetOnlyWhenAvailable(int durationSeconds, int expectedSeconds)
+    {
+        TimeSpan thumbnailTime = ThumbnailCacheService.GetVideoThumbnailTime(TimeSpan.FromSeconds(durationSeconds));
+
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), thumbnailTime);
+    }
 }
