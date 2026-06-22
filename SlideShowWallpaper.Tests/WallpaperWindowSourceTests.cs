@@ -14,6 +14,16 @@ public sealed class WallpaperWindowSourceTests
         Assert.DoesNotContain("Stretch = Stretch.None", source);
     }
 
+    [Fact]
+    public void WallpaperWindow_AnchorsWallpaperElementsAtTopLeftForCalculatedOffsets()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml"));
+
+        Assert.Equal(3, CountOccurrences(source, "HorizontalAlignment=\"Left\""));
+        Assert.Equal(3, CountOccurrences(source, "VerticalAlignment=\"Top\""));
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -23,5 +33,18 @@ public sealed class WallpaperWindowSourceTests
         }
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Project root not found.");
+    }
+
+    private static int CountOccurrences(string source, string value)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 }

@@ -28,16 +28,17 @@ public static class WallpaperLayoutCalculator
 
         double width = scaleMode == WallpaperScaleMode.Stretch ? viewportWidth : sourceWidth * scale;
         double height = scaleMode == WallpaperScaleMode.Stretch ? viewportHeight : sourceHeight * scale;
-        double clampedOffsetX = ClampOffset(offsetX, width, viewportWidth);
-        double clampedOffsetY = ClampOffset(offsetY, height, viewportHeight);
+        double clampedOffsetX = CalculatePosition(offsetX, width, viewportWidth);
+        double clampedOffsetY = CalculatePosition(offsetY, height, viewportHeight);
         return new WallpaperElementLayout(width, height, clampedOffsetX, clampedOffsetY);
     }
 
-    private static double ClampOffset(double offset, double contentSize, double viewportSize)
+    private static double CalculatePosition(double offset, double contentSize, double viewportSize)
     {
         double overflow = Math.Max(0, contentSize - viewportSize);
-        double limit = overflow / 2;
-        return Math.Clamp(offset, -limit, limit);
+        double centeredPosition = (viewportSize - contentSize) / 2;
+        double requestedPosition = centeredPosition + offset;
+        return Math.Clamp(requestedPosition, -overflow, 0);
     }
 }
 
