@@ -297,11 +297,24 @@ public sealed partial class MainWindow : Window
             ColumnSpacing = 16,
             RowSpacing = 8,
         };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        FrameworkElement previewPane = BuildPreviewPane(profile);
+        TextBlock metadata = CreatePreviewMetadataText(profile);
+        Grid.SetRow(metadata, 0);
+        Grid.SetColumn(metadata, 0);
+        root.Children.Add(metadata);
+
+        FrameworkElement commandBar = BuildMonitorCommandBar(profile);
+        commandBar.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetRow(commandBar, 0);
+        Grid.SetColumn(commandBar, 1);
+        root.Children.Add(commandBar);
+
+        FrameworkElement previewPane = BuildPreviewPane(profile, metadata);
+        Grid.SetRow(previewPane, 1);
         Grid.SetColumn(previewPane, 0);
         root.Children.Add(previewPane);
 
@@ -310,32 +323,30 @@ public sealed partial class MainWindow : Window
             Content = BuildMonitorSettings(profile),
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
+        Grid.SetRow(scrollViewer, 1);
         Grid.SetColumn(scrollViewer, 1);
         root.Children.Add(scrollViewer);
 
         return root;
     }
 
-    private FrameworkElement BuildPreviewPane(MonitorProfile profile)
+    private TextBlock CreatePreviewMetadataText(MonitorProfile profile)
     {
-        ObservableCollection<ImagePreviewItem> items = GetPreviewItems(profile);
-        var root = new Grid
-        {
-            RowSpacing = 8,
-        };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
         var metadata = new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("ImageCountZero") : FormatPreviewStatusText(profile),
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextWrapping = TextWrapping.WrapWholeWords,
+            VerticalAlignment = VerticalAlignment.Center,
         };
         _previewMetadataTexts[profile.Id] = metadata;
         AutomationProperties.SetName(metadata, LocalizedStrings.Format("MonitorImageCountAutomationFormat", profile.DisplayName));
-        root.Children.Add(metadata);
+        return metadata;
+    }
 
+    private FrameworkElement BuildPreviewPane(MonitorProfile profile, TextBlock metadata)
+    {
+        ObservableCollection<ImagePreviewItem> items = GetPreviewItems(profile);
         var previewHost = new Grid();
         var previewList = new ListView
         {
@@ -372,11 +383,9 @@ public sealed partial class MainWindow : Window
         });
         previewHost.Children.Add(loadingPanel);
 
-        Grid.SetRow(previewHost, 1);
-        root.Children.Add(previewHost);
         StartPreviewLoad(profile, items, metadata, loadingPanel, progressRing);
 
-        return root;
+        return previewHost;
     }
 
     private static DataTemplate CreatePreviewTemplate()
@@ -464,11 +473,6 @@ public sealed partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        FrameworkElement commandBar = BuildMonitorCommandBar(profile);
-        Grid.SetRow(commandBar, 0);
-        root.Children.Add(commandBar);
 
         var form = new StackPanel
         {
@@ -521,7 +525,7 @@ public sealed partial class MainWindow : Window
                 },
                 LocalizedStrings.Get("TransitionDurationAutomation")))));
 
-        Grid.SetRow(form, 1);
+        Grid.SetRow(form, 0);
         root.Children.Add(form);
         return root;
     }
