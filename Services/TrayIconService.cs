@@ -127,7 +127,7 @@ public sealed class TrayIconService : IDisposable
             {
                 TrayMenuItemKind.Header => NativeMethods.MF_STRING | NativeMethods.MF_GRAYED,
                 TrayMenuItemKind.Separator => NativeMethods.MF_SEPARATOR,
-                _ => NativeMethods.MF_STRING,
+                _ => item.IsEnabled ? NativeMethods.MF_STRING : (uint)(NativeMethods.MF_STRING | NativeMethods.MF_GRAYED),
             };
             NativeMethods.AppendMenu(menu, flags, (nuint)item.CommandId, item.Text);
         }
@@ -185,9 +185,17 @@ public sealed class TrayIconService : IDisposable
         {
             MonitorProfile profile = profiles[i];
             items.Add(TrayMenuItem.Header(profile.DisplayName));
-            items.Add(TrayMenuItem.CreateCommand(2000 + i, profile.IsStopped ? "Start" : "Stop", profile.Id));
-            items.Add(TrayMenuItem.CreateCommand(3000 + i, profile.IsPaused ? "Resume" : "Pause", profile.Id));
-            items.Add(TrayMenuItem.CreateCommand(4000 + i, "Next", profile.Id));
+            if (string.IsNullOrWhiteSpace(profile.FolderPath))
+            {
+                items.Add(TrayMenuItem.DisabledCommand("Not Loaded", profile.Id));
+            }
+            else
+            {
+                items.Add(TrayMenuItem.CreateCommand(2000 + i, profile.IsStopped ? "Start" : "Stop", profile.Id));
+                items.Add(TrayMenuItem.CreateCommand(3000 + i, profile.IsPaused ? "Resume" : "Pause", profile.Id));
+                items.Add(TrayMenuItem.CreateCommand(4000 + i, "Next", profile.Id));
+            }
+
             items.Add(TrayMenuItem.Separator());
         }
 
@@ -212,6 +220,11 @@ public sealed record TrayMenuItem(TrayMenuItemKind Kind, int CommandId, string T
     public static TrayMenuItem CreateCommand(int command, string text, string monitorId)
     {
         return new TrayMenuItem(TrayMenuItemKind.Command, command, text, monitorId, true);
+    }
+
+    public static TrayMenuItem DisabledCommand(string text, string monitorId)
+    {
+        return new TrayMenuItem(TrayMenuItemKind.Command, 0, text, monitorId, false);
     }
 
     public static TrayMenuItem Separator()

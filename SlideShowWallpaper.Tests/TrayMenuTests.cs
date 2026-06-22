@@ -10,7 +10,7 @@ public sealed class TrayMenuTests
     {
         MonitorProfile[] profiles =
         [
-            new() { Id = "display1", DisplayName = "Dell U2723QE" },
+            new() { Id = "display1", DisplayName = "Dell U2723QE", FolderPath = @"C:\Wallpapers" },
         ];
 
         IReadOnlyList<TrayMenuItem> items = TrayIconService.BuildMenuItems(profiles);
@@ -30,8 +30,8 @@ public sealed class TrayMenuTests
     {
         MonitorProfile[] profiles =
         [
-            new() { Id = "display1", DisplayName = "Dell U2723QE" },
-            new() { Id = "display2", DisplayName = "LG UltraFine" },
+            new() { Id = "display1", DisplayName = "Dell U2723QE", FolderPath = @"C:\Wallpapers" },
+            new() { Id = "display2", DisplayName = "LG UltraFine", FolderPath = @"D:\Pictures" },
         ];
 
         IReadOnlyList<TrayMenuItem> items = TrayIconService.BuildMenuItems(profiles);
@@ -39,6 +39,23 @@ public sealed class TrayMenuTests
         Assert.Equal(TrayMenuItemKind.Separator, items[4].Kind);
         Assert.Equal(TrayMenuItemKind.Header, items[5].Kind);
         Assert.Equal("LG UltraFine", items[5].Text);
+        Assert.Equal(TrayMenuItemKind.Separator, items[^1].Kind);
+    }
+
+    [Fact]
+    public void BuildMenuItems_WithMissingFolder_ShowsDisabledNotLoadedOnly()
+    {
+        MonitorProfile[] profiles =
+        [
+            new() { Id = "display1", DisplayName = "Dell U2723QE", FolderPath = "" },
+        ];
+
+        IReadOnlyList<TrayMenuItem> items = TrayIconService.BuildMenuItems(profiles);
+
+        TrayMenuItem notLoaded = Assert.Single(items, item => item.Text == "Not Loaded");
+        Assert.Equal(TrayMenuItemKind.Command, notLoaded.Kind);
+        Assert.False(notLoaded.IsEnabled);
+        Assert.DoesNotContain(items, item => item.Text is "Start" or "Stop" or "Pause" or "Resume" or "Next");
         Assert.Equal(TrayMenuItemKind.Separator, items[^1].Kind);
     }
 }
