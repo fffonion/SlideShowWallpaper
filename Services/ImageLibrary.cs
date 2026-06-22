@@ -74,6 +74,16 @@ public static class ImageLibrary
         return SortImages(images, order, Random.Shared);
     }
 
+    public static IReadOnlyList<ImageMetadata> FilterByMediaFilter(IEnumerable<ImageMetadata> media, PlaybackMediaFilter filter)
+    {
+        return filter switch
+        {
+            PlaybackMediaFilter.ImagesOnly => media.Where(item => item.Kind == MediaKind.Image).ToArray(),
+            PlaybackMediaFilter.VideosOnly => media.Where(item => item.Kind == MediaKind.Video).ToArray(),
+            _ => media.ToArray(),
+        };
+    }
+
     public static IReadOnlyList<ImageMetadata> SortImages(IEnumerable<ImageMetadata> images, PlaybackOrder order, Random random)
     {
         return order switch

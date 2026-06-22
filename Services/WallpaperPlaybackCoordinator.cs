@@ -165,7 +165,7 @@ public sealed class WallpaperPlaybackCoordinator
         _monitorRects = _monitorService.GetMonitorRects();
         IReadOnlyList<string> paths = orderedPaths is { Count: > 0 }
             ? orderedPaths
-            : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None))
+            : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None))
                 .Select(image => image.Path)
                 .ToArray();
         ReplaceQueue(profile, paths, preserveInitialOrder: true);
@@ -257,7 +257,7 @@ public sealed class WallpaperPlaybackCoordinator
         bool selectedImageShown = TryShowSelectedImage(profile);
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None);
             if (!_playbackEnabled
                 || profile.IsStopped
                 || !_queueVersions.TryGetValue(profile.Id, out int latestVersion)
@@ -308,7 +308,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None);
             OrderedImagesChanged?.Invoke(this, new OrderedImagesChangedEventArgs(profile.Id, images));
             if (!_playbackEnabled || profile.IsStopped)
             {
@@ -348,7 +348,8 @@ public sealed class WallpaperPlaybackCoordinator
         if (_windows.ContainsKey(profile.Id)
             || string.IsNullOrWhiteSpace(profile.FolderPath)
             || string.IsNullOrWhiteSpace(profile.SelectedImagePath)
-            || !File.Exists(profile.SelectedImagePath))
+            || !File.Exists(profile.SelectedImagePath)
+            || !IsAllowedByMediaFilter(profile.SelectedImagePath, profile.MediaFilter))
         {
             return false;
         }
@@ -403,6 +404,16 @@ public sealed class WallpaperPlaybackCoordinator
     private static ImagePlaybackItem CreatePlaybackItem(string path)
     {
         return new ImagePlaybackItem(path, ImageLibrary.IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image);
+    }
+
+    private static bool IsAllowedByMediaFilter(string path, PlaybackMediaFilter mediaFilter)
+    {
+        return mediaFilter switch
+        {
+            PlaybackMediaFilter.ImagesOnly => ImageLibrary.IsSupportedImagePath(path),
+            PlaybackMediaFilter.VideosOnly => ImageLibrary.IsSupportedVideoPath(path),
+            _ => ImageLibrary.IsSupportedMediaPath(path),
+        };
     }
 
     private void PublishCurrentWallpaperChanged(string monitorId, string path)

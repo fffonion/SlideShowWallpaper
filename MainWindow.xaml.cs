@@ -30,6 +30,13 @@ public sealed partial class MainWindow : Window
         new(PlaybackOrder.ModifiedDateDesc, LocalizedStrings.Get("PlaybackModifiedDateDesc")),
     ];
 
+    private static IReadOnlyList<Choice<PlaybackMediaFilter>> MediaFilterChoices =>
+    [
+        new(PlaybackMediaFilter.ImagesOnly, LocalizedStrings.Get("MediaFilterImages")),
+        new(PlaybackMediaFilter.VideosOnly, LocalizedStrings.Get("MediaFilterVideos")),
+        new(PlaybackMediaFilter.ImagesAndVideos, LocalizedStrings.Get("MediaFilterImagesAndVideos")),
+    ];
+
     private static IReadOnlyList<Choice<TimeUnit>> TimeUnitChoices =>
     [
         new(TimeUnit.Seconds, LocalizedStrings.Get("TimeSeconds")),
@@ -362,7 +369,7 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, cancellation.Token);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, cancellation.Token);
             if (cancellation.IsCancellationRequested)
             {
                 return;
@@ -427,6 +434,11 @@ public sealed partial class MainWindow : Window
             profile.PlaybackOrder = value;
             RenderTabs(profile.Id);
         }, LocalizedStrings.Get("PlaybackOrderAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("MediaFilter"), CreateChoiceCombo(MediaFilterChoices, profile.MediaFilter, value =>
+        {
+            profile.MediaFilter = value;
+            RenderTabs(profile.Id);
+        }, LocalizedStrings.Get("MediaFilterAutomation")));
         AddRow(form, row++, LocalizedStrings.Get("Offset"), CreateOffsetControls(profile));
         AddRow(form, row++, LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
             ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),

@@ -46,6 +46,7 @@ public sealed class SettingsStoreTests
                     TransitionDurationMs = 2400,
                     TransitionDurationUnit = TimeUnit.Seconds,
                     VideoLoop = true,
+                    MediaFilter = PlaybackMediaFilter.ImagesOnly,
                     IsPaused = true,
                     IsStopped = true,
                     SelectedImagePath = @"C:\Wallpapers\a.png",
@@ -67,6 +68,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);
         Assert.Equal(TimeUnit.Minutes, monitor.IntervalUnit);
         Assert.True(monitor.VideoLoop);
+        Assert.Equal(PlaybackMediaFilter.ImagesOnly, monitor.MediaFilter);
         Assert.True(monitor.IsStopped);
     }
 

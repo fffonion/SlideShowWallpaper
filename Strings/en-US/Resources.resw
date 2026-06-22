@@ -29,6 +29,7 @@
   <data name="Folder" xml:space="preserve"><value>Folder</value></data>
   <data name="Scale" xml:space="preserve"><value>Scale</value></data>
   <data name="Order" xml:space="preserve"><value>Order</value></data>
+  <data name="MediaFilter" xml:space="preserve"><value>Media</value></data>
   <data name="Offset" xml:space="preserve"><value>Offset</value></data>
   <data name="Interval" xml:space="preserve"><value>Interval</value></data>
   <data name="Transition" xml:space="preserve"><value>Transition</value></data>
@@ -36,8 +37,12 @@
   <data name="FolderNone" xml:space="preserve"><value>(none)</value></data>
   <data name="ScaleModeAutomation" xml:space="preserve"><value>Scale mode</value></data>
   <data name="PlaybackOrderAutomation" xml:space="preserve"><value>Playback order</value></data>
+  <data name="MediaFilterAutomation" xml:space="preserve"><value>Media filter</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>Transition duration</value></data>
   <data name="VideoLoop" xml:space="preserve"><value>Loop video</value></data>
+  <data name="MediaFilterImages" xml:space="preserve"><value>Images</value></data>
+  <data name="MediaFilterVideos" xml:space="preserve"><value>Videos</value></data>
+  <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>Images and videos</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 images</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} images</value></data>
   <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>

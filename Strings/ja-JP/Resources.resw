@@ -29,6 +29,7 @@
   <data name="Folder" xml:space="preserve"><value>フォルダー</value></data>
   <data name="Scale" xml:space="preserve"><value>拡大縮小</value></data>
   <data name="Order" xml:space="preserve"><value>順序</value></data>
+  <data name="MediaFilter" xml:space="preserve"><value>メディア</value></data>
   <data name="Offset" xml:space="preserve"><value>オフセット</value></data>
   <data name="Interval" xml:space="preserve"><value>間隔</value></data>
   <data name="Transition" xml:space="preserve"><value>トランジション</value></data>
@@ -36,8 +37,12 @@
   <data name="FolderNone" xml:space="preserve"><value>(なし)</value></data>
   <data name="ScaleModeAutomation" xml:space="preserve"><value>拡大縮小モード</value></data>
   <data name="PlaybackOrderAutomation" xml:space="preserve"><value>再生順序</value></data>
+  <data name="MediaFilterAutomation" xml:space="preserve"><value>メディアフィルター</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>トランジション時間</value></data>
   <data name="VideoLoop" xml:space="preserve"><value>動画をループ再生</value></data>
+  <data name="MediaFilterImages" xml:space="preserve"><value>画像</value></data>
+  <data name="MediaFilterVideos" xml:space="preserve"><value>動画</value></data>
+  <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>画像と動画</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 枚の画像</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 枚の画像</value></data>
   <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>

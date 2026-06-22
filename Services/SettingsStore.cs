@@ -64,6 +64,7 @@ public sealed class SettingsStore
                     TransitionDurationMs = GetInt(sections, section, nameof(MonitorProfile.TransitionDurationMs), 800),
                     TransitionDurationUnit = GetEnum(sections, section, nameof(MonitorProfile.TransitionDurationUnit), TimeUnit.Seconds),
                     VideoLoop = GetBool(sections, section, nameof(MonitorProfile.VideoLoop), false),
+                    MediaFilter = GetEnum(sections, section, nameof(MonitorProfile.MediaFilter), PlaybackMediaFilter.ImagesAndVideos),
                     IsPaused = GetBool(sections, section, nameof(MonitorProfile.IsPaused), false),
                     IsStopped = GetBool(sections, section, nameof(MonitorProfile.IsStopped), false),
                     SelectedImagePath = GetString(sections, section, nameof(MonitorProfile.SelectedImagePath)),
@@ -113,6 +114,7 @@ public sealed class SettingsStore
             AppendValue(builder, nameof(MonitorProfile.TransitionDurationMs), monitor.TransitionDurationMs);
             AppendValue(builder, nameof(MonitorProfile.TransitionDurationUnit), monitor.TransitionDurationUnit);
             AppendValue(builder, nameof(MonitorProfile.VideoLoop), monitor.VideoLoop);
+            AppendValue(builder, nameof(MonitorProfile.MediaFilter), monitor.MediaFilter);
             AppendValue(builder, nameof(MonitorProfile.IsPaused), monitor.IsPaused);
             AppendValue(builder, nameof(MonitorProfile.IsStopped), monitor.IsStopped);
             AppendValue(builder, nameof(MonitorProfile.SelectedImagePath), monitor.SelectedImagePath);

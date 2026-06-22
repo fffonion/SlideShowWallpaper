@@ -154,4 +154,25 @@ public sealed class MonitorProfileChangeTrackerTests
         Assert.True(change.PlaybackSettingsChanged);
         Assert.True(change.HasChanges);
     }
+
+    [Fact]
+    public void Update_WithMediaFilterChange_RequiresQueueRefresh()
+    {
+        var tracker = new MonitorProfileChangeTracker();
+        var profile = new MonitorProfile
+        {
+            Id = "display1",
+            FolderPath = @"C:\Wallpapers",
+            PlaybackOrder = PlaybackOrder.NameAsc,
+            MediaFilter = PlaybackMediaFilter.ImagesAndVideos,
+        };
+        _ = tracker.Update(profile);
+
+        profile.MediaFilter = PlaybackMediaFilter.ImagesOnly;
+        MonitorProfileChange change = tracker.Update(profile);
+
+        Assert.True(change.QueueChanged);
+        Assert.False(change.VisualChanged);
+        Assert.True(change.HasChanges);
+    }
 }

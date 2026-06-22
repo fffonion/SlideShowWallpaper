@@ -40,6 +40,52 @@ public sealed class ImageOrderServiceTests
         Assert.Empty(second);
     }
 
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_WithImagesOnlyFilter_ReturnsImagesOnly()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.png"), string.Empty);
+        await File.WriteAllTextAsync(Path.Combine(folder, "b.mp4"), string.Empty);
+        var service = new ImageOrderService(new ZeroRandom());
+
+        IReadOnlyList<ImageMetadata> media = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.ImagesOnly, CancellationToken.None);
+
+        ImageMetadata item = Assert.Single(media);
+        Assert.Equal("a.png", item.FileName);
+    }
+
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_WithVideosOnlyFilter_ReturnsVideosOnly()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.png"), string.Empty);
+        await File.WriteAllTextAsync(Path.Combine(folder, "b.mp4"), string.Empty);
+        var service = new ImageOrderService(new ZeroRandom());
+
+        IReadOnlyList<ImageMetadata> media = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.VideosOnly, CancellationToken.None);
+
+        ImageMetadata item = Assert.Single(media);
+        Assert.Equal("b.mp4", item.FileName);
+    }
+
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_MediaFilterUsesSeparateCacheEntry()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.png"), string.Empty);
+        await File.WriteAllTextAsync(Path.Combine(folder, "b.mp4"), string.Empty);
+        var service = new ImageOrderService(new ZeroRandom());
+
+        IReadOnlyList<ImageMetadata> all = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.ImagesAndVideos, CancellationToken.None);
+        IReadOnlyList<ImageMetadata> imagesOnly = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.ImagesOnly, CancellationToken.None);
+
+        Assert.Equal(2, all.Count);
+        Assert.Single(imagesOnly);
+    }
+
     private sealed class ZeroRandom : Random
     {
         public override int Next(int maxValue)

@@ -22,7 +22,8 @@ public sealed class MonitorProfileChangeTracker
 
         _snapshots[profile.Id] = next;
         bool queueChanged = !string.Equals(previous.FolderPath, next.FolderPath, StringComparison.OrdinalIgnoreCase)
-            || previous.PlaybackOrder != next.PlaybackOrder;
+            || previous.PlaybackOrder != next.PlaybackOrder
+            || previous.MediaFilter != next.MediaFilter;
         bool visualChanged = !queueChanged
             && (previous.ScaleMode != next.ScaleMode
                 || !previous.OffsetX.Equals(next.OffsetX)
@@ -56,7 +57,8 @@ public sealed class MonitorProfileChangeTracker
         int IntervalSeconds,
         WallpaperTransition Transition,
         int TransitionDurationMs,
-        bool VideoLoop)
+        bool VideoLoop,
+        PlaybackMediaFilter MediaFilter)
     {
         public static Snapshot From(MonitorProfile profile)
         {
@@ -69,7 +71,8 @@ public sealed class MonitorProfileChangeTracker
                 profile.IntervalSeconds,
                 profile.Transition,
                 profile.TransitionDurationMs,
-                profile.VideoLoop);
+                profile.VideoLoop,
+                profile.MediaFilter);
         }
     }
 }

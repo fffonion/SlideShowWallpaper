@@ -20,13 +20,23 @@ public sealed class ImageOrderService
 
     public async Task<IReadOnlyList<ImageMetadata>> GetOrLoadOrderedImagesAsync(string folderPath, PlaybackOrder order, CancellationToken cancellationToken)
     {
-        Task<IReadOnlyList<ImageMetadata>> task = GetOrCreateTask(folderPath, order, reload: false);
+        return await GetOrLoadOrderedImagesAsync(folderPath, order, PlaybackMediaFilter.ImagesAndVideos, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ImageMetadata>> GetOrLoadOrderedImagesAsync(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, CancellationToken cancellationToken)
+    {
+        Task<IReadOnlyList<ImageMetadata>> task = GetOrCreateTask(folderPath, order, mediaFilter, reload: false);
         return await task.WaitAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<ImageMetadata>> ReloadOrderedImagesAsync(string folderPath, PlaybackOrder order, CancellationToken cancellationToken)
     {
-        Task<IReadOnlyList<ImageMetadata>> task = GetOrCreateTask(folderPath, order, reload: true);
+        return await ReloadOrderedImagesAsync(folderPath, order, PlaybackMediaFilter.ImagesAndVideos, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ImageMetadata>> ReloadOrderedImagesAsync(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, CancellationToken cancellationToken)
+    {
+        Task<IReadOnlyList<ImageMetadata>> task = GetOrCreateTask(folderPath, order, mediaFilter, reload: true);
         return await task.WaitAsync(cancellationToken);
     }
 
@@ -38,9 +48,9 @@ public sealed class ImageOrderService
         }
     }
 
-    private Task<IReadOnlyList<ImageMetadata>> GetOrCreateTask(string folderPath, PlaybackOrder order, bool reload)
+    private Task<IReadOnlyList<ImageMetadata>> GetOrCreateTask(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, bool reload)
     {
-        string key = CreateKey(folderPath, order);
+        string key = CreateKey(folderPath, order, mediaFilter);
         lock (_sync)
         {
             if (!reload
@@ -51,20 +61,20 @@ public sealed class ImageOrderService
                 return existing;
             }
 
-            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(() => Scan(folderPath, order));
+            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(() => Scan(folderPath, order, mediaFilter));
             _tasks[key] = task;
             return task;
         }
     }
 
-    private IReadOnlyList<ImageMetadata> Scan(string folderPath, PlaybackOrder order)
+    private IReadOnlyList<ImageMetadata> Scan(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
         {
             return [];
         }
 
-        IReadOnlyList<ImageMetadata> images = ImageLibrary.ScanFolderMetadata(folderPath, PlaybackOrder.NameAsc);
+        IReadOnlyList<ImageMetadata> images = ImageLibrary.FilterByMediaFilter(ImageLibrary.ScanFolderMetadata(folderPath, PlaybackOrder.NameAsc), mediaFilter);
         if (order != PlaybackOrder.Random)
         {
             return ImageLibrary.SortImages(images, order);
@@ -76,11 +86,11 @@ public sealed class ImageOrderService
         }
     }
 
-    private static string CreateKey(string folderPath, PlaybackOrder order)
+    private static string CreateKey(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter)
     {
         string normalizedFolder = string.IsNullOrWhiteSpace(folderPath)
             ? string.Empty
             : Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return $"{order}|{normalizedFolder}";
+        return $"{mediaFilter}|{order}|{normalizedFolder}";
     }
 }
