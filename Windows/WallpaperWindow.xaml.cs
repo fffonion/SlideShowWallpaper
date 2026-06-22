@@ -57,9 +57,9 @@ public sealed partial class WallpaperWindow : Window
     public void ApplyProfile(MonitorProfile profile)
     {
         _profile = profile;
-        CurrentImage.Stretch = Stretch.None;
-        NextImage.Stretch = Stretch.None;
-        VideoPlayer.Stretch = Stretch.None;
+        CurrentImage.Stretch = Stretch.Fill;
+        NextImage.Stretch = Stretch.Fill;
+        VideoPlayer.Stretch = Stretch.Fill;
         _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
         _mediaPlayer.IsMuted = !profile.VideoSoundEnabled;
         ApplyImageLayout(CurrentImage, _currentTransform, profile);
@@ -308,7 +308,7 @@ public sealed partial class WallpaperWindow : Window
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)
     {
-        image.Stretch = Stretch.None;
+        image.Stretch = Stretch.Fill;
         ApplyImageLayout(image, transform, profile);
     }
 
