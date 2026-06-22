@@ -1,0 +1,95 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>SlideShowWallpaper</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\AppIcon.ico" />
+    <Content Include="Assets\AppIcon.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!--
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260224000" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="SlideShowWallpaper.Tests\**\*.cs" />
+    <Content Remove=".github\**\*" />
+    <Content Remove="artifacts\**\*" />
+    <Content Remove="docs\**\*" />
+    <Content Remove="SlideShowWallpaper.Tests\**\*" />
+    <None Remove=".github\**\*" />
+    <None Remove="artifacts\**\*" />
+    <None Remove="docs\**\*" />
+    <None Remove="SlideShowWallpaper.Tests\**\*" />
+    <Page Remove="SlideShowWallpaper.Tests\**\*" />
+    <PRIResource Remove="SlideShowWallpaper.Tests\**\*" />
+  </ItemGroup>
+
+  <!--
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <!-- Publish Properties -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <SingleFileRuntimeIdentifier Condition="'$(SingleFileRuntimeIdentifier)' == ''">win-x64</SingleFileRuntimeIdentifier>
+    <SingleFilePublishDir Condition="'$(SingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)\</SingleFilePublishDir>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <Target Name="BuildSingleFile">
+    <RemoveDir Directories="$(SingleFilePublishDir)" />
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="Publish"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=$(SingleFileRuntimeIdentifier);PublishDir=$(SingleFilePublishDir);EnableMsixTooling=true;SelfContained=true;WindowsAppSDKSelfContained=true;WindowsAppSdkUndockedRegFreeWinRTInitialize=true;PublishSingleFile=true;EnableCompressionInSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;IncludeAllContentForSelfExtract=true;PublishTrimmed=false;SuppressTrimAnalysisWarnings=true;DebugSymbols=false;DebugType=None" />
+    <Message Importance="High" Text="Single-file executable published to $(SingleFilePublishDir)" />
+  </Target>
+</Project>

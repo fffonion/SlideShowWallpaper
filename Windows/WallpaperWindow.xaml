@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="SlideShowWallpaper.Windows.WallpaperWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="SlideShow Wallpaper Player">
+    <Grid x:Name="Root" Background="Black">
+        <Image
+            x:Name="CurrentImage"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Opacity="1" />
+        <Image
+            x:Name="NextImage"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Opacity="0" />
+    </Grid>
+</Window>

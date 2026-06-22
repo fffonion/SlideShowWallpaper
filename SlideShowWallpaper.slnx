@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SlideShowWallpaper.csproj" />
+  <Project Path="SlideShowWallpaper.Tests/SlideShowWallpaper.Tests.csproj" />
+</Solution>

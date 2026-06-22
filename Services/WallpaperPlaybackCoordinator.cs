@@ -1,0 +1,268 @@
+using Microsoft.UI.Dispatching;
+using SlideShowWallpaper.Models;
+using SlideShowWallpaper.Windows;
+
+namespace SlideShowWallpaper.Services;
+
+public sealed class WallpaperPlaybackCoordinator
+{
+    private readonly MonitorService _monitorService;
+    private readonly DesktopHostService _desktopHostService;
+    private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _queueVersions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly MonitorProfileChangeTracker _profileChanges = new();
+    private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
+    private bool _playbackEnabled = true;
+
+    public WallpaperPlaybackCoordinator(MonitorService monitorService, DesktopHostService desktopHostService)
+    {
+        _monitorService = monitorService;
+        _desktopHostService = desktopHostService;
+    }
+
+    public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
+
+    public bool PlaybackEnabled => _playbackEnabled;
+
+    public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled)
+    {
+        _playbackEnabled = playbackEnabled;
+        if (!_playbackEnabled)
+        {
+            StopPlayback();
+            return;
+        }
+
+        _monitorRects = _monitorService.GetMonitorRects();
+        foreach (MonitorProfile profile in profiles)
+        {
+            if (profile.IsStopped)
+            {
+                CloseWindow(profile.Id);
+                continue;
+            }
+
+            MonitorProfileChange change = _profileChanges.Update(profile);
+            if (!change.HasChanges
+                && _queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue)
+                && existingQueue.Count > 0
+                && _windows.ContainsKey(profile.Id))
+            {
+                continue;
+            }
+
+            if (change.QueueChanged)
+            {
+                StartRebuildQueue(profile);
+                continue;
+            }
+
+            if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
+            {
+                CloseWindow(profile.Id);
+                continue;
+            }
+
+            if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            {
+                EnsureWindow(profile);
+            }
+            else
+            {
+                _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
+                if (change.VisualChanged)
+                {
+                    _ = window.UpdateProfileWithTransitionAsync(profile);
+                }
+                else
+                {
+                    window.ApplyProfile(profile);
+                }
+            }
+
+            ConfigureTimer(profile);
+        }
+    }
+
+    public void PauseOrResume(string monitorId, bool isPaused)
+    {
+        if (_timers.TryGetValue(monitorId, out DispatcherQueueTimer? timer))
+        {
+            if (isPaused)
+            {
+                timer.Stop();
+            }
+            else
+            {
+                timer.Start();
+            }
+        }
+    }
+
+    public Task ShowNextAsync(string monitorId)
+    {
+        if (!_playbackEnabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!_queues.TryGetValue(monitorId, out PlaybackQueue? queue) || !_windows.TryGetValue(monitorId, out WallpaperWindow? window))
+        {
+            return Task.CompletedTask;
+        }
+
+        ImagePlaybackItem? item = queue.Next();
+        return item is null ? Task.CompletedTask : window.ShowImageAsync(item.Path);
+    }
+
+    public void Shuffle(string monitorId)
+    {
+        if (_queues.TryGetValue(monitorId, out PlaybackQueue? queue))
+        {
+            queue.Shuffle();
+        }
+    }
+
+    public async Task ShowImageAsync(MonitorProfile profile, string path)
+    {
+        if (!_playbackEnabled || profile.IsStopped || string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return;
+        }
+
+        _monitorRects = _monitorService.GetMonitorRects();
+        IReadOnlyList<ImageMetadata> images = await ImageLibrary.ScanFolderMetadataAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+        ReplaceQueue(profile, images.Select(image => image.Path));
+        EnsureWindow(profile);
+        ConfigureTimer(profile);
+        if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
+        {
+            queue.StartAfter(path);
+        }
+
+        if (_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+        {
+            await window.ShowImageAsync(path);
+        }
+    }
+
+    public void Shutdown()
+    {
+        StopPlayback();
+    }
+
+    public void StopPlayback()
+    {
+        foreach (DispatcherQueueTimer timer in _timers.Values)
+        {
+            timer.Stop();
+        }
+
+        foreach (WallpaperWindow window in _windows.Values)
+        {
+            window.Close();
+        }
+
+        _windows.Clear();
+        _timers.Clear();
+        _queues.Clear();
+        _queueVersions.Clear();
+        _profileChanges.Clear();
+    }
+
+    private void CloseWindow(string monitorId)
+    {
+        if (_timers.Remove(monitorId, out DispatcherQueueTimer? timer))
+        {
+            timer.Stop();
+        }
+
+        if (_windows.Remove(monitorId, out WallpaperWindow? window))
+        {
+            window.Close();
+        }
+
+        _queueVersions.Remove(monitorId);
+        _profileChanges.Forget(monitorId);
+    }
+
+    private void EnsureWindow(MonitorProfile profile)
+    {
+        if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+        {
+            window = new WallpaperWindow(profile);
+            _windows[profile.Id] = window;
+            window.Activate();
+        }
+
+        window.ApplyProfile(profile);
+        _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
+    }
+
+    private async void StartRebuildQueue(MonitorProfile profile)
+    {
+        int version = _queueVersions.TryGetValue(profile.Id, out int currentVersion) ? currentVersion + 1 : 1;
+        _queueVersions[profile.Id] = version;
+        try
+        {
+            IReadOnlyList<ImageMetadata> images = await ImageLibrary.ScanFolderMetadataAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+            if (!_playbackEnabled
+                || profile.IsStopped
+                || !_queueVersions.TryGetValue(profile.Id, out int latestVersion)
+                || latestVersion != version)
+            {
+                return;
+            }
+
+            ReplaceQueue(profile, images.Select(image => image.Path));
+            if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
+            {
+                CloseWindow(profile.Id);
+                return;
+            }
+
+            EnsureWindow(profile);
+            ConfigureTimer(profile);
+            await ShowNextAsync(profile.Id);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths)
+    {
+        var items = paths.Select(path => new ImagePlaybackItem(path));
+        if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
+        {
+            _queues[profile.Id] = new PlaybackQueue(items, profile.PlaybackOrder);
+        }
+        else
+        {
+            queue.ReplaceItems(items);
+        }
+    }
+
+    private void ConfigureTimer(MonitorProfile profile)
+    {
+        if (!_timers.TryGetValue(profile.Id, out DispatcherQueueTimer? timer))
+        {
+            timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+            timer.Tick += async (_, _) => await ShowNextAsync(profile.Id);
+            _timers[profile.Id] = timer;
+        }
+
+        timer.Stop();
+        timer.Interval = TimeSpan.FromSeconds(Math.Max(5, profile.IntervalSeconds));
+        if (!profile.IsPaused && !profile.IsStopped)
+        {
+            timer.Start();
+        }
+    }
+}

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="SlideShowWallpaper.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="SlideShow Wallpaper"
+    mc:Ignorable="d">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar x:Name="AppTitleBar" Title="SlideShow Wallpaper">
+            <TitleBar.IconSource>
+                <ImageIconSource>
+                    <ImageIconSource.ImageSource>
+                        <BitmapImage UriSource="ms-appx:///Assets/AppIcon.png" />
+                    </ImageIconSource.ImageSource>
+                </ImageIconSource>
+            </TitleBar.IconSource>
+        </TitleBar>
+
+        <Grid Grid.Row="1" Padding="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <CommandBar
+                    HorizontalAlignment="Left"
+                    DefaultLabelPosition="Right"
+                    IsDynamicOverflowEnabled="True">
+                    <AppBarButton Click="RefreshScreens_Click" Icon="Refresh" Label="Refresh" />
+                    <AppBarToggleButton x:Name="AutostartButton" Click="AutostartButton_Click" Icon="Play" Label="Autostart" />
+                    <AppBarToggleButton
+                        x:Name="CloseToTrayButton"
+                        AutomationProperties.AutomationId="CloseToTrayButton"
+                        AutomationProperties.Name="Close to tray"
+                        Click="CloseToTrayButton_Click"
+                        Label="Close to tray">
+                        <AppBarToggleButton.Icon>
+                            <FontIcon Glyph="&#xE77A;" />
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                </CommandBar>
+
+                <ComboBox
+                    x:Name="ThemeComboBox"
+                    Grid.Column="1"
+                    MinWidth="150"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="ThemeComboBox"
+                    AutomationProperties.Name="Theme"
+                    SelectionChanged="ThemeComboBox_SelectionChanged" />
+            </Grid>
+
+            <TabView
+                x:Name="MonitorTabs"
+                Grid.Row="1"
+                Margin="0,12,0,0"
+                IsAddTabButtonVisible="False"
+                SelectionChanged="MonitorTabs_SelectionChanged" />
+        </Grid>
+    </Grid>
+</Window>

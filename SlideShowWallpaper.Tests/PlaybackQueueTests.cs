@@ -1,0 +1,106 @@
+using SlideShowWallpaper.Models;
+using SlideShowWallpaper.Services;
+
+namespace SlideShowWallpaper.Tests;
+
+public sealed class PlaybackQueueTests
+{
+    [Fact]
+    public void Next_returns_items_in_order_and_loops()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+        ],
+        PlaybackOrder.SequentialLoop);
+
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+    }
+
+    [Fact]
+    public void Next_returns_null_for_empty_queue()
+    {
+        var queue = new PlaybackQueue([], PlaybackOrder.SequentialLoop);
+
+        Assert.Null(queue.Next());
+    }
+
+    [Fact]
+    public void ReplaceItems_resets_position_to_first_item()
+    {
+        var queue = new PlaybackQueue([new ImagePlaybackItem(@"C:\A\old.jpg")], PlaybackOrder.SequentialLoop);
+        _ = queue.Next();
+
+        queue.ReplaceItems([new ImagePlaybackItem(@"C:\A\new.jpg")]);
+
+        Assert.Equal(@"C:\A\new.jpg", queue.Next()?.Path);
+    }
+
+    [Fact]
+    public void ReplaceItems_WithSameNextItem_PreservesNextPosition()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+        ],
+        PlaybackOrder.SequentialLoop);
+        _ = queue.Next();
+        _ = queue.Next();
+
+        queue.ReplaceItems(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+        ]);
+
+        Assert.Equal(@"C:\A\c.jpg", queue.Next()?.Path);
+    }
+
+    [Fact]
+    public void Shuffle_WithRandomOrder_ReordersItems()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+            new ImagePlaybackItem(@"C:\A\d.jpg"),
+        ],
+        PlaybackOrder.Random,
+        new ZeroRandom());
+
+        queue.Shuffle();
+
+        Assert.Equal(@"C:\A\c.jpg", queue.Next()?.Path);
+    }
+
+    [Fact]
+    public void Constructor_WithRandomOrder_ShufflesBeforeFirstNext()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+            new ImagePlaybackItem(@"C:\A\d.jpg"),
+        ],
+        PlaybackOrder.Random,
+        new ZeroRandom());
+
+        Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
+    }
+
+    private sealed class ZeroRandom : Random
+    {
+        public override int Next(int maxValue)
+        {
+            return 0;
+        }
+    }
+}

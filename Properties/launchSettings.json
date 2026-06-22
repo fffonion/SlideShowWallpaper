@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SlideShowWallpaper (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SlideShowWallpaper (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
