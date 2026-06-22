@@ -34,6 +34,11 @@ public static class ImageLibrary
             return false;
         }
 
+        if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            return info.Kind == MediaKind.Image;
+        }
+
         return SupportedExtensions.Contains(Path.GetExtension(path));
     }
 
@@ -42,6 +47,11 @@ public static class ImageLibrary
         if (string.IsNullOrWhiteSpace(path))
         {
             return false;
+        }
+
+        if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            return info.Kind == MediaKind.Video;
         }
 
         return SupportedVideoExtensions.Contains(Path.GetExtension(path));
@@ -149,6 +159,11 @@ public static class ImageLibrary
 
     private static MediaKind GetMediaKind(string path)
     {
+        if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            return info.Kind;
+        }
+
         return IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image;
     }
 }

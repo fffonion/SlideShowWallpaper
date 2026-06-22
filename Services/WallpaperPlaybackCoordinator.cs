@@ -368,11 +368,13 @@ public sealed class WallpaperPlaybackCoordinator
         if (item.Kind == MediaKind.Video)
         {
             bool loop = _profiles.TryGetValue(monitorId, out MonitorProfile? profile) && profile.VideoLoop;
-            await window.ShowVideoAsync(item.Path, loop);
+            string playbackPath = await NdfMediaService.MaterializeForPlaybackAsync(item.Path, CancellationToken.None);
+            await window.ShowVideoAsync(playbackPath, loop);
         }
         else
         {
-            await window.ShowImageAsync(item.Path);
+            string playbackPath = await NdfMediaService.MaterializeForPlaybackAsync(item.Path, CancellationToken.None);
+            await window.ShowImageAsync(playbackPath);
         }
 
         PublishCurrentWallpaperChanged(monitorId, item.Path);

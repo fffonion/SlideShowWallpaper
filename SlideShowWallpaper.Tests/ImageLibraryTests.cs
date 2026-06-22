@@ -74,6 +74,20 @@ public sealed class ImageLibraryTests
     }
 
     [Fact]
+    public void ScanFolderMetadata_WithNdfMedia_ReturnsDetectedMediaKinds()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "image.ndf"), [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        File.WriteAllBytes(Path.Combine(folder, "video.ndf"), [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+
+        IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc);
+
+        Assert.Equal(["image.ndf", "video.ndf"], media.Select(item => item.FileName));
+        Assert.Equal([MediaKind.Image, MediaKind.Video], media.Select(item => item.Kind));
+    }
+
+    [Fact]
     public void FilterSupportedImages_orders_files_by_full_path()
     {
         string[] paths =

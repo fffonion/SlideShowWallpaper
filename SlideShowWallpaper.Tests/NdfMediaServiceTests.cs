@@ -1,0 +1,77 @@
+using SlideShowWallpaper.Models;
+using SlideShowWallpaper.Services;
+
+namespace SlideShowWallpaper.Tests;
+
+public sealed class NdfMediaServiceTests
+{
+    [Fact]
+    public void TryGetMediaInfo_WithNdfMp4_DetectsVideoAndOffset()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+
+        bool detected = NdfMediaService.TryGetMediaInfo(file.Path, out NdfMediaInfo info);
+
+        Assert.True(detected);
+        Assert.Equal(MediaKind.Video, info.Kind);
+        Assert.Equal(2, info.Offset);
+        Assert.Equal(".mp4", info.Extension);
+    }
+
+    [Fact]
+    public void TryGetMediaInfo_WithNdfPng_DetectsImageWithoutOffset()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        bool detected = NdfMediaService.TryGetMediaInfo(file.Path, out NdfMediaInfo info);
+
+        Assert.True(detected);
+        Assert.Equal(MediaKind.Image, info.Kind);
+        Assert.Equal(0, info.Offset);
+        Assert.Equal(".png", info.Extension);
+    }
+
+    [Fact]
+    public async Task MaterializeForPlaybackAsync_WithNdfMp4_StripsN0vaHeaderOnDemand()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+        string cacheRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+        string materialized = await NdfMediaService.MaterializeForPlaybackAsync(file.Path, cacheRoot, CancellationToken.None);
+
+        Assert.EndsWith(".mp4", materialized, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], await File.ReadAllBytesAsync(materialized));
+    }
+
+    [Fact]
+    public async Task MaterializeForPlaybackAsync_WithNormalMedia_ReturnsOriginalPath()
+    {
+        using TestFile file = TestFile.Create(".jpg", [0xFF, 0xD8, 0xFF]);
+
+        string materialized = await NdfMediaService.MaterializeForPlaybackAsync(file.Path, CancellationToken.None);
+
+        Assert.Equal(file.Path, materialized);
+    }
+
+    private sealed class TestFile : IDisposable
+    {
+        private TestFile(string path)
+        {
+            Path = path;
+        }
+
+        public string Path { get; }
+
+        public static TestFile Create(string extension, byte[] bytes)
+        {
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{Guid.NewGuid():N}{extension}");
+            File.WriteAllBytes(path, bytes);
+            return new TestFile(path);
+        }
+
+        public void Dispose()
+        {
+            File.Delete(Path);
+        }
+    }
+}
