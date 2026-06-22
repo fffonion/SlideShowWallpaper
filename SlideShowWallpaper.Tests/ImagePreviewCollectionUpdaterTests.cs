@@ -132,6 +132,105 @@ public sealed class ImagePreviewCollectionUpdaterTests
     }
 
     [Fact]
+    public async Task Thumbnail_ForVideoItem_ShowsSpinnerWhileLoading()
+    {
+        string videoPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");
+        string thumbnailPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(videoPath, [1, 2, 3]);
+        await File.WriteAllBytesAsync(thumbnailPath, Convert.FromBase64String(OnePixelPngBase64));
+        var metadata = new ImageMetadata(videoPath, "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
+        var loaderStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishLoader = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) =>
+            {
+                loaderStarted.SetResult();
+                return finishLoader.Task;
+            },
+            _ => null);
+        try
+        {
+            _ = item.Thumbnail;
+            await loaderStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.True(item.IsThumbnailLoading);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.LoadingVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.PlaceholderVisibility);
+
+            var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(ImagePreviewItem.IsThumbnailLoading) && !item.IsThumbnailLoading)
+                {
+                    loaded.TrySetResult();
+                }
+            };
+
+            finishLoader.SetResult(thumbnailPath);
+            await loaded.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.False(item.IsThumbnailLoading);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.LoadingVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.ImageVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.PlaceholderVisibility);
+        }
+        finally
+        {
+            File.Delete(videoPath);
+            File.Delete(thumbnailPath);
+        }
+    }
+
+    [Fact]
+    public async Task Thumbnail_ForNdfImageItem_ShowsSpinnerWhileLoading()
+    {
+        string ndfPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ndf");
+        await File.WriteAllBytesAsync(ndfPath, [1, 2, 3]);
+        var metadata = new ImageMetadata(ndfPath, "wallpaper.ndf", DateTime.UnixEpoch, 1, MediaKind.Image);
+        var loaderStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishLoader = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) =>
+            {
+                loaderStarted.SetResult();
+                return finishLoader.Task;
+            },
+            _ => null);
+        try
+        {
+            _ = item.Thumbnail;
+            await loaderStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.True(item.IsThumbnailLoading);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.LoadingVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.PlaceholderVisibility);
+
+            var loaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(ImagePreviewItem.IsThumbnailLoading) && !item.IsThumbnailLoading)
+                {
+                    loaded.TrySetResult();
+                }
+            };
+
+            finishLoader.SetResult(ndfPath);
+            await loaded.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.False(item.IsThumbnailLoading);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.LoadingVisibility);
+        }
+        finally
+        {
+            File.Delete(ndfPath);
+        }
+    }
+
+    [Fact]
     public async Task Thumbnail_WhenImageDecodeFails_KeepsPlaceholderInsteadOfLoadingOriginalImage()
     {
         string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");

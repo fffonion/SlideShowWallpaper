@@ -18,6 +18,12 @@ public static class ImagePreviewTemplateFactory
                 <Border Height="116" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <Grid>
                         <Image Source="{Binding Thumbnail}" Stretch="Uniform" Visibility="{Binding ImageVisibility}" />
+                        <ProgressRing
+                            Width="28"
+                            Height="28"
+                            IsActive="{Binding IsThumbnailLoading}"
+                            Visibility="{Binding LoadingVisibility}"
+                            AutomationProperties.AccessibilityView="Raw" />
                         <FontIcon
                             Glyph="&#xE768;"
                             FontSize="30"

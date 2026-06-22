@@ -46,9 +46,15 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
     public string Details => $"{Metadata.ModifiedUtc.ToLocalTime():g}";
 
-    public Visibility ImageVisibility => !_thumbnailFailed && (Metadata.Kind == MediaKind.Image || _thumbnailLoaded) ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImageVisibility => !_thumbnailFailed && (!RequiresThumbnailPlaceholder || _thumbnailLoaded) ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility PlaceholderVisibility => _thumbnailFailed || (Metadata.Kind == MediaKind.Video && !_thumbnailLoaded) ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility LoadingVisibility => IsThumbnailLoading ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool IsThumbnailLoading => RequiresThumbnailPlaceholder && _thumbnailLoadStarted && !_thumbnailLoaded && !_thumbnailFailed;
+
+    public Visibility PlaceholderVisibility => _thumbnailFailed || (Metadata.Kind == MediaKind.Video && !_thumbnailLoaded && !IsThumbnailLoading) ? Visibility.Visible : Visibility.Collapsed;
+
+    private bool RequiresThumbnailPlaceholder => Metadata.Kind == MediaKind.Video || string.Equals(System.IO.Path.GetExtension(Metadata.Path), ".ndf", StringComparison.OrdinalIgnoreCase);
 
     public ImageSource? Thumbnail
     {
@@ -74,6 +80,8 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         _thumbnail = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadingVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsThumbnailLoading)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
     }
 
@@ -89,6 +97,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         _thumbnailCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _thumbnailCancellation = cancellation;
+        NotifyThumbnailStateChanged();
         try
         {
             string thumbnailPath = await _thumbnailLoader(Metadata, cancellation.Token);
@@ -127,8 +136,15 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
             cancellation.Dispose();
         }
 
+        NotifyThumbnailStateChanged();
+    }
+
+    private void NotifyThumbnailStateChanged()
+    {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadingVisibility)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsThumbnailLoading)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
     }
 }
