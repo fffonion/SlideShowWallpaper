@@ -27,4 +27,12 @@ public sealed class LaunchOptionsTests
 
         Assert.True(options.AllowMultipleInstances);
     }
+
+    [Fact]
+    public void FromArguments_WithMultipleSwitch_DisablesCloseToTray()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments(["/multiple"]);
+
+        Assert.True(options.DisableCloseToTray);
+    }
 }

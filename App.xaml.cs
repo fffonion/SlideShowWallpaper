@@ -55,7 +55,7 @@ public partial class App : Application
             }
 
             _coordinator = new WallpaperPlaybackCoordinator(_monitorService, _desktopHostService, _imageOrderService, _folderChangeWatcherService);
-            _window = new MainWindow(_monitorService, _coordinator, _settingsStore, _autostartService, _folderPickerService, _imageOrderService);
+            _window = new MainWindow(_monitorService, _coordinator, _settingsStore, _autostartService, _folderPickerService, _imageOrderService, launchOptions.DisableCloseToTray);
             if (!launchOptions.StartInTray)
             {
                 _window.Activate();

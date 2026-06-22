@@ -82,6 +82,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
+    private readonly bool _disableCloseToTray;
     private string? _selectedMonitorId;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
@@ -94,7 +95,8 @@ public sealed partial class MainWindow : Window
         SettingsStore settingsStore,
         AutostartService autostartService,
         FolderPickerService folderPickerService,
-        ImageOrderService imageOrderService)
+        ImageOrderService imageOrderService,
+        bool disableCloseToTray = false)
     {
         _monitorService = monitorService;
         _coordinator = coordinator;
@@ -102,6 +104,7 @@ public sealed partial class MainWindow : Window
         _autostartService = autostartService;
         _folderPickerService = folderPickerService;
         _imageOrderService = imageOrderService;
+        _disableCloseToTray = disableCloseToTray;
 
         InitializeComponent();
         Title = LocalizedStrings.Get("AppTitle");
@@ -162,7 +165,7 @@ public sealed partial class MainWindow : Window
         }
 
         _viewModel.StartWithWindows = _autostartService.IsEnabled();
-        _viewModel.CloseToTray = config.CloseToTray;
+        _viewModel.CloseToTray = _disableCloseToTray ? false : config.CloseToTray;
         _viewModel.ThemeMode = config.ThemeMode;
         _viewModel.PlaybackEnabled = true;
         AutostartButton.IsChecked = _viewModel.StartWithWindows;
@@ -1043,10 +1046,11 @@ public sealed partial class MainWindow : Window
 
     private WallpaperConfig CreateConfig()
     {
+        WallpaperConfig existingConfig = _settingsStore.Load();
         return new WallpaperConfig
         {
             StartWithWindows = _viewModel.StartWithWindows,
-            CloseToTray = _viewModel.CloseToTray,
+            CloseToTray = _disableCloseToTray ? existingConfig.CloseToTray : _viewModel.CloseToTray,
             ThemeMode = _viewModel.ThemeMode,
             PlaybackEnabled = true,
             Monitors = _viewModel.Profiles.ToList(),
