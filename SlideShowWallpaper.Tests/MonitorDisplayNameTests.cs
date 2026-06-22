@@ -13,6 +13,14 @@ public sealed class MonitorDisplayNameTests
     }
 
     [Fact]
+    public void BuildDisplayName_RemovesTrailingParenthesizedDescription()
+    {
+        string name = MonitorService.BuildDisplayName(@"\\.\DISPLAY2", "Philips 24E1N5500(23.8 inch Wide LCD MONITOR 24E1N5500)");
+
+        Assert.Equal("Philips 24E1N5500", name);
+    }
+
+    [Fact]
     public void BuildDisplayName_falls_back_to_display_label_without_friendly_name()
     {
         string name = MonitorService.BuildDisplayName(@"\\.\DISPLAY2", "");

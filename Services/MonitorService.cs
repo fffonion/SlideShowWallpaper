@@ -65,7 +65,7 @@ public sealed class MonitorService
     public static string BuildDisplayName(string deviceName, string friendlyName)
     {
         string cleanDeviceName = string.IsNullOrWhiteSpace(deviceName) ? "Display" : deviceName.Trim();
-        string cleanFriendlyName = friendlyName.Trim();
+        string cleanFriendlyName = TrimParenthesizedDescription(friendlyName);
         if (!string.IsNullOrWhiteSpace(cleanFriendlyName) && !string.Equals(cleanFriendlyName, cleanDeviceName, StringComparison.OrdinalIgnoreCase))
         {
             return cleanFriendlyName;
@@ -75,6 +75,13 @@ public sealed class MonitorService
         return cleanDeviceName.StartsWith(displayPrefix, StringComparison.OrdinalIgnoreCase)
             ? $"Display {cleanDeviceName[displayPrefix.Length..]}"
             : cleanDeviceName;
+    }
+
+    private static string TrimParenthesizedDescription(string value)
+    {
+        string cleanValue = value.Trim();
+        int descriptionStart = cleanValue.IndexOf('(');
+        return descriptionStart > 0 ? cleanValue[..descriptionStart].Trim() : cleanValue;
     }
 
     private static string GetFriendlyName(string deviceName)

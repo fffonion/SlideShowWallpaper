@@ -47,7 +47,12 @@ public sealed class DesktopHostService
         IntPtr progman = NativeMethods.FindWindow("Progman", null);
         if (progman != IntPtr.Zero)
         {
-            NativeMethods.SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out _);
+            CreateProgmanWorkerWindow(progman);
+            IntPtr progmanWorker = NativeMethods.FindWindowEx(progman, IntPtr.Zero, "WorkerW", null);
+            if (progmanWorker != IntPtr.Zero)
+            {
+                return new DesktopHostTarget(progmanWorker, IntPtr.Zero, IntPtr.Zero);
+            }
         }
 
         var target = new DesktopHostTarget(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
@@ -68,6 +73,13 @@ public sealed class DesktopHostService
         }, IntPtr.Zero);
 
         return target.HostWindow != IntPtr.Zero ? target : new DesktopHostTarget(progman, NativeMethods.HWND_BOTTOM, IntPtr.Zero);
+    }
+
+    private static void CreateProgmanWorkerWindow(IntPtr progman)
+    {
+        NativeMethods.SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out _);
+        NativeMethods.SendMessageTimeout(progman, 0x052C, new IntPtr(0xD), IntPtr.Zero, 0, 1000, out _);
+        NativeMethods.SendMessageTimeout(progman, 0x052C, new IntPtr(0xD), new IntPtr(1), 0, 1000, out _);
     }
 
     private static void MakeDesktopIconListTransparent(IntPtr listView)
