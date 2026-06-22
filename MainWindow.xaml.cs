@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
     private readonly bool _disableCloseToTray;
+    private int _previewSessionVersion;
     private string? _selectedMonitorId;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
@@ -499,6 +500,7 @@ public sealed partial class MainWindow : Window
         CancelPreviewLoad(profile.Id);
         var cancellation = new CancellationTokenSource();
         _previewLoadTokens[profile.Id] = cancellation;
+        int previewSessionVersion = _previewSessionVersion;
         metadataText.Text = LocalizedStrings.Get("LoadingImages");
         loadingPanel.Visibility = Visibility.Visible;
         progressRing.IsActive = true;
@@ -508,7 +510,7 @@ public sealed partial class MainWindow : Window
         try
         {
             IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, cancellation.Token);
-            if (cancellation.IsCancellationRequested)
+            if (IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
             {
                 return;
             }
@@ -523,13 +525,18 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            if (IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
+            {
+                return;
+            }
+
             AppLog.Write(exception);
             items.Clear();
             metadataText.Text = LocalizedStrings.Get("UnableToLoadImages");
         }
         finally
         {
-            if (_previewLoadTokens.TryGetValue(profile.Id, out CancellationTokenSource? current) && ReferenceEquals(current, cancellation))
+            if (!IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
             {
                 _previewLoadTokens.Remove(profile.Id);
                 loadingPanel.Visibility = Visibility.Collapsed;
@@ -1229,6 +1236,7 @@ public sealed partial class MainWindow : Window
 
     private void UnloadSettingsUiForTray()
     {
+        _previewSessionVersion++;
         foreach (string monitorId in _previewLoadTokens.Keys.ToArray())
         {
             CancelPreviewLoad(monitorId);
@@ -1243,6 +1251,14 @@ public sealed partial class MainWindow : Window
         GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
         GC.WaitForPendingFinalizers();
         GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+    }
+
+    private bool IsPreviewLoadExpired(string monitorId, CancellationTokenSource cancellation, int previewSessionVersion)
+    {
+        return cancellation.IsCancellationRequested
+            || previewSessionVersion != _previewSessionVersion
+            || !_previewLoadTokens.TryGetValue(monitorId, out CancellationTokenSource? current)
+            || !ReferenceEquals(current, cancellation);
     }
 
     private void UnloadPreviewState()
