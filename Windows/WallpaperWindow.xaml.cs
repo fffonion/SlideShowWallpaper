@@ -28,6 +28,7 @@ public sealed partial class WallpaperWindow : Window
         NextImage.RenderTransform = _nextTransform;
         ConfigureWindow();
         ApplyProfile(profile);
+        Closed += (_, _) => ClearImageSources();
     }
 
     public void ApplyProfile(MonitorProfile profile)
@@ -105,6 +106,7 @@ public sealed partial class WallpaperWindow : Window
             ApplyProfile(profile);
             CurrentImage.Opacity = 1;
             NextImage.Opacity = 0;
+            NextImage.Source = null;
             return;
         }
 
@@ -120,6 +122,7 @@ public sealed partial class WallpaperWindow : Window
         ApplyProfile(profile);
         CurrentImage.Opacity = 1;
         NextImage.Opacity = 0;
+        NextImage.Source = null;
     }
 
     private void ConfigureWindow()
@@ -185,8 +188,15 @@ public sealed partial class WallpaperWindow : Window
         _currentTransform.X = _profile.OffsetX;
         _currentTransform.Y = _profile.OffsetY;
         NextImage.Opacity = 0;
+        NextImage.Source = null;
         _nextTransform.X = _profile.OffsetX;
         _nextTransform.Y = _profile.OffsetY;
+    }
+
+    private void ClearImageSources()
+    {
+        CurrentImage.Source = null;
+        NextImage.Source = null;
     }
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)

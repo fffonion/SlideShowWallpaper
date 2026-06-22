@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -310,7 +311,7 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, cancellation.Token);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, cancellation.Token);
             if (cancellation.IsCancellationRequested)
             {
                 return;
@@ -783,19 +784,25 @@ public sealed partial class MainWindow : Window
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
         _settingsApplyTimer.Stop();
-        ClearPreviewThumbnails();
         if (_exitRequested || !_viewModel.CloseToTray)
         {
+            UnloadPreviewState();
             ShutdownApplication();
             return;
         }
 
         args.Handled = true;
+        UnloadSettingsUiForTray();
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
 
     private void ShowSettingsWindow()
     {
+        if (MonitorTabs.TabItems.Count == 0)
+        {
+            RenderTabs();
+        }
+
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);
         Activate();
     }
@@ -849,12 +856,28 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ClearPreviewThumbnails()
+    private void UnloadSettingsUiForTray()
     {
-        foreach (ImagePreviewItem item in _previewItems.Values.SelectMany(items => items))
+        foreach (string monitorId in _previewLoadTokens.Keys.ToArray())
         {
-            item.ClearThumbnail();
+            CancelPreviewLoad(monitorId);
         }
+
+        MonitorTabs.TabItems.Clear();
+        UnloadPreviewState();
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
+    }
+
+    private void UnloadPreviewState()
+    {
+        foreach (ObservableCollection<ImagePreviewItem> items in _previewItems.Values)
+        {
+            ImagePreviewCollectionUpdater.Clear(items);
+        }
+
+        _previewItems.Clear();
+        _previewMetadataTexts.Clear();
     }
 
     private static double ToDisplaySeconds(int seconds, TimeUnit unit)

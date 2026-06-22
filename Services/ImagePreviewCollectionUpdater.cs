@@ -20,4 +20,14 @@ public static class ImagePreviewCollectionUpdater
             items.Add(existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : new ImagePreviewItem(image));
         }
     }
+
+    public static void Clear(ObservableCollection<ImagePreviewItem> items)
+    {
+        foreach (ImagePreviewItem item in items)
+        {
+            item.ClearThumbnail();
+        }
+
+        items.Clear();
+    }
 }

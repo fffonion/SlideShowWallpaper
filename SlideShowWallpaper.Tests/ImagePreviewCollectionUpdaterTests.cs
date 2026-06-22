@@ -46,4 +46,20 @@ public sealed class ImagePreviewCollectionUpdaterTests
         Assert.Same(secondItem, items[0]);
         Assert.Same(firstItem, items[1]);
     }
+
+    [Fact]
+    public void Clear_RemovesPreviewItems()
+    {
+        var first = new ImageMetadata(@"C:\Wallpapers\a.png", "a.png", DateTime.UnixEpoch, 1);
+        var second = new ImageMetadata(@"C:\Wallpapers\b.png", "b.png", DateTime.UnixEpoch, 1);
+        var items = new ObservableCollection<ImagePreviewItem>
+        {
+            new(first),
+            new(second),
+        };
+
+        ImagePreviewCollectionUpdater.Clear(items);
+
+        Assert.Empty(items);
+    }
 }
