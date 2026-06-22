@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -12,6 +14,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
     private static readonly ThumbnailCacheService ThumbnailCache = new();
     private readonly Func<ImageMetadata, CancellationToken, Task<string>> _thumbnailLoader;
     private readonly Func<string, ImageSource?> _thumbnailFactory;
+    private DispatcherQueue? _dispatcherQueue;
     private ImageSource? _thumbnail;
     private CancellationTokenSource? _thumbnailCancellation;
     private int _thumbnailLoadVersion;
@@ -71,22 +74,22 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
     public void ClearThumbnail()
     {
-        _thumbnailLoadVersion++;
-        _thumbnailCancellation?.Cancel();
-        _thumbnailCancellation = null;
-        _thumbnailLoadStarted = false;
-        _thumbnailLoaded = false;
-        _thumbnailFailed = false;
-        _thumbnail = null;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadingVisibility)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsThumbnailLoading)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
+        RunOnUiThread(() =>
+        {
+            _thumbnailLoadVersion++;
+            _thumbnailCancellation?.Cancel();
+            _thumbnailCancellation = null;
+            _thumbnailLoadStarted = false;
+            _thumbnailLoaded = false;
+            _thumbnailFailed = false;
+            _thumbnail = null;
+            NotifyThumbnailStateChanged();
+        });
     }
 
     private async void StartThumbnailLoad()
     {
+        _dispatcherQueue ??= TryGetDispatcherQueue();
         if (_thumbnailLoadStarted)
         {
             return;
@@ -101,14 +104,18 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         try
         {
             string thumbnailPath = await _thumbnailLoader(Metadata, cancellation.Token);
-            if (version != _thumbnailLoadVersion)
+            RunOnUiThread(() =>
             {
-                return;
-            }
+                if (version != _thumbnailLoadVersion)
+                {
+                    return;
+                }
 
-            _thumbnail = _thumbnailFactory(thumbnailPath);
-            _thumbnailLoaded = true;
-            _thumbnailFailed = false;
+                _thumbnail = _thumbnailFactory(thumbnailPath);
+                _thumbnailLoaded = true;
+                _thumbnailFailed = false;
+                NotifyThumbnailStateChanged();
+            });
         }
         catch (OperationCanceledException)
         {
@@ -117,26 +124,31 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         catch (Exception exception)
         {
             AppLog.Write(exception);
-            if (version != _thumbnailLoadVersion)
+            RunOnUiThread(() =>
             {
-                return;
-            }
+                if (version != _thumbnailLoadVersion)
+                {
+                    return;
+                }
 
-            _thumbnailFailed = true;
-            _thumbnailLoaded = false;
-            _thumbnail = null;
+                _thumbnailFailed = true;
+                _thumbnailLoaded = false;
+                _thumbnail = null;
+                NotifyThumbnailStateChanged();
+            });
         }
         finally
         {
-            if (ReferenceEquals(_thumbnailCancellation, cancellation))
+            RunOnUiThread(() =>
             {
-                _thumbnailCancellation = null;
-            }
+                if (ReferenceEquals(_thumbnailCancellation, cancellation))
+                {
+                    _thumbnailCancellation = null;
+                }
+            });
 
             cancellation.Dispose();
         }
-
-        NotifyThumbnailStateChanged();
     }
 
     private void NotifyThumbnailStateChanged()
@@ -146,5 +158,28 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadingVisibility)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsThumbnailLoading)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlaceholderVisibility)));
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (_dispatcherQueue is not { } dispatcherQueue || dispatcherQueue.HasThreadAccess)
+        {
+            action();
+            return;
+        }
+
+        dispatcherQueue.TryEnqueue(() => action());
+    }
+
+    private static DispatcherQueue? TryGetDispatcherQueue()
+    {
+        try
+        {
+            return DispatcherQueue.GetForCurrentThread();
+        }
+        catch (COMException)
+        {
+            return null;
+        }
     }
 }

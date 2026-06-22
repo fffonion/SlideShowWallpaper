@@ -138,24 +138,31 @@ public sealed class WallpaperPlaybackCoordinator
 
     public async Task ShowNextAsync(string monitorId)
     {
-        if (!_playbackEnabled)
+        try
         {
-            return;
-        }
+            if (!_playbackEnabled)
+            {
+                return;
+            }
 
-        if (!_queues.TryGetValue(monitorId, out PlaybackQueue? queue) || !_windows.TryGetValue(monitorId, out WallpaperWindow? window))
+            if (!_queues.TryGetValue(monitorId, out PlaybackQueue? queue) || !_windows.TryGetValue(monitorId, out WallpaperWindow? window))
+            {
+                return;
+            }
+
+            ImagePlaybackItem? item = queue.Next();
+            if (item is null)
+            {
+                return;
+            }
+
+            await ShowWindowMediaAsync(monitorId, window, item);
+            RestartTimer(monitorId);
+        }
+        catch (Exception exception)
         {
-            return;
+            AppLog.Write(exception);
         }
-
-        ImagePlaybackItem? item = queue.Next();
-        if (item is null)
-        {
-            return;
-        }
-
-        await ShowWindowMediaAsync(monitorId, window, item);
-        RestartTimer(monitorId);
     }
 
     public void Shuffle(string monitorId)
@@ -174,22 +181,29 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         _monitorRects = _monitorService.GetMonitorRects();
-        IReadOnlyList<string> paths = orderedPaths is { Count: > 0 }
-            ? orderedPaths
-            : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None))
-                .Select(image => image.Path)
-                .ToArray();
-        ReplaceQueue(profile, paths, preserveInitialOrder: true);
-        EnsureWindow(profile);
-        ConfigureTimer(profile);
-        if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
+        try
         {
-            queue.StartAfter(path);
-        }
+            IReadOnlyList<string> paths = orderedPaths is { Count: > 0 }
+                ? orderedPaths
+                : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None))
+                    .Select(image => image.Path)
+                    .ToArray();
+            ReplaceQueue(profile, paths, preserveInitialOrder: true);
+            EnsureWindow(profile);
+            ConfigureTimer(profile);
+            if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
+            {
+                queue.StartAfter(path);
+            }
 
-        if (_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            if (_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            {
+                await ShowWindowMediaAsync(profile.Id, window, CreatePlaybackItem(path));
+            }
+        }
+        catch (Exception exception)
         {
-            await ShowWindowMediaAsync(profile.Id, window, CreatePlaybackItem(path));
+            AppLog.Write(exception);
         }
     }
 
@@ -222,6 +236,7 @@ public sealed class WallpaperPlaybackCoordinator
 
     private void CloseWindow(string monitorId)
     {
+        _queueVersions[monitorId] = _queueVersions.TryGetValue(monitorId, out int currentVersion) ? currentVersion + 1 : 1;
         if (_timers.Remove(monitorId, out DispatcherQueueTimer? timer))
         {
             timer.Stop();
@@ -232,7 +247,6 @@ public sealed class WallpaperPlaybackCoordinator
             window.Close();
         }
 
-        _queueVersions.Remove(monitorId);
         _profileChanges.Forget(monitorId);
     }
 
@@ -367,8 +381,20 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         EnsureWindow(profile);
-        _ = ShowWindowMediaAsync(profile.Id, _windows[profile.Id], CreatePlaybackItem(profile.SelectedImagePath));
+        _ = ShowWindowMediaSafeAsync(profile.Id, _windows[profile.Id], CreatePlaybackItem(profile.SelectedImagePath));
         return true;
+    }
+
+    private async Task ShowWindowMediaSafeAsync(string monitorId, WallpaperWindow window, ImagePlaybackItem item)
+    {
+        try
+        {
+            await ShowWindowMediaAsync(monitorId, window, item);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private async Task ShowWindowMediaAsync(string monitorId, WallpaperWindow window, ImagePlaybackItem item)
@@ -378,20 +404,44 @@ public sealed class WallpaperPlaybackCoordinator
             return;
         }
 
+        if (!CanUpdateWindow(monitorId, window))
+        {
+            return;
+        }
+
         if (item.Kind == MediaKind.Video)
         {
             bool loop = _profiles.TryGetValue(monitorId, out MonitorProfile? profile) && VideoPlaybackPolicy.ShouldLoopVideo(profile);
             string playbackPath = await NdfMediaService.MaterializeForPlaybackAsync(item.Path, CancellationToken.None);
+            if (!CanUpdateWindow(monitorId, window))
+            {
+                return;
+            }
+
             await window.ShowVideoAsync(playbackPath, loop);
         }
         else
         {
             string playbackPath = await NdfMediaService.MaterializeForPlaybackAsync(item.Path, CancellationToken.None);
+            if (!CanUpdateWindow(monitorId, window))
+            {
+                return;
+            }
+
             await window.ShowImageAsync(playbackPath);
         }
 
         PublishCurrentWallpaperChanged(monitorId, item.Path);
         ApplyVideoCoverageState();
+    }
+
+    private bool CanUpdateWindow(string monitorId, WallpaperWindow window)
+    {
+        return _playbackEnabled
+            && _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
+            && !profile.IsStopped
+            && _windows.TryGetValue(monitorId, out WallpaperWindow? currentWindow)
+            && ReferenceEquals(currentWindow, window);
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)

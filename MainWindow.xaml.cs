@@ -951,6 +951,7 @@ public sealed partial class MainWindow : Window
     {
         if (sender is Button { Tag: MonitorProfile profile })
         {
+            CancelSelectedPreviewLoad();
             _selectedMonitorId = profile.Id;
             _isSettingsSelected = false;
         }
@@ -961,6 +962,7 @@ public sealed partial class MainWindow : Window
 
     private void SettingsNavigationItem_Click(object sender, RoutedEventArgs e)
     {
+        CancelSelectedPreviewLoad();
         _selectedMonitorId = null;
         _isSettingsSelected = true;
         UpdateMonitorNavigationVisuals();
@@ -1013,10 +1015,17 @@ public sealed partial class MainWindow : Window
 
         profile.SelectedImagePath = item.Path;
         ApplySettings();
-        IReadOnlyList<string> orderedPaths = sender is ListView { ItemsSource: IEnumerable<ImagePreviewItem> previewItems }
-            ? previewItems.Select(previewItem => previewItem.Path).ToArray()
-            : [];
-        await _coordinator.ShowImageAsync(profile, item.Path, orderedPaths);
+        try
+        {
+            IReadOnlyList<string> orderedPaths = sender is ListView { ItemsSource: IEnumerable<ImagePreviewItem> previewItems }
+                ? previewItems.Select(previewItem => previewItem.Path).ToArray()
+                : [];
+            await _coordinator.ShowImageAsync(profile, item.Path, orderedPaths);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private void TogglePauseFromTray(string monitorId)
@@ -1207,6 +1216,14 @@ public sealed partial class MainWindow : Window
         if (_previewLoadTokens.Remove(monitorId, out CancellationTokenSource? cancellation))
         {
             cancellation.Cancel();
+        }
+    }
+
+    private void CancelSelectedPreviewLoad()
+    {
+        if (!string.IsNullOrWhiteSpace(_selectedMonitorId))
+        {
+            CancelPreviewLoad(_selectedMonitorId);
         }
     }
 

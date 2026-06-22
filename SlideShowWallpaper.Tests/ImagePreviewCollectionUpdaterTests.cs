@@ -231,6 +231,50 @@ public sealed class ImagePreviewCollectionUpdaterTests
     }
 
     [Fact]
+    public async Task Thumbnail_AfterClearDuringLoad_DoesNotApplyCompletedThumbnail()
+    {
+        string videoPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");
+        string thumbnailPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(videoPath, [1, 2, 3]);
+        await File.WriteAllBytesAsync(thumbnailPath, Convert.FromBase64String(OnePixelPngBase64));
+        var metadata = new ImageMetadata(videoPath, "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
+        var loaderStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishLoader = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        string? loadedThumbnailPath = null;
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) =>
+            {
+                loaderStarted.SetResult();
+                return finishLoader.Task;
+            },
+            path =>
+            {
+                loadedThumbnailPath = path;
+                return null;
+            });
+        try
+        {
+            _ = item.Thumbnail;
+            await loaderStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            item.ClearThumbnail();
+            finishLoader.SetResult(thumbnailPath);
+            await Task.Delay(100);
+
+            Assert.Null(loadedThumbnailPath);
+            Assert.False(item.IsThumbnailLoading);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.LoadingVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
+        }
+        finally
+        {
+            File.Delete(videoPath);
+            File.Delete(thumbnailPath);
+        }
+    }
+
+    [Fact]
     public async Task Thumbnail_WhenImageDecodeFails_KeepsPlaceholderInsteadOfLoadingOriginalImage()
     {
         string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
