@@ -67,7 +67,7 @@ public static class NdfMediaService
 
     public static Task<string> MaterializeForPlaybackAsync(string path, CancellationToken cancellationToken = default)
     {
-        return MaterializeForPlaybackAsync(path, Path.Combine(Path.GetTempPath(), "SlideShowWallpaper", "ndf"), cancellationToken);
+        return MaterializeForPlaybackAsync(path, AppTempPaths.NdfCache, cancellationToken);
     }
 
     public static async Task<string> MaterializeForPlaybackAsync(string path, string cacheRoot, CancellationToken cancellationToken = default)
@@ -123,11 +123,9 @@ public static class NdfMediaService
         }
 
         var stream = new InMemoryRandomAccessStream();
-        using (Stream output = stream.AsStreamForWrite())
-        {
-            await CopyNdfContentAsync(path, info, output, cancellationToken);
-            await output.FlushAsync(cancellationToken);
-        }
+        Stream output = stream.AsStreamForWrite();
+        await CopyNdfContentAsync(path, info, output, cancellationToken);
+        await output.FlushAsync(cancellationToken);
 
         stream.Seek(0);
         return stream;
@@ -135,23 +133,28 @@ public static class NdfMediaService
 
     public static async Task<StorageFile> GetStorageFileForThumbnailAsync(string path, CancellationToken cancellationToken = default)
     {
+        return await GetStorageFileForThumbnailAsync(path, AppTempPaths.ThumbnailMedia, cancellationToken);
+    }
+
+    public static async Task<StorageFile> GetStorageFileForThumbnailAsync(string path, string cacheRoot, CancellationToken cancellationToken = default)
+    {
         if (!TryGetMediaInfo(path, out NdfMediaInfo info))
         {
             return await StorageFile.GetFileFromPathAsync(path).AsTask(cancellationToken);
         }
 
-        return await StorageFile.CreateStreamedFileAsync(
-            $"{Path.GetFileNameWithoutExtension(path)}{info.Extension}",
-            async request =>
-            {
-                using (request)
-                {
-                    using Stream output = request.AsStreamForWrite();
-                    await CopyNdfContentAsync(path, info, output, cancellationToken);
-                    await output.FlushAsync(cancellationToken);
-                }
-            },
-            null).AsTask(cancellationToken);
+        var sourceFile = new FileInfo(path);
+        long requiredBytes = Math.Max(0, sourceFile.Length - info.Offset);
+        if (!AppTempPaths.HasAvailableBytes(cacheRoot, requiredBytes))
+        {
+            throw new IOException($"Not enough temporary space for {sourceFile.Name}.");
+        }
+
+        Directory.CreateDirectory(cacheRoot);
+        string outputPath = Path.Combine(cacheRoot, $"{Guid.NewGuid():N}{info.Extension}");
+        await using FileStream destination = File.Open(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+        await CopyNdfContentAsync(path, info, destination, cancellationToken);
+        return await StorageFile.GetFileFromPathAsync(outputPath).AsTask(cancellationToken);
     }
 
     private static bool IsNdfPath(string path)

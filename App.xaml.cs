@@ -38,6 +38,7 @@ public partial class App : Application
         try
         {
             AppLog.Write("Launch start");
+            AppTempPaths.Cleanup();
             LaunchOptions launchOptions = LaunchOptions.FromArguments(Environment.GetCommandLineArgs().Skip(1));
             if (!launchOptions.AllowMultipleInstances)
             {

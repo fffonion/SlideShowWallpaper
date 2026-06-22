@@ -61,14 +61,30 @@ public sealed class NdfMediaServiceTests
     public async Task GetStorageFileForThumbnailAsync_WithNdfMp4_StreamsStrippedContent()
     {
         using TestFile file = TestFile.Create(".ndf", [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+        string cacheRoot = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
 
-        global::Windows.Storage.StorageFile streamedFile = await NdfMediaService.GetStorageFileForThumbnailAsync(file.Path, CancellationToken.None);
+        global::Windows.Storage.StorageFile streamedFile = await NdfMediaService.GetStorageFileForThumbnailAsync(file.Path, cacheRoot, CancellationToken.None);
 
         using global::Windows.Storage.Streams.IRandomAccessStream stream = await streamedFile.OpenReadAsync().AsTask();
         using Stream reader = stream.AsStreamForRead();
         using var memory = new MemoryStream();
         await reader.CopyToAsync(memory);
         Assert.Equal([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], memory.ToArray());
+        Assert.StartsWith(cacheRoot, streamedFile.Path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task OpenContentStreamAsync_WithNdfPng_ReturnsReadableOpenStream()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        using global::Windows.Storage.Streams.IRandomAccessStream stream = await NdfMediaService.OpenContentStreamAsync(file.Path, CancellationToken.None);
+        using Stream reader = stream.AsStreamForRead();
+        var bytes = new byte[8];
+        int bytesRead = await reader.ReadAsync(bytes);
+
+        Assert.Equal(8, bytesRead);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], bytes);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Globalization;
+using SlideShowWallpaper.Models;
 
 namespace SlideShowWallpaper.Services;
 
@@ -31,7 +32,9 @@ public static class PlaybackStatusFormatter
         int totalMinutes = Math.Max(0, (int)Math.Ceiling(remainingSeconds / 60.0));
         int hours = totalMinutes / 60;
         int minutes = totalMinutes % 60;
-        string value = string.Format(CultureInfo.CurrentCulture, timeFormat, hours, minutes);
+        string value = hours == 0
+            ? string.Format(CultureInfo.CurrentCulture, "{0}m", minutes)
+            : string.Format(CultureInfo.CurrentCulture, timeFormat, hours, minutes);
         return string.Format(CultureInfo.CurrentCulture, format, value);
     }
 
@@ -40,17 +43,19 @@ public static class PlaybackStatusFormatter
         int totalCount,
         int intervalSeconds,
         DateTimeOffset? currentStartedAt,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        PlaybackOrder playbackOrder = PlaybackOrder.SequentialLoop)
     {
-        if (currentIndex <= 0 || totalCount <= 0 || currentStartedAt is null)
+        if (totalCount <= 0)
         {
             return 0;
         }
 
         int interval = Math.Max(0, intervalSeconds);
-        double elapsed = Math.Max(0, (now - currentStartedAt.Value).TotalSeconds);
+        double elapsed = currentStartedAt is null ? 0 : Math.Max(0, (now - currentStartedAt.Value).TotalSeconds);
         int currentRemaining = Math.Max(0, (int)Math.Ceiling(interval - elapsed));
-        int remainingItems = Math.Max(0, totalCount - Math.Clamp(currentIndex, 1, totalCount));
+        int loopItemCount = playbackOrder == PlaybackOrder.SingleLoop ? 1 : totalCount;
+        int remainingItems = Math.Max(0, loopItemCount - 1);
         return currentRemaining + (remainingItems * interval);
     }
 }

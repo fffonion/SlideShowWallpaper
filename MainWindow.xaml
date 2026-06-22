@@ -26,7 +26,7 @@
             </TitleBar.IconSource>
         </TitleBar>
 
-        <Grid Grid.Row="1" Padding="16">
+        <Grid Grid.Row="1" Padding="16,16,16,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -74,12 +74,32 @@
                 </StackPanel>
             </Grid>
 
-            <TabView
-                x:Name="MonitorTabs"
+            <Grid
+                x:Name="MonitorLayout"
                 Grid.Row="1"
                 Margin="0,12,0,0"
-                IsAddTabButtonVisible="False"
-                SelectionChanged="MonitorTabs_SelectionChanged" />
+                ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel
+                    x:Name="MonitorNavigationPanel"
+                    AutomationProperties.AutomationId="MonitorNavigationPanel"
+                    Padding="4,4,0,4"
+                    Spacing="2" />
+
+                <Border
+                    Grid.Column="1"
+                    Padding="16,12,16,0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <ContentControl x:Name="MonitorContent" />
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

@@ -84,8 +84,11 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
+    private string? _selectedMonitorId;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
+
+    private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);
 
     public MainWindow(
         MonitorService monitorService,
@@ -136,9 +139,8 @@ public sealed partial class MainWindow : Window
         _playbackStatusTimer.Start();
     }
 
-    private MonitorProfile? SelectedProfile => MonitorTabs.SelectedItem is TabViewItem { Tag: MonitorProfile profile }
-        ? profile
-        : _viewModel.Profiles.FirstOrDefault();
+    private MonitorProfile? SelectedProfile => _viewModel.Profiles.FirstOrDefault(profile => string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase))
+        ?? _viewModel.Profiles.FirstOrDefault();
 
     private void LoadSettings()
     {
@@ -174,38 +176,114 @@ public sealed partial class MainWindow : Window
     private void RenderTabs(string? selectedMonitorId = null)
     {
         selectedMonitorId ??= SelectedProfile?.Id;
-        MonitorTabs.TabItems.Clear();
+        MonitorContent.Content = null;
+        MonitorNavigationPanel.Children.Clear();
         foreach (MonitorSettingsViewModel item in _viewModel.Monitors)
         {
-            MonitorTabs.TabItems.Add(new TabViewItem
-            {
-                Header = item.Profile.DisplayName,
-                IsClosable = false,
-                Tag = item.Profile,
-                Content = BuildMonitorPage(item.Profile),
-            });
+            MonitorNavigationPanel.Children.Add(CreateMonitorNavigationItem(item.Profile));
         }
 
-        if (MonitorTabs.TabItems.Count == 0)
+        if (MonitorNavigationPanel.Children.Count == 0)
         {
+            _selectedMonitorId = null;
             return;
         }
 
-        int selectedIndex = 0;
-        if (!string.IsNullOrWhiteSpace(selectedMonitorId))
-        {
-            for (int i = 0; i < MonitorTabs.TabItems.Count; i++)
-            {
-                if (MonitorTabs.TabItems[i] is TabViewItem { Tag: MonitorProfile profile }
-                    && string.Equals(profile.Id, selectedMonitorId, StringComparison.OrdinalIgnoreCase))
-                {
-                    selectedIndex = i;
-                    break;
-                }
-            }
-        }
+        _selectedMonitorId = _viewModel.Profiles.Any(profile => string.Equals(profile.Id, selectedMonitorId, StringComparison.OrdinalIgnoreCase))
+            ? selectedMonitorId
+            : _viewModel.Profiles.FirstOrDefault()?.Id;
+        UpdateMonitorNavigationVisuals();
+        ShowSelectedMonitorPage();
+    }
 
-        MonitorTabs.SelectedIndex = selectedIndex;
+    private Button CreateMonitorNavigationItem(MonitorProfile profile)
+    {
+        var root = new Grid
+        {
+            ColumnSpacing = 10,
+            Padding = new Thickness(0),
+            MinHeight = 40,
+        };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var indicator = new Border
+        {
+            Width = 3,
+            Height = 24,
+            CornerRadius = new CornerRadius(2),
+            Background = GetThemeBrush("AccentFillColorDefaultBrush"),
+            Opacity = 0,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        root.Children.Add(indicator);
+
+        var icon = new FontIcon
+        {
+            Glyph = "\uE7F4",
+            FontSize = 17,
+            Width = 24,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(icon, 1);
+        root.Children.Add(icon);
+
+        var text = new TextBlock
+        {
+            Text = profile.DisplayName,
+            FontSize = 14,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(text, profile.DisplayName);
+        Grid.SetColumn(text, 2);
+        root.Children.Add(text);
+
+        var surface = new Border
+        {
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(0, 0, 10, 0),
+            Background = GetThemeBrush("SubtleFillColorTransparentBrush"),
+            Child = root,
+        };
+
+        var item = new Button
+        {
+            Content = surface,
+            Tag = profile,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinHeight = 40,
+            Padding = new Thickness(0),
+            Background = GetThemeBrush("SubtleFillColorTransparentBrush"),
+            BorderThickness = new Thickness(0),
+        };
+        item.Click += MonitorNavigationItem_Click;
+        surface.Tag = new MonitorNavigationVisuals(surface, indicator);
+        AutomationProperties.SetName(item, profile.DisplayName);
+        return item;
+    }
+
+    private void UpdateMonitorNavigationVisuals()
+    {
+        foreach (UIElement element in MonitorNavigationPanel.Children)
+        {
+            if (element is not Button { Tag: MonitorProfile profile, Content: Border { Tag: MonitorNavigationVisuals visuals } } item)
+            {
+                continue;
+            }
+
+            bool isSelected = string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase);
+            visuals.Surface.Background = GetThemeBrush(isSelected ? "SubtleFillColorSecondaryBrush" : "SubtleFillColorTransparentBrush");
+            visuals.Indicator.Opacity = isSelected ? 1 : 0;
+            item.Background = GetThemeBrush("SubtleFillColorTransparentBrush");
+        }
+    }
+
+    private void ShowSelectedMonitorPage()
+    {
+        MonitorContent.Content = SelectedProfile is { } profile ? BuildMonitorPage(profile) : null;
     }
 
     private UIElement BuildMonitorPage(MonitorProfile profile)
@@ -410,7 +488,7 @@ public sealed partial class MainWindow : Window
         var root = new Grid
         {
             RowSpacing = 10,
-            MaxWidth = 760,
+            MaxWidth = 500,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -534,10 +612,11 @@ public sealed partial class MainWindow : Window
 
     private void ConfigureSettingsWindow()
     {
-        const int width = 1240;
+        const int preferredWidth = 1460;
         const int preferredHeight = 1420;
         DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
         RectInt32 workArea = displayArea.WorkArea;
+        int width = Math.Min(preferredWidth, workArea.Width);
         int height = Math.Min(preferredHeight, workArea.Height);
         AppWindow.Resize(new SizeInt32(width, height));
         AppWindow.Move(new PointInt32(
@@ -630,13 +709,15 @@ public sealed partial class MainWindow : Window
             MinHeight = 44,
             Padding = new Thickness(16, 4, 16, 4),
         };
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var text = new TextBlock
         {
             Text = row.Label,
             VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.WrapWholeWords,
+            MaxLines = 3,
         };
         AutomationProperties.SetName(text, row.Label);
         Grid.SetColumn(text, 0);
@@ -704,7 +785,7 @@ public sealed partial class MainWindow : Window
         {
             ItemsSource = choices,
             SelectedItem = selectedChoice,
-            MinWidth = 180,
+            Width = 270,
         };
         AutomationProperties.SetName(combo, automationName);
         combo.SelectionChanged += (_, _) =>
@@ -758,7 +839,7 @@ public sealed partial class MainWindow : Window
             double currentValue = double.IsNaN(valueBox.Value) ? value : valueBox.Value;
             changed(currentValue, newUnit);
         }, LocalizedStrings.Format("TimeUnitAutomationFormat", automationName));
-        unitCombo.MinWidth = 112;
+        unitCombo.Width = 128;
 
         panel.Children.Add(valueBox);
         panel.Children.Add(unitCombo);
@@ -835,8 +916,15 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void MonitorTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void MonitorNavigationItem_Click(object sender, RoutedEventArgs e)
     {
+        if (sender is Button { Tag: MonitorProfile profile })
+        {
+            _selectedMonitorId = profile.Id;
+        }
+
+        UpdateMonitorNavigationVisuals();
+        ShowSelectedMonitorPage();
     }
 
     private void Coordinator_OrderedImagesChanged(object? sender, OrderedImagesChangedEventArgs args)
@@ -1020,7 +1108,7 @@ public sealed partial class MainWindow : Window
 
     public void ShowSettingsWindow()
     {
-        if (MonitorTabs.TabItems.Count == 0)
+        if (MonitorNavigationPanel.Children.Count == 0)
         {
             RenderTabs();
         }
@@ -1093,7 +1181,8 @@ public sealed partial class MainWindow : Window
             CancelPreviewLoad(monitorId);
         }
 
-        MonitorTabs.TabItems.Clear();
+        MonitorNavigationPanel.Children.Clear();
+        MonitorContent.Content = null;
         UnloadPreviewState();
         _imageOrderService.ClearCache();
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
@@ -1137,7 +1226,8 @@ public sealed partial class MainWindow : Window
                 profile.TotalMediaCount,
                 profile.IntervalSeconds,
                 profile.CurrentMediaStartedAt,
-                DateTimeOffset.Now);
+                DateTimeOffset.Now,
+                profile.PlaybackOrder);
             loopRemainingText.Text = PlaybackStatusFormatter.FormatLoopRemaining(remainingSeconds);
         }
     }
