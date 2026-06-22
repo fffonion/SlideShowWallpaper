@@ -42,6 +42,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260224000" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260317003" />
   </ItemGroup>
 
   <ItemGroup>
@@ -78,6 +79,7 @@
   <PropertyGroup>
     <SingleFileRuntimeIdentifier Condition="'$(SingleFileRuntimeIdentifier)' == ''">win-x64</SingleFileRuntimeIdentifier>
     <SingleFilePublishDir Condition="'$(SingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)\</SingleFilePublishDir>
+    <SelfContainedSingleFilePublishDir Condition="'$(SelfContainedSingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)-self-contained\</SelfContainedSingleFilePublishDir>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
     <TrimMode>partial</TrimMode>
@@ -88,8 +90,21 @@
     <RemoveDir Directories="$(SingleFilePublishDir)" />
     <MSBuild
       Projects="$(MSBuildProjectFullPath)"
+      Targets="Restore"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=$(SingleFileRuntimeIdentifier);Platform=$(Platform);UseFrameworkDependentSingleFile=true;EnableMsixTooling=true;SelfContained=false;WindowsAppSDKSelfContained=false;WindowsAppSdkSelfContained=false" />
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
       Targets="Publish"
-      Properties="Configuration=$(Configuration);RuntimeIdentifier=$(SingleFileRuntimeIdentifier);PublishDir=$(SingleFilePublishDir);EnableMsixTooling=true;SelfContained=true;WindowsAppSDKSelfContained=true;WindowsAppSdkUndockedRegFreeWinRTInitialize=true;PublishSingleFile=true;EnableCompressionInSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;IncludeAllContentForSelfExtract=true;PublishTrimmed=false;SuppressTrimAnalysisWarnings=true;DebugSymbols=false;DebugType=None" />
-    <Message Importance="High" Text="Single-file executable published to $(SingleFilePublishDir)" />
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=$(SingleFileRuntimeIdentifier);Platform=$(Platform);PublishDir=$(SingleFilePublishDir);UseFrameworkDependentSingleFile=true;EnableMsixTooling=true;SelfContained=false;WindowsAppSDKSelfContained=false;WindowsAppSdkSelfContained=false;WindowsAppSdkUndockedRegFreeWinRTInitialize=true;PublishSingleFile=true;EnableCompressionInSingleFile=false;IncludeNativeLibrariesForSelfExtract=true;IncludeAllContentForSelfExtract=true;PublishTrimmed=false;SuppressTrimAnalysisWarnings=true;DebugSymbols=false;DebugType=None" />
+    <Message Importance="High" Text="Framework-dependent single-file executable published to $(SingleFilePublishDir)" />
+  </Target>
+
+  <Target Name="BuildSingleFileSelfContained">
+    <RemoveDir Directories="$(SelfContainedSingleFilePublishDir)" />
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="Publish"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=$(SingleFileRuntimeIdentifier);Platform=$(Platform);PublishDir=$(SelfContainedSingleFilePublishDir);EnableMsixTooling=true;SelfContained=true;WindowsAppSDKSelfContained=true;WindowsAppSdkUndockedRegFreeWinRTInitialize=true;PublishSingleFile=true;EnableCompressionInSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;IncludeAllContentForSelfExtract=true;PublishTrimmed=false;SuppressTrimAnalysisWarnings=true;DebugSymbols=false;DebugType=None" />
+    <Message Importance="High" Text="Self-contained single-file executable published to $(SelfContainedSingleFilePublishDir)" />
   </Target>
 </Project>
