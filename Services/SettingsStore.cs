@@ -63,7 +63,7 @@ public sealed class SettingsStore
                     Transition = GetEnum(sections, section, nameof(MonitorProfile.Transition), WallpaperTransition.Fade),
                     TransitionDurationMs = GetInt(sections, section, nameof(MonitorProfile.TransitionDurationMs), 800),
                     TransitionDurationUnit = GetEnum(sections, section, nameof(MonitorProfile.TransitionDurationUnit), TimeUnit.Seconds),
-                    VideoLoop = GetBool(sections, section, nameof(MonitorProfile.VideoLoop), false),
+                    VideoLoop = GetBool(sections, section, nameof(MonitorProfile.VideoLoop), true),
                     VideoSoundEnabled = GetBool(sections, section, nameof(MonitorProfile.VideoSoundEnabled), false),
                     MediaFilter = GetEnum(sections, section, nameof(MonitorProfile.MediaFilter), PlaybackMediaFilter.ImagesAndVideos),
                     IsPaused = GetBool(sections, section, nameof(MonitorProfile.IsPaused), false),

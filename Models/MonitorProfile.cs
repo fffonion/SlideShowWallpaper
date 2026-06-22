@@ -28,7 +28,7 @@ public sealed class MonitorProfile
 
     public TimeUnit TransitionDurationUnit { get; set; } = TimeUnit.Seconds;
 
-    public bool VideoLoop { get; set; }
+    public bool VideoLoop { get; set; } = true;
 
     public bool VideoSoundEnabled { get; set; }
 

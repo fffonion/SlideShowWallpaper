@@ -5,6 +5,19 @@ namespace SlideShowWallpaper.Tests;
 public sealed class ProjectPackagingTests
 {
     [Fact]
+    public void ProjectTargetsNet10()
+    {
+        string projectPath = FindProjectPath();
+        XDocument project = XDocument.Load(projectPath);
+        string? targetFramework = project
+            .Descendants("TargetFramework")
+            .Select(element => element.Value)
+            .FirstOrDefault();
+
+        Assert.Equal("net10.0-windows10.0.26100.0", targetFramework);
+    }
+
+    [Fact]
     public void ProjectReferencesWinUiPackageWithoutFullWindowsAppSdk()
     {
         string projectPath = FindProjectPath();

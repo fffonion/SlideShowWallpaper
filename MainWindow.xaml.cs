@@ -429,18 +429,23 @@ public sealed partial class MainWindow : Window
 
         int row = 0;
         AddRow(form, row++, LocalizedStrings.Get("Folder"), new TextBlock { Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("FolderNone") : profile.FolderPath, TextTrimming = TextTrimming.CharacterEllipsis });
+        AddSectionHeader(form, row++, LocalizedStrings.Get("DisplaySettingsGroup"));
         AddRow(form, row++, LocalizedStrings.Get("Scale"), CreateChoiceCombo(ScaleModeChoices, profile.ScaleMode, value => profile.ScaleMode = value, LocalizedStrings.Get("ScaleModeAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
-        {
-            profile.PlaybackOrder = value;
-            RenderTabs(profile.Id);
-        }, LocalizedStrings.Get("PlaybackOrderAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("Offset"), CreateOffsetControls(profile));
+        AddSectionHeader(form, row++, LocalizedStrings.Get("MediaSettingsGroup"));
         AddRow(form, row++, LocalizedStrings.Get("MediaFilter"), CreateChoiceCombo(MediaFilterChoices, profile.MediaFilter, value =>
         {
             profile.MediaFilter = value;
             RenderTabs(profile.Id);
         }, LocalizedStrings.Get("MediaFilterAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("Offset"), CreateOffsetControls(profile));
+        AddRow(form, row++, LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
+        {
+            profile.PlaybackOrder = value;
+            RenderTabs(profile.Id);
+        }, LocalizedStrings.Get("PlaybackOrderAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
+        AddRow(form, row++, LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound")));
+        AddSectionHeader(form, row++, LocalizedStrings.Get("PlaybackSettingsGroup"));
         AddRow(form, row++, LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
             ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
             profile.IntervalUnit,
@@ -460,8 +465,6 @@ public sealed partial class MainWindow : Window
                 profile.TransitionDurationMs = Math.Max(0, TimeUnitConverter.ToMilliseconds(value, unit));
             },
             LocalizedStrings.Get("TransitionDurationAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
-        AddRow(form, row++, LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound")));
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);
@@ -535,7 +538,7 @@ public sealed partial class MainWindow : Window
     private void ConfigureSettingsWindow()
     {
         const int width = 1180;
-        const int preferredHeight = 900;
+        const int preferredHeight = 1280;
         DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
         RectInt32 workArea = displayArea.WorkArea;
         int height = Math.Min(preferredHeight, workArea.Height);
@@ -549,6 +552,22 @@ public sealed partial class MainWindow : Window
             presenter.IsResizable = true;
             presenter.IsMaximizable = false;
         }
+    }
+
+    private static void AddSectionHeader(Grid root, int row, string label)
+    {
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var text = new TextBlock
+        {
+            Text = label,
+            Style = Application.Current.Resources["SubtitleTextBlockStyle"] as Style,
+            Margin = new Thickness(0, row == 1 ? 2 : 12, 0, 0),
+        };
+        AutomationProperties.SetName(text, label);
+        Grid.SetRow(text, row);
+        Grid.SetColumnSpan(text, 2);
+        root.Children.Add(text);
     }
 
     private static void AddRow(Grid root, int row, string label, FrameworkElement control)

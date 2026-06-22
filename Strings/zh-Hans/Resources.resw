@@ -27,6 +27,9 @@
   <data name="TimeHours" xml:space="preserve"><value>小时</value></data>
   <data name="TimeUnitAutomationFormat" xml:space="preserve"><value>{0} 单位</value></data>
   <data name="Folder" xml:space="preserve"><value>文件夹</value></data>
+  <data name="DisplaySettingsGroup" xml:space="preserve"><value>显示</value></data>
+  <data name="MediaSettingsGroup" xml:space="preserve"><value>媒体</value></data>
+  <data name="PlaybackSettingsGroup" xml:space="preserve"><value>播放</value></data>
   <data name="Scale" xml:space="preserve"><value>缩放</value></data>
   <data name="Order" xml:space="preserve"><value>顺序</value></data>
   <data name="MediaFilter" xml:space="preserve"><value>媒体</value></data>

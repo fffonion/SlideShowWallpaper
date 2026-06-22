@@ -27,6 +27,9 @@
   <data name="TimeHours" xml:space="preserve"><value>Hours</value></data>
   <data name="TimeUnitAutomationFormat" xml:space="preserve"><value>{0} unit</value></data>
   <data name="Folder" xml:space="preserve"><value>Folder</value></data>
+  <data name="DisplaySettingsGroup" xml:space="preserve"><value>Display</value></data>
+  <data name="MediaSettingsGroup" xml:space="preserve"><value>Media</value></data>
+  <data name="PlaybackSettingsGroup" xml:space="preserve"><value>Playback</value></data>
   <data name="Scale" xml:space="preserve"><value>Scale</value></data>
   <data name="Order" xml:space="preserve"><value>Order</value></data>
   <data name="MediaFilter" xml:space="preserve"><value>Media</value></data>

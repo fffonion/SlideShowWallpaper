@@ -27,6 +27,9 @@
   <data name="TimeHours" xml:space="preserve"><value>時間</value></data>
   <data name="TimeUnitAutomationFormat" xml:space="preserve"><value>{0} の単位</value></data>
   <data name="Folder" xml:space="preserve"><value>フォルダー</value></data>
+  <data name="DisplaySettingsGroup" xml:space="preserve"><value>表示</value></data>
+  <data name="MediaSettingsGroup" xml:space="preserve"><value>メディア</value></data>
+  <data name="PlaybackSettingsGroup" xml:space="preserve"><value>再生</value></data>
   <data name="Scale" xml:space="preserve"><value>拡大縮小</value></data>
   <data name="Order" xml:space="preserve"><value>順序</value></data>
   <data name="MediaFilter" xml:space="preserve"><value>メディア</value></data>

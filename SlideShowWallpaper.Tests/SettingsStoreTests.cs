@@ -139,6 +139,38 @@ public sealed class SettingsStoreTests
     }
 
     [Fact]
+    public void MonitorProfile_WithDefaultConstructor_EnablesVideoLoop()
+    {
+        var profile = new MonitorProfile();
+
+        Assert.True(profile.VideoLoop);
+    }
+
+    [Fact]
+    public void Load_WithMissingVideoLoop_UsesTrue()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, "SlideShowWallpaper.ini");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(
+            path,
+            """
+            [Settings]
+            MonitorCount=1
+
+            [Monitor0]
+            Id=display1
+            DisplayName=Display 1
+            """);
+        var store = new SettingsStore(path);
+
+        WallpaperConfig config = store.Load();
+
+        MonitorProfile monitor = Assert.Single(config.Monitors);
+        Assert.True(monitor.VideoLoop);
+    }
+
+    [Fact]
     public void MonitorProfile_WithDefaultConstructor_DisablesVideoSound()
     {
         var profile = new MonitorProfile();
