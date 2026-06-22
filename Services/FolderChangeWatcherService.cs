@@ -2,7 +2,7 @@ namespace SlideShowWallpaper.Services;
 
 public sealed class FolderChangeWatcherService : IDisposable
 {
-    private static readonly TimeSpan DefaultDebounceDelay = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan DefaultDebounceDelay = TimeSpan.FromSeconds(10);
     private readonly Dictionary<string, WatchRegistration> _registrations = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeSpan _debounceDelay;
     private bool _disposed;
@@ -93,11 +93,12 @@ public sealed class FolderChangeWatcherService : IDisposable
             {
                 Filter = "*.*",
                 IncludeSubdirectories = false,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime,
             };
-            _watcher.Created += (_, args) => ScheduleIfSupported(args.FullPath, debounceDelay);
-            _watcher.Changed += (_, args) => ScheduleIfSupported(args.FullPath, debounceDelay);
-            _watcher.Renamed += (_, args) => ScheduleIfSupported(args.FullPath, debounceDelay);
+            _watcher.Created += (_, _) => Schedule(debounceDelay);
+            _watcher.Changed += (_, _) => Schedule(debounceDelay);
+            _watcher.Deleted += (_, _) => Schedule(debounceDelay);
+            _watcher.Renamed += (_, _) => Schedule(debounceDelay);
             _watcher.Error += (_, _) => Schedule(debounceDelay);
             _watcher.EnableRaisingEvents = true;
         }
@@ -124,14 +125,6 @@ public sealed class FolderChangeWatcherService : IDisposable
                 _disposed = true;
                 _watcher.Dispose();
                 _timer.Dispose();
-            }
-        }
-
-        private void ScheduleIfSupported(string path, TimeSpan debounceDelay)
-        {
-            if (ImageLibrary.IsSupportedImagePath(path))
-            {
-                Schedule(debounceDelay);
             }
         }
 
