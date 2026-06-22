@@ -23,8 +23,14 @@ public sealed class PreviewPopupPolicyTests
     }
 
     [Fact]
-    public void HoverDelay_ReturnsFiveSeconds()
+    public void GetHoverDelay_WithDefaultDelay_ReturnsTwoSeconds()
     {
-        Assert.Equal(TimeSpan.FromSeconds(5), PreviewPopupPolicy.HoverDelay);
+        Assert.Equal(TimeSpan.FromSeconds(2), PreviewPopupPolicy.GetHoverDelay(WallpaperConfig.DefaultPreviewPopupDelaySeconds));
+    }
+
+    [Fact]
+    public void GetHoverDelay_WithTooSmallDelay_ClampsToMinimum()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(PreviewPopupPolicy.MinimumHoverDelaySeconds), PreviewPopupPolicy.GetHoverDelay(0));
     }
 }

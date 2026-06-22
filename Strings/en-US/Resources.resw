@@ -23,6 +23,7 @@
   <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>Automatically track new files</value></data>
   <data name="AppSettingGlobalMute" xml:space="preserve"><value>Mute all videos</value></data>
   <data name="AppSettingThumbnailCache" xml:space="preserve"><value>Thumbnail cache</value></data>
+  <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>Video preview delay (seconds)</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>Follow system</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>Light</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>Dark</value></data>

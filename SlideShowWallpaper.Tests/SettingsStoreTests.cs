@@ -33,6 +33,7 @@ public sealed class SettingsStoreTests
             AutoTrackNewFiles = false,
             GlobalMute = false,
             ThumbnailCacheEnabled = false,
+            PreviewPopupDelaySeconds = 3,
             Monitors =
             [
                 new MonitorProfile
@@ -73,6 +74,7 @@ public sealed class SettingsStoreTests
         Assert.False(loaded.AutoTrackNewFiles);
         Assert.False(loaded.GlobalMute);
         Assert.False(loaded.ThumbnailCacheEnabled);
+        Assert.Equal(3, loaded.PreviewPopupDelaySeconds);
         Assert.Equal("display1", monitor.Id);
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);
@@ -256,5 +258,24 @@ public sealed class SettingsStoreTests
         WallpaperConfig config = store.Load();
 
         Assert.Equal(AppThemeMode.System, config.ThemeMode);
+    }
+
+    [Fact]
+    public void Load_WithMissingPreviewPopupDelay_UsesTwoSeconds()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, "SlideShowWallpaper.ini");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(
+            path,
+            """
+            [Settings]
+            MonitorCount=0
+            """);
+        var store = new SettingsStore(path);
+
+        WallpaperConfig config = store.Load();
+
+        Assert.Equal(WallpaperConfig.DefaultPreviewPopupDelaySeconds, config.PreviewPopupDelaySeconds);
     }
 }

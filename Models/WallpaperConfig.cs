@@ -56,6 +56,8 @@ public enum AppLanguageMode
 
 public sealed class WallpaperConfig
 {
+    public const int DefaultPreviewPopupDelaySeconds = 2;
+
     public bool StartWithWindows { get; set; }
 
     public bool CloseToTray { get; set; } = true;
@@ -71,6 +73,8 @@ public sealed class WallpaperConfig
     public bool GlobalMute { get; set; } = true;
 
     public bool ThumbnailCacheEnabled { get; set; } = true;
+
+    public int PreviewPopupDelaySeconds { get; set; } = DefaultPreviewPopupDelaySeconds;
 
     public List<MonitorProfile> Monitors { get; set; } = [];
 }

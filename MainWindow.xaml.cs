@@ -160,7 +160,7 @@ public sealed partial class MainWindow : Window
         _playbackStatusTimer.IsRepeating = true;
         _playbackStatusTimer.Tick += (_, _) => UpdateAllPlaybackStatusTexts();
         _previewPopupTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
-        _previewPopupTimer.Interval = PreviewPopupPolicy.HoverDelay;
+        _previewPopupTimer.Interval = PreviewPopupPolicy.GetHoverDelay(_viewModel.PreviewPopupDelaySeconds);
         _previewPopupTimer.IsRepeating = false;
         _previewPopupTimer.Tick += PreviewPopupTimer_Tick;
 
@@ -170,6 +170,7 @@ public sealed partial class MainWindow : Window
         _hwnd = WindowNative.GetWindowHandle(this);
         Closed += MainWindow_Closed;
         LoadSettings();
+        UpdatePreviewPopupDelay();
         _trayIconService = new TrayIconService(
             _hwnd,
             () => _viewModel.Profiles,
@@ -229,6 +230,7 @@ public sealed partial class MainWindow : Window
         _viewModel.AutoTrackNewFiles = config.AutoTrackNewFiles;
         _viewModel.GlobalMute = config.GlobalMute;
         _viewModel.ThumbnailCacheEnabled = config.ThumbnailCacheEnabled;
+        _viewModel.PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, config.PreviewPopupDelaySeconds);
         ApplyTheme(_viewModel.ThemeMode);
     }
 
@@ -422,7 +424,15 @@ public sealed partial class MainWindow : Window
             new SettingsRow(LocalizedStrings.Get("AppSettingLanguage"), CreateChoiceCombo(LanguageModeChoices, _viewModel.LanguageMode, SetLanguage, LocalizedStrings.Get("AppSettingLanguage"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingAutoTrackNewFiles"), CreateCheckBox(_viewModel.AutoTrackNewFiles, value => _viewModel.AutoTrackNewFiles = value, LocalizedStrings.Get("AppSettingAutoTrackNewFiles"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingGlobalMute"), CreateCheckBox(_viewModel.GlobalMute, value => _viewModel.GlobalMute = value, LocalizedStrings.Get("AppSettingGlobalMute"))),
-            new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache")))));
+            new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingVideoPreviewDelay"), CreateNumberBox(
+                _viewModel.PreviewPopupDelaySeconds,
+                value =>
+                {
+                    _viewModel.PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, (int)Math.Round(value));
+                    UpdatePreviewPopupDelay();
+                },
+                LocalizedStrings.Get("AppSettingVideoPreviewDelay")))));
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
@@ -649,6 +659,7 @@ public sealed partial class MainWindow : Window
         }
 
         _previewPopupTimer.Stop();
+        UpdatePreviewPopupDelay();
         HidePreviewPopup();
         _previewPopupPendingItem = item;
         _previewPopupPendingContainer = itemContainer;
@@ -899,6 +910,11 @@ public sealed partial class MainWindow : Window
         {
             _previewPopupPlayer.IsMuted = PreviewPopupPolicy.ShouldMuteVideo(_viewModel.GlobalMute, _previewPopupPendingProfile);
         }
+    }
+
+    private void UpdatePreviewPopupDelay()
+    {
+        _previewPopupTimer.Interval = PreviewPopupPolicy.GetHoverDelay(_viewModel.PreviewPopupDelaySeconds);
     }
 
     private void DisposePreviewPopup()
@@ -1740,6 +1756,7 @@ public sealed partial class MainWindow : Window
             AutoTrackNewFiles = _viewModel.AutoTrackNewFiles,
             GlobalMute = _viewModel.GlobalMute,
             ThumbnailCacheEnabled = _viewModel.ThumbnailCacheEnabled,
+            PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, _viewModel.PreviewPopupDelaySeconds),
             Monitors = _viewModel.Profiles.ToList(),
         };
     }

@@ -4,7 +4,12 @@ namespace SlideShowWallpaper.Services;
 
 internal static class PreviewPopupPolicy
 {
-    public static TimeSpan HoverDelay { get; } = TimeSpan.FromSeconds(5);
+    public const int MinimumHoverDelaySeconds = 1;
+
+    public static TimeSpan GetHoverDelay(int seconds)
+    {
+        return TimeSpan.FromSeconds(Math.Max(MinimumHoverDelaySeconds, seconds));
+    }
 
     public static bool ShouldMuteVideo(bool globalMute, MonitorProfile profile)
     {

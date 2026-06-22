@@ -23,6 +23,7 @@
   <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>自動追蹤新檔案</value></data>
   <data name="AppSettingGlobalMute" xml:space="preserve"><value>全域靜音</value></data>
   <data name="AppSettingThumbnailCache" xml:space="preserve"><value>縮圖快取</value></data>
+  <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>影片預覽延遲（秒）</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟隨系統</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>淺色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>
