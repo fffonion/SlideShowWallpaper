@@ -36,7 +36,29 @@ jobs:
           dotnet restore .\SlideShowWallpaper.csproj -p:Platform=x64 -r win-x64
 
       - name: Run tests
-        run: dotnet test .\SlideShowWallpaper.Tests\SlideShowWallpaper.Tests.csproj --configuration Release --no-restore -p:Platform=x64
+        timeout-minutes: 10
+        run: |
+          New-Item -ItemType Directory -Force artifacts\test-results | Out-Null
+          dotnet test .\SlideShowWallpaper.Tests\SlideShowWallpaper.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            -p:Platform=x64 `
+            --logger "console;verbosity=detailed" `
+            --logger "trx;LogFileName=release-tests.trx" `
+            --results-directory artifacts\test-results `
+            --blame-hang `
+            --blame-hang-timeout 5m `
+            --blame-hang-dump-type mini `
+            --diag artifacts\vstest-release.log
+
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-diagnostics
+          path: |
+            artifacts/test-results/**
+            artifacts/vstest-release.log*
 
       - name: Build single-file executable
         run: dotnet msbuild .\SlideShowWallpaper.csproj -t:BuildSingleFile -p:Configuration=Release -p:Platform=x64 -v minimal
