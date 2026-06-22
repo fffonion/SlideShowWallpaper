@@ -409,7 +409,7 @@ public sealed partial class MainWindow : Window
     {
         var root = new Grid
         {
-            RowSpacing = 14,
+            RowSpacing = 10,
             MaxWidth = 760,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
@@ -420,58 +420,56 @@ public sealed partial class MainWindow : Window
         Grid.SetRow(commandBar, 0);
         root.Children.Add(commandBar);
 
-        var form = new Grid
+        var form = new StackPanel
         {
-            RowSpacing = 12,
-            ColumnSpacing = 12,
+            Spacing = 10,
         };
-        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
-        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        form.Children.Add(CreateSettingsSection(null, new SettingsRow(LocalizedStrings.Get("Folder"), CreateFolderControls(profile))));
+        form.Children.Add(CreateSettingsSection(
+            LocalizedStrings.Get("DisplaySettingsGroup"),
+            new SettingsRow(LocalizedStrings.Get("Scale"), CreateChoiceCombo(ScaleModeChoices, profile.ScaleMode, value => profile.ScaleMode = value, LocalizedStrings.Get("ScaleModeAutomation"))),
+            new SettingsRow(LocalizedStrings.Get("Offset"), CreateOffsetControls(profile))));
+        form.Children.Add(CreateSettingsSection(
+            LocalizedStrings.Get("MediaSettingsGroup"),
+            new SettingsRow(LocalizedStrings.Get("MediaFilter"), CreateChoiceCombo(MediaFilterChoices, profile.MediaFilter, value =>
+            {
+                profile.MediaFilter = value;
+                RenderTabs(profile.Id);
+            }, LocalizedStrings.Get("MediaFilterAutomation"))),
+            new SettingsRow(LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
+            {
+                profile.PlaybackOrder = value;
+                if (value == PlaybackOrder.SingleLoop)
+                {
+                    profile.VideoLoop = true;
+                }
 
-        int row = 0;
-        AddRow(form, row++, LocalizedStrings.Get("Folder"), new TextBlock { Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("FolderNone") : profile.FolderPath, TextTrimming = TextTrimming.CharacterEllipsis });
-        AddSectionHeader(form, row++, LocalizedStrings.Get("DisplaySettingsGroup"));
-        AddRow(form, row++, LocalizedStrings.Get("Scale"), CreateChoiceCombo(ScaleModeChoices, profile.ScaleMode, value => profile.ScaleMode = value, LocalizedStrings.Get("ScaleModeAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("Offset"), CreateOffsetControls(profile));
-        AddSectionHeader(form, row++, LocalizedStrings.Get("MediaSettingsGroup"));
-        AddRow(form, row++, LocalizedStrings.Get("MediaFilter"), CreateChoiceCombo(MediaFilterChoices, profile.MediaFilter, value =>
-        {
-            profile.MediaFilter = value;
-            RenderTabs(profile.Id);
-        }, LocalizedStrings.Get("MediaFilterAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
-        {
-            profile.PlaybackOrder = value;
-            if (value == PlaybackOrder.SingleLoop)
-            {
-                profile.VideoLoop = true;
-            }
-
-            RenderTabs(profile.Id);
-        }, LocalizedStrings.Get("PlaybackOrderAutomation")));
-        AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
-        AddRow(form, row++, LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound")));
-        AddRow(form, row++, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized"), CreateCheckBox(profile.PauseVideoWhenOtherAppMaximized, value => profile.PauseVideoWhenOtherAppMaximized = value, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized")));
-        AddSectionHeader(form, row++, LocalizedStrings.Get("PlaybackSettingsGroup"));
-        AddRow(form, row++, LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
-            ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
-            profile.IntervalUnit,
-            (value, unit) =>
-            {
-                profile.IntervalUnit = unit;
-                profile.IntervalSeconds = Math.Max(5, (int)Math.Round(TimeUnitConverter.ToSeconds(value, unit)));
-            },
-            LocalizedStrings.Get("Interval")));
-        AddRow(form, row++, LocalizedStrings.Get("Transition"), CreateChoiceCombo(TransitionChoices, profile.Transition, value => profile.Transition = value, LocalizedStrings.Get("Transition")));
-        AddRow(form, row++, LocalizedStrings.Get("Duration"), CreateTimedNumberBox(
-            ToDisplayDuration(profile.TransitionDurationMs, profile.TransitionDurationUnit),
-            profile.TransitionDurationUnit,
-            (value, unit) =>
-            {
-                profile.TransitionDurationUnit = unit;
-                profile.TransitionDurationMs = Math.Max(0, TimeUnitConverter.ToMilliseconds(value, unit));
-            },
-            LocalizedStrings.Get("TransitionDurationAutomation")));
+                RenderTabs(profile.Id);
+            }, LocalizedStrings.Get("PlaybackOrderAutomation"))),
+            new SettingsRow(LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop"))),
+            new SettingsRow(LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound"))),
+            new SettingsRow(LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized"), CreateCheckBox(profile.PauseVideoWhenOtherAppMaximized, value => profile.PauseVideoWhenOtherAppMaximized = value, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized")))));
+        form.Children.Add(CreateSettingsSection(
+            LocalizedStrings.Get("PlaybackSettingsGroup"),
+            new SettingsRow(LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
+                ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
+                profile.IntervalUnit,
+                (value, unit) =>
+                {
+                    profile.IntervalUnit = unit;
+                    profile.IntervalSeconds = Math.Max(5, (int)Math.Round(TimeUnitConverter.ToSeconds(value, unit)));
+                },
+                LocalizedStrings.Get("Interval"))),
+            new SettingsRow(LocalizedStrings.Get("Transition"), CreateChoiceCombo(TransitionChoices, profile.Transition, value => profile.Transition = value, LocalizedStrings.Get("Transition"))),
+            new SettingsRow(LocalizedStrings.Get("Duration"), CreateTimedNumberBox(
+                ToDisplayDuration(profile.TransitionDurationMs, profile.TransitionDurationUnit),
+                profile.TransitionDurationUnit,
+                (value, unit) =>
+                {
+                    profile.TransitionDurationUnit = unit;
+                    profile.TransitionDurationMs = Math.Max(0, TimeUnitConverter.ToMilliseconds(value, unit));
+                },
+                LocalizedStrings.Get("TransitionDurationAutomation")))));
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);
@@ -502,13 +500,6 @@ public sealed partial class MainWindow : Window
             UpdatePauseButton(pauseButton, profile.IsPaused);
         };
 
-        var folderButton = new AppBarButton
-        {
-            Icon = new SymbolIcon(Symbol.OpenFile),
-            Label = LocalizedStrings.Get("Folder"),
-        };
-        folderButton.Click += async (_, _) => await OpenFolderAsync(profile);
-
         var nextButton = new AppBarButton
         {
             Icon = new SymbolIcon(Symbol.Forward),
@@ -534,7 +525,6 @@ public sealed partial class MainWindow : Window
             DefaultLabelPosition = CommandBarDefaultLabelPosition.Right,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
-        commandBar.PrimaryCommands.Add(folderButton);
         commandBar.PrimaryCommands.Add(stopButton);
         commandBar.PrimaryCommands.Add(pauseButton);
         commandBar.PrimaryCommands.Add(nextButton);
@@ -545,7 +535,7 @@ public sealed partial class MainWindow : Window
     private void ConfigureSettingsWindow()
     {
         const int width = 1240;
-        const int preferredHeight = 1300;
+        const int preferredHeight = 1420;
         DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
         RectInt32 workArea = displayArea.WorkArea;
         int height = Math.Min(preferredHeight, workArea.Height);
@@ -561,40 +551,121 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static void AddSectionHeader(Grid root, int row, string label)
+    private Grid CreateFolderControls(MonitorProfile profile)
     {
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        var text = new TextBlock
+        var panel = new Grid
         {
-            Text = label,
-            Style = Application.Current.Resources["SubtitleTextBlockStyle"] as Style,
-            Margin = new Thickness(0, row == 1 ? 2 : 12, 0, 0),
+            ColumnSpacing = 10,
         };
-        AutomationProperties.SetName(text, label);
-        Grid.SetRow(text, row);
-        Grid.SetColumnSpan(text, 2);
-        root.Children.Add(text);
-    }
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-    private static void AddRow(Grid root, int row, string label, FrameworkElement control)
-    {
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        var text = new TextBlock
+        var pathText = new TextBlock
         {
-            Text = label,
+            Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("FolderNone") : profile.FolderPath,
+            TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        AutomationProperties.SetName(text, label);
-        Grid.SetRow(text, row);
-        Grid.SetColumn(text, 0);
-        root.Children.Add(text);
+        Grid.SetColumn(pathText, 0);
+        panel.Children.Add(pathText);
 
-        control.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetRow(control, row);
-        Grid.SetColumn(control, 1);
-        root.Children.Add(control);
+        var folderButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Folder),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(folderButton, LocalizedStrings.Get("Folder"));
+        ToolTipService.SetToolTip(folderButton, LocalizedStrings.Get("Folder"));
+        folderButton.Click += async (_, _) => await OpenFolderAsync(profile);
+        Grid.SetColumn(folderButton, 1);
+        panel.Children.Add(folderButton);
+
+        return panel;
+    }
+
+    private static Border CreateSettingsSection(string? title, params SettingsRow[] rows)
+    {
+        var stack = new StackPanel();
+        if (!string.IsNullOrEmpty(title))
+        {
+            var titleBlock = new TextBlock
+            {
+                Text = title,
+                FontSize = 22,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(16, 10, 16, 8),
+            };
+            AutomationProperties.SetName(titleBlock, title);
+            stack.Children.Add(titleBlock);
+            stack.Children.Add(CreateSettingsDivider());
+        }
+
+        for (int i = 0; i < rows.Length; i++)
+        {
+            if (i > 0)
+            {
+                stack.Children.Add(CreateSettingsDivider());
+            }
+
+            stack.Children.Add(CreateSettingsRow(rows[i]));
+        }
+
+        return new Border
+        {
+            Background = GetThemeBrush("CardBackgroundFillColorDefaultBrush"),
+            BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Child = stack,
+        };
+    }
+
+    private static Border CreateSettingsRow(SettingsRow row)
+    {
+        var content = new Grid
+        {
+            ColumnSpacing = 12,
+            MinHeight = 44,
+            Padding = new Thickness(16, 4, 16, 4),
+        };
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var text = new TextBlock
+        {
+            Text = row.Label,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(text, row.Label);
+        Grid.SetColumn(text, 0);
+        content.Children.Add(text);
+
+        row.Control.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(row.Control, 1);
+        content.Children.Add(row.Control);
+
+        return new Border
+        {
+            Child = content,
+        };
+    }
+
+    private static Border CreateSettingsDivider()
+    {
+        return new Border
+        {
+            Height = 1,
+            Background = GetThemeBrush("DividerStrokeColorDefaultBrush"),
+        };
+    }
+
+    private static Brush GetThemeBrush(string resourceKey)
+    {
+        return Application.Current.Resources.TryGetValue(resourceKey, out object value) && value is Brush brush
+            ? brush
+            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 
     private StackPanel CreateOffsetControls(MonitorProfile profile)
@@ -1105,6 +1176,8 @@ public sealed partial class MainWindow : Window
         button.Label = isPaused ? LocalizedStrings.Get("Resume") : LocalizedStrings.Get("Pause");
         AutomationProperties.SetName(button, button.Label);
     }
+
+    private readonly record struct SettingsRow(string Label, FrameworkElement Control);
 
     private sealed record Choice<T>(T Value, string Label)
     {
