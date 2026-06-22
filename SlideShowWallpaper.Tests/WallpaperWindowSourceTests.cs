@@ -24,6 +24,21 @@ public sealed class WallpaperWindowSourceTests
         Assert.Equal(3, CountOccurrences(source, "VerticalAlignment=\"Top\""));
     }
 
+    [Fact]
+    public void WallpaperWindow_UsesXamlRootViewportForVideoLayout()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string applyVideoLayout = source[
+            source.IndexOf("private void ApplyVideoLayout", StringComparison.Ordinal)..
+            source.IndexOf("private DoubleAnimation CreateOpacityAnimation", StringComparison.Ordinal)];
+
+        Assert.Contains("GetViewportWidth(Root)", applyVideoLayout);
+        Assert.Contains("GetViewportHeight(Root)", applyVideoLayout);
+        Assert.DoesNotContain("ActualWidthOrFallback()", applyVideoLayout);
+        Assert.DoesNotContain("ActualHeightOrFallback()", applyVideoLayout);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

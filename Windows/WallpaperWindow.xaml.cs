@@ -340,8 +340,8 @@ public sealed partial class WallpaperWindow : Window
         WallpaperElementLayout layout = WallpaperLayoutCalculator.Calculate(
             sourceWidth,
             sourceHeight,
-            ActualWidthOrFallback(),
-            ActualHeightOrFallback(),
+            GetViewportWidth(Root),
+            GetViewportHeight(Root),
             profile.ScaleMode,
             profile.OffsetX,
             profile.OffsetY);
