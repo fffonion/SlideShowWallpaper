@@ -6,8 +6,7 @@ public sealed class ImageOrderService
 {
     private readonly object _sync = new();
     private readonly Random _random;
-    private string? _lastKey;
-    private Task<IReadOnlyList<ImageMetadata>>? _lastTask;
+    private readonly Dictionary<string, Task<IReadOnlyList<ImageMetadata>>> _tasks = new(StringComparer.OrdinalIgnoreCase);
 
     public ImageOrderService()
         : this(Random.Shared)
@@ -37,17 +36,16 @@ public sealed class ImageOrderService
         lock (_sync)
         {
             if (!reload
-                && string.Equals(_lastKey, key, StringComparison.OrdinalIgnoreCase)
-                && _lastTask is not null
-                && !_lastTask.IsFaulted
-                && !_lastTask.IsCanceled)
+                && _tasks.TryGetValue(key, out Task<IReadOnlyList<ImageMetadata>>? existing)
+                && !existing.IsFaulted
+                && !existing.IsCanceled)
             {
-                return _lastTask;
+                return existing;
             }
 
-            _lastKey = key;
-            _lastTask = Task.Run(() => Scan(folderPath, order));
-            return _lastTask;
+            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(() => Scan(folderPath, order));
+            _tasks[key] = task;
+            return task;
         }
     }
 

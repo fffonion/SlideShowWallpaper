@@ -9,24 +9,35 @@ public sealed class WallpaperPlaybackCoordinator
     private readonly MonitorService _monitorService;
     private readonly DesktopHostService _desktopHostService;
     private readonly ImageOrderService _imageOrderService;
+    private readonly FolderChangeWatcherService _folderChangeWatcherService;
+    private readonly DispatcherQueue _dispatcherQueue;
     private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _queueVersions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, MonitorProfile> _profiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly MonitorProfileChangeTracker _profileChanges = new();
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
     private bool _playbackEnabled = true;
 
-    public WallpaperPlaybackCoordinator(MonitorService monitorService, DesktopHostService desktopHostService, ImageOrderService imageOrderService)
+    public WallpaperPlaybackCoordinator(
+        MonitorService monitorService,
+        DesktopHostService desktopHostService,
+        ImageOrderService imageOrderService,
+        FolderChangeWatcherService folderChangeWatcherService)
     {
         _monitorService = monitorService;
         _desktopHostService = desktopHostService;
         _imageOrderService = imageOrderService;
+        _folderChangeWatcherService = folderChangeWatcherService;
+        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
     }
 
     public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
 
     public bool PlaybackEnabled => _playbackEnabled;
+
+    public event EventHandler<OrderedImagesChangedEventArgs>? OrderedImagesChanged;
 
     public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled)
     {
@@ -38,8 +49,17 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         _monitorRects = _monitorService.GetMonitorRects();
+        HashSet<string> activeProfileIds = profiles.Select(profile => profile.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string monitorId in _profiles.Keys.Where(id => !activeProfileIds.Contains(id)).ToArray())
+        {
+            _profiles.Remove(monitorId);
+            _folderChangeWatcherService.Unwatch(monitorId);
+        }
+
         foreach (MonitorProfile profile in profiles)
         {
+            _profiles[profile.Id] = profile;
+            ConfigureFolderWatcher(profile);
             if (profile.IsStopped)
             {
                 CloseWindow(profile.Id);
@@ -175,7 +195,9 @@ public sealed class WallpaperPlaybackCoordinator
         _timers.Clear();
         _queues.Clear();
         _queueVersions.Clear();
+        _profiles.Clear();
         _profileChanges.Clear();
+        _folderChangeWatcherService.Clear();
     }
 
     private void CloseWindow(string monitorId)
@@ -192,6 +214,17 @@ public sealed class WallpaperPlaybackCoordinator
 
         _queueVersions.Remove(monitorId);
         _profileChanges.Forget(monitorId);
+    }
+
+    private void ConfigureFolderWatcher(MonitorProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.FolderPath))
+        {
+            _folderChangeWatcherService.Unwatch(profile.Id);
+            return;
+        }
+
+        _folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, () => DispatchFolderChange(profile.Id));
     }
 
     private void EnsureWindow(MonitorProfile profile)
@@ -250,6 +283,48 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 
+    private void DispatchFolderChange(string monitorId)
+    {
+        _dispatcherQueue.TryEnqueue(() => ReloadChangedFolderAsync(monitorId));
+    }
+
+    private async void ReloadChangedFolderAsync(string monitorId)
+    {
+        if (!_profiles.TryGetValue(monitorId, out MonitorProfile? profile) || string.IsNullOrWhiteSpace(profile.FolderPath))
+        {
+            return;
+        }
+
+        try
+        {
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+            OrderedImagesChanged?.Invoke(this, new OrderedImagesChangedEventArgs(profile.Id, images));
+            if (!_playbackEnabled || profile.IsStopped)
+            {
+                return;
+            }
+
+            bool hadWindow = _windows.ContainsKey(profile.Id);
+            ReplaceQueue(profile, images.Select(image => image.Path), preserveInitialOrder: true);
+            if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
+            {
+                CloseWindow(profile.Id);
+                return;
+            }
+
+            EnsureWindow(profile);
+            ConfigureTimer(profile);
+            if (!hadWindow)
+            {
+                await ShowNextAsync(profile.Id);
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
     private bool TryShowSelectedImage(MonitorProfile profile)
     {
         if (_windows.ContainsKey(profile.Id)
@@ -290,3 +365,5 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 }
+
+public sealed record OrderedImagesChangedEventArgs(string MonitorId, IReadOnlyList<ImageMetadata> Images);

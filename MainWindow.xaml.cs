@@ -65,6 +65,7 @@ public sealed partial class MainWindow : Window
     private readonly TrayIconService _trayIconService;
     private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
@@ -103,6 +104,7 @@ public sealed partial class MainWindow : Window
         Closed += MainWindow_Closed;
         LoadSettings();
         _trayIconService = new TrayIconService(_hwnd, () => _viewModel.Profiles, ShowSettingsWindow, ExitApplication, NextFromTray, TogglePauseFromTray, ToggleStopFromTray);
+        _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         RenderTabs();
         ApplySettings();
     }
@@ -218,6 +220,7 @@ public sealed partial class MainWindow : Window
             Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("ImageCountZero") : LocalizedStrings.Get("LoadingImages"),
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
         };
+        _previewMetadataTexts[profile.Id] = metadata;
         AutomationProperties.SetName(metadata, LocalizedStrings.Format("MonitorImageCountAutomationFormat", profile.DisplayName));
         root.Children.Add(metadata);
 
@@ -650,6 +653,21 @@ public sealed partial class MainWindow : Window
     {
     }
 
+    private void Coordinator_OrderedImagesChanged(object? sender, OrderedImagesChangedEventArgs args)
+    {
+        if (!_previewItems.TryGetValue(args.MonitorId, out ObservableCollection<ImagePreviewItem>? items))
+        {
+            return;
+        }
+
+        ImagePreviewItem[] reusableItems = [.. items];
+        ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems);
+        if (_previewMetadataTexts.TryGetValue(args.MonitorId, out TextBlock? metadataText))
+        {
+            metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
+        }
+    }
+
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListView { Tag: MonitorProfile profile, SelectedItem: ImagePreviewItem item })
@@ -790,6 +808,7 @@ public sealed partial class MainWindow : Window
 
     private void ShutdownApplication()
     {
+        _coordinator.OrderedImagesChanged -= Coordinator_OrderedImagesChanged;
         _trayIconService.Dispose();
         _coordinator.Shutdown();
     }
