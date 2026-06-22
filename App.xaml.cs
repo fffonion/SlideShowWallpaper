@@ -14,6 +14,7 @@ public partial class App : Application
     private readonly ImageOrderService _imageOrderService = new();
     private readonly FolderChangeWatcherService _folderChangeWatcherService = new();
     private WallpaperPlaybackCoordinator? _coordinator;
+    private SingleInstanceService? _singleInstanceService;
 
     public App()
     {
@@ -38,6 +39,20 @@ public partial class App : Application
         {
             AppLog.Write("Launch start");
             LaunchOptions launchOptions = LaunchOptions.FromArguments(Environment.GetCommandLineArgs().Skip(1));
+            if (!launchOptions.AllowMultipleInstances)
+            {
+                _singleInstanceService = new SingleInstanceService();
+                if (!_singleInstanceService.TryAcquirePrimary())
+                {
+                    _ = _singleInstanceService.NotifyPrimaryAsync().GetAwaiter().GetResult();
+                    _singleInstanceService.Dispose();
+                    _singleInstanceService = null;
+                    Exit();
+                    Environment.Exit(0);
+                    return;
+                }
+            }
+
             _coordinator = new WallpaperPlaybackCoordinator(_monitorService, _desktopHostService, _imageOrderService, _folderChangeWatcherService);
             _window = new MainWindow(_monitorService, _coordinator, _settingsStore, _autostartService, _folderPickerService, _imageOrderService);
             if (!launchOptions.StartInTray)
@@ -45,6 +60,7 @@ public partial class App : Application
                 _window.Activate();
             }
 
+            _singleInstanceService?.StartActivationListener(ShowExistingInstanceWindow);
             AppLog.Write("Launch activated");
         }
         catch (Exception exception)
@@ -52,5 +68,15 @@ public partial class App : Application
             AppLog.Write(exception);
             throw;
         }
+    }
+
+    private void ShowExistingInstanceWindow()
+    {
+        if (_window is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        mainWindow.DispatcherQueue.TryEnqueue(mainWindow.ShowSettingsWindow);
     }
 }

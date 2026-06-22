@@ -19,4 +19,12 @@ public sealed class LaunchOptionsTests
 
         Assert.False(options.StartInTray);
     }
+
+    [Fact]
+    public void FromArguments_WithMultipleSwitch_AllowsMultipleInstances()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments(["/multiple"]);
+
+        Assert.True(options.AllowMultipleInstances);
+    }
 }

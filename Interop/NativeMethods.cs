@@ -24,6 +24,7 @@ public static partial class NativeMethods
     internal const int TPM_RIGHTBUTTON = 0x0002;
     internal const int TPM_RETURNCMD = 0x0100;
     internal const int SW_HIDE = 0;
+    internal const int SW_RESTORE = 9;
     internal const int SW_SHOW = 5;
     internal const int WM_APP = 0x8000;
     internal const int WM_COMMAND = 0x0111;

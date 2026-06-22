@@ -796,7 +796,7 @@ public sealed partial class MainWindow : Window
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
 
-    private void ShowSettingsWindow()
+    public void ShowSettingsWindow()
     {
         if (MonitorTabs.TabItems.Count == 0)
         {
@@ -804,7 +804,9 @@ public sealed partial class MainWindow : Window
         }
 
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);
+        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_RESTORE);
         Activate();
+        NativeMethods.SetForegroundWindow(_hwnd);
     }
 
     private void ExitApplication()
