@@ -63,6 +63,26 @@ public sealed class PlaybackQueueTests
     }
 
     [Fact]
+    public void ReplaceItemsAfterCurrent_WithCurrentItemInNewList_StartsAfterCurrentItem()
+    {
+        var queue = new PlaybackQueue(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+        ],
+        PlaybackOrder.SequentialLoop);
+        _ = queue.Next();
+
+        queue.ReplaceItemsAfterCurrent(
+        [
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+            new ImagePlaybackItem(@"C:\A\new.jpg"),
+        ]);
+
+        Assert.Equal(@"C:\A\new.jpg", queue.Next()?.Path);
+    }
+
+    [Fact]
     public void Shuffle_WithRandomOrder_ReordersItems()
     {
         var queue = new PlaybackQueue(

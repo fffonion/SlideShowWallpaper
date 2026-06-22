@@ -305,19 +305,26 @@ public sealed class WallpaperPlaybackCoordinator
             }
 
             bool hadWindow = _windows.ContainsKey(profile.Id);
-            ReplaceQueue(profile, images.Select(image => image.Path), preserveInitialOrder: true);
+            ReplaceQueueAfterCurrent(profile, images.Select(image => image.Path));
             if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
             {
                 CloseWindow(profile.Id);
                 return;
             }
 
+            if (hadWindow)
+            {
+                if (!_timers.ContainsKey(profile.Id))
+                {
+                    ConfigureTimer(profile);
+                }
+
+                return;
+            }
+
             EnsureWindow(profile);
             ConfigureTimer(profile);
-            if (!hadWindow)
-            {
-                await ShowNextAsync(profile.Id);
-            }
+            await ShowNextAsync(profile.Id);
         }
         catch (Exception exception)
         {
@@ -346,6 +353,18 @@ public sealed class WallpaperPlaybackCoordinator
         _queues[profile.Id] = preserveInitialOrder
             ? PlaybackQueue.FromOrderedItems(items, profile.PlaybackOrder)
             : new PlaybackQueue(items, profile.PlaybackOrder);
+    }
+
+    private void ReplaceQueueAfterCurrent(MonitorProfile profile, IEnumerable<string> paths)
+    {
+        ImagePlaybackItem[] items = paths.Select(path => new ImagePlaybackItem(path)).ToArray();
+        if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
+        {
+            queue.ReplaceItemsAfterCurrent(items);
+            return;
+        }
+
+        _queues[profile.Id] = PlaybackQueue.FromOrderedItems(items, profile.PlaybackOrder);
     }
 
     private void ConfigureTimer(MonitorProfile profile)

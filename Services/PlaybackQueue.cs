@@ -8,6 +8,7 @@ public sealed class PlaybackQueue
     private readonly PlaybackOrder _order;
     private List<ImagePlaybackItem> _items;
     private int _nextIndex;
+    private string? _currentPath;
 
     public PlaybackQueue(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order)
         : this(items, order, Random.Shared, shuffleInitial: true)
@@ -45,6 +46,7 @@ public sealed class PlaybackQueue
         }
 
         ImagePlaybackItem item = _items[_nextIndex];
+        _currentPath = item.Path;
 
         _nextIndex = (_nextIndex + 1) % _items.Count;
         if (_nextIndex == 0)
@@ -64,6 +66,17 @@ public sealed class PlaybackQueue
             : Math.Max(0, _items.FindIndex(item => string.Equals(item.Path, nextPath, StringComparison.OrdinalIgnoreCase)));
     }
 
+    public void ReplaceItemsAfterCurrent(IEnumerable<ImagePlaybackItem> items)
+    {
+        string? currentPath = _currentPath;
+        _items = items.ToList();
+        _nextIndex = 0;
+        if (!string.IsNullOrWhiteSpace(currentPath))
+        {
+            StartAfter(currentPath);
+        }
+    }
+
     public void Shuffle()
     {
         if (_order != PlaybackOrder.Random)
@@ -80,6 +93,7 @@ public sealed class PlaybackQueue
         int index = _items.FindIndex(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
         if (index >= 0)
         {
+            _currentPath = _items[index].Path;
             _nextIndex = (index + 1) % _items.Count;
         }
     }
