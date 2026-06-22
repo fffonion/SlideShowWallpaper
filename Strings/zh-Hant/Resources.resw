@@ -57,6 +57,7 @@
   <data name="ImageCountZero" xml:space="preserve"><value>0 張圖片</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 張圖片</value></data>
   <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1} 張圖片，{2}</value></data>
+  <data name="PreviewStatusNoRemainingFormat" xml:space="preserve"><value>{0}/{1} 張圖片</value></data>
   <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
   <data name="LoopRemainingFormat" xml:space="preserve"><value>剩餘 {0}</value></data>
   <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}小時 {1:00}分鐘</value></data>

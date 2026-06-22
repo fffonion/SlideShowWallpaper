@@ -586,17 +586,20 @@ public sealed partial class MainWindow : Window
             new SettingsRow(LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop"))),
             new SettingsRow(LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound"))),
             new SettingsRow(LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized"), CreateCheckBox(profile.PauseVideoWhenOtherAppMaximized, value => profile.PauseVideoWhenOtherAppMaximized = value, LocalizedStrings.Get("PauseVideoWhenOtherAppMaximized")))));
+        FrameworkElement intervalControl = CreateTimedNumberBox(
+            ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
+            profile.IntervalUnit,
+            (value, unit) =>
+            {
+                profile.IntervalUnit = unit;
+                profile.IntervalSeconds = Math.Max(5, (int)Math.Round(TimeUnitConverter.ToSeconds(value, unit)));
+            },
+            LocalizedStrings.Get("Interval"),
+            profile.PlaybackOrder != PlaybackOrder.SingleLoop);
+
         form.Children.Add(CreateSettingsSection(
             LocalizedStrings.Get("PlaybackSettingsGroup"),
-            new SettingsRow(LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
-                ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
-                profile.IntervalUnit,
-                (value, unit) =>
-                {
-                    profile.IntervalUnit = unit;
-                    profile.IntervalSeconds = Math.Max(5, (int)Math.Round(TimeUnitConverter.ToSeconds(value, unit)));
-                },
-                LocalizedStrings.Get("Interval"))),
+            new SettingsRow(LocalizedStrings.Get("Interval"), intervalControl),
             new SettingsRow(LocalizedStrings.Get("Transition"), CreateChoiceCombo(TransitionChoices, profile.Transition, value => profile.Transition = value, LocalizedStrings.Get("Transition"))),
             new SettingsRow(LocalizedStrings.Get("Duration"), CreateTimedNumberBox(
                 ToDisplayDuration(profile.TransitionDurationMs, profile.TransitionDurationUnit),
@@ -880,7 +883,7 @@ public sealed partial class MainWindow : Window
         return numberBox;
     }
 
-    private StackPanel CreateTimedNumberBox(double value, TimeUnit unit, Action<double, TimeUnit> changed, string automationName)
+    private StackPanel CreateTimedNumberBox(double value, TimeUnit unit, Action<double, TimeUnit> changed, string automationName, bool isEnabled = true)
     {
         var panel = new StackPanel
         {
@@ -899,6 +902,8 @@ public sealed partial class MainWindow : Window
             changed(currentValue, newUnit);
         }, LocalizedStrings.Format("TimeUnitAutomationFormat", automationName));
         unitCombo.Width = 128;
+        valueBox.IsEnabled = isEnabled;
+        unitCombo.IsEnabled = isEnabled;
 
         panel.Children.Add(valueBox);
         panel.Children.Add(unitCombo);
@@ -1275,6 +1280,11 @@ public sealed partial class MainWindow : Window
 
     private static string FormatPreviewStatusText(MonitorProfile profile)
     {
+        if (profile.PlaybackOrder == PlaybackOrder.SingleLoop)
+        {
+            return PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(profile.CurrentMediaIndex, profile.TotalMediaCount);
+        }
+
         int remainingSeconds = PlaybackStatusFormatter.CalculateLoopRemainingSeconds(
             profile.CurrentMediaIndex,
             profile.TotalMediaCount,

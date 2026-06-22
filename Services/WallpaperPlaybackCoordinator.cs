@@ -496,6 +496,11 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         timer.Stop();
+        if (profile.PlaybackOrder == PlaybackOrder.SingleLoop)
+        {
+            return;
+        }
+
         timer.Interval = TimeSpan.FromSeconds(Math.Max(5, profile.IntervalSeconds));
         if (!profile.IsPaused && !profile.IsStopped)
         {
@@ -545,6 +550,7 @@ public sealed class WallpaperPlaybackCoordinator
         if (!_profiles.TryGetValue(monitorId, out MonitorProfile? profile)
             || profile.IsPaused
             || profile.IsStopped
+            || profile.PlaybackOrder == PlaybackOrder.SingleLoop
             || !_timers.TryGetValue(monitorId, out DispatcherQueueTimer? timer))
         {
             return;

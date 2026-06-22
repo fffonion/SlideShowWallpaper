@@ -34,6 +34,26 @@ public static class PlaybackStatusFormatter
             LocalizedStrings.Get("LoopRemainingTimeFormat"));
     }
 
+    public static string FormatPreviewStatusWithoutRemaining(int currentIndex, int totalCount)
+    {
+        return FormatPreviewStatusWithoutRemaining(
+            currentIndex,
+            totalCount,
+            LocalizedStrings.Get("PreviewStatusNoRemainingFormat"),
+            LocalizedStrings.Get("ImageCountZero"));
+    }
+
+    public static string FormatPreviewStatusWithoutRemaining(int currentIndex, int totalCount, string format, string zeroText)
+    {
+        if (totalCount <= 0)
+        {
+            return zeroText;
+        }
+
+        int current = Math.Clamp(currentIndex, 1, totalCount);
+        return string.Format(CultureInfo.CurrentCulture, format, current, totalCount);
+    }
+
     public static string FormatPreviewStatus(
         int currentIndex,
         int totalCount,

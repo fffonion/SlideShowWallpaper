@@ -40,6 +40,22 @@ public sealed class PlaybackStatusFormatterTests
     }
 
     [Fact]
+    public void FormatPreviewStatusWithoutRemaining_WithItems_ExcludesRemainingText()
+    {
+        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(2, 5, "{0}/{1} images", "0 images");
+
+        Assert.Equal("2/5 images", result);
+    }
+
+    [Fact]
+    public void FormatPreviewStatusWithoutRemaining_WithNoItems_ReturnsZeroText()
+    {
+        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(0, 0, "{0}/{1} images", "0 images");
+
+        Assert.Equal("0 images", result);
+    }
+
+    [Fact]
     public void CalculateLoopRemainingSeconds_IncludesFullLoopFromCurrentItem()
     {
         var startedAt = new DateTimeOffset(2026, 6, 22, 12, 0, 0, TimeSpan.Zero);
