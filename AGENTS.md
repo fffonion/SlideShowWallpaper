@@ -161,8 +161,12 @@ Add-AppxPackage -Register ".\<ProjectName>\bin\$Platform\Debug\<TargetFramework>
 - Quick smoke tests: `dotnet run -c Debug -p:Platform=$Platform` from the
   project folder.
 - Launch a packaged build: `winapp run .\<ProjectName>\bin\$Platform\Debug\<TargetFramework>\<ProjectName>.exe` after registering the MSIX output.
-- If the launch fails because an old instance is still running, terminate it
-  with `taskkill /IM <ProjectName>.exe /F` before re-running.
+- For test launches, pass `/multiple` so an installed or separately running
+  instance is not reused or closed.
+- If a test launch must be stopped before rebuilding, only stop the process
+  whose `Path` exactly matches the current build output executable. Do not use
+  `taskkill /IM <ProjectName>.exe /F` or `Get-Process <ProjectName> |
+  Stop-Process`, because that can close instances launched from other folders.
 
 ### Run Tests
 
