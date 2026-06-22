@@ -40,6 +40,7 @@
   <data name="MediaFilterAutomation" xml:space="preserve"><value>媒體篩選</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>轉場時間長度</value></data>
   <data name="VideoLoop" xml:space="preserve"><value>循環播放影片</value></data>
+  <data name="VideoSound" xml:space="preserve"><value>播放聲音</value></data>
   <data name="MediaFilterImages" xml:space="preserve"><value>圖片</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>影片</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>圖片和影片</value></data>

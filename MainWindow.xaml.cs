@@ -461,6 +461,7 @@ public sealed partial class MainWindow : Window
             },
             LocalizedStrings.Get("TransitionDurationAutomation")));
         AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
+        AddRow(form, row++, LocalizedStrings.Get("VideoSound"), CreateCheckBox(profile.VideoSoundEnabled, value => profile.VideoSoundEnabled = value, LocalizedStrings.Get("VideoSound")));
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);

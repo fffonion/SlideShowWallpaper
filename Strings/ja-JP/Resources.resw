@@ -40,6 +40,7 @@
   <data name="MediaFilterAutomation" xml:space="preserve"><value>メディアフィルター</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>トランジション時間</value></data>
   <data name="VideoLoop" xml:space="preserve"><value>動画をループ再生</value></data>
+  <data name="VideoSound" xml:space="preserve"><value>音声を再生</value></data>
   <data name="MediaFilterImages" xml:space="preserve"><value>画像</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>動画</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>画像と動画</value></data>

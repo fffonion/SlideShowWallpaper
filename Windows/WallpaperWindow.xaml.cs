@@ -59,6 +59,7 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Stretch = stretch;
         VideoPlayer.Stretch = stretch;
         _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
+        _mediaPlayer.IsMuted = !profile.VideoSoundEnabled;
         _currentTransform.X = profile.OffsetX;
         _currentTransform.Y = profile.OffsetY;
         _nextTransform.X = profile.OffsetX;

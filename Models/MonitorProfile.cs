@@ -30,6 +30,8 @@ public sealed class MonitorProfile
 
     public bool VideoLoop { get; set; }
 
+    public bool VideoSoundEnabled { get; set; }
+
     public PlaybackMediaFilter MediaFilter { get; set; } = PlaybackMediaFilter.ImagesAndVideos;
 
     public bool IsPaused { get; set; }
