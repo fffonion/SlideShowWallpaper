@@ -118,7 +118,7 @@ public static class NdfMediaService
     {
         if (!TryGetMediaInfo(path, out NdfMediaInfo info))
         {
-            StorageFile file = await StorageFile.GetFileFromPathAsync(path).AsTask(cancellationToken);
+            StorageFile file = await StorageFile.GetFileFromPathAsync(FileLinkResolver.GetFinalPath(path)).AsTask(cancellationToken);
             return await file.OpenReadAsync().AsTask(cancellationToken);
         }
 
@@ -140,7 +140,7 @@ public static class NdfMediaService
     {
         if (!TryGetMediaInfo(path, out NdfMediaInfo info))
         {
-            return await StorageFile.GetFileFromPathAsync(path).AsTask(cancellationToken);
+            return await StorageFile.GetFileFromPathAsync(FileLinkResolver.GetFinalPath(path)).AsTask(cancellationToken);
         }
 
         var sourceFile = new FileInfo(path);

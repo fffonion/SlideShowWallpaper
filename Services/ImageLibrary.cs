@@ -107,11 +107,7 @@ public static class ImageLibrary
 
         var images = Directory.EnumerateFiles(folderPath)
             .Where(IsSupportedMediaPath)
-            .Select(path =>
-            {
-                var info = new FileInfo(path);
-                return new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length, GetMediaKind(info.FullName));
-            });
+            .Select(CreateMetadata);
 
         return SortImages(images, order);
     }
@@ -134,8 +130,7 @@ public static class ImageLibrary
                     continue;
                 }
 
-                var info = new FileInfo(path);
-                images.Add(new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length, GetMediaKind(info.FullName)));
+                images.Add(CreateMetadata(path));
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -177,6 +172,13 @@ public static class ImageLibrary
         }
 
         return IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image;
+    }
+
+    private static ImageMetadata CreateMetadata(string path)
+    {
+        var linkInfo = new FileInfo(path);
+        FileInfo metadataInfo = FileLinkResolver.GetFinalFileInfo(path);
+        return new ImageMetadata(linkInfo.FullName, linkInfo.Name, metadataInfo.LastWriteTimeUtc, metadataInfo.Length, GetMediaKind(linkInfo.FullName));
     }
 
     private static bool IsLargeEnoughNdfMedia(NdfMediaInfo info)

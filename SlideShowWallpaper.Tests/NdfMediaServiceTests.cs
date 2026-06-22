@@ -74,6 +74,23 @@ public sealed class NdfMediaServiceTests
     }
 
     [Fact]
+    public async Task GetStorageFileForThumbnailAsync_WithVideoSymlink_UsesTargetFile()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string targetPath = Path.Combine(root, "target.mp4");
+        string linkPath = Path.Combine(root, "linked.mp4");
+        await File.WriteAllBytesAsync(targetPath, [1, 2, 3, 4, 5]);
+        File.CreateSymbolicLink(linkPath, targetPath);
+
+        global::Windows.Storage.StorageFile file = await NdfMediaService.GetStorageFileForThumbnailAsync(linkPath, Path.Combine(root, "cache"), CancellationToken.None);
+        ulong size = (await file.GetBasicPropertiesAsync().AsTask()).Size;
+
+        Assert.Equal(targetPath, file.Path);
+        Assert.Equal(5UL, size);
+    }
+
+    [Fact]
     public async Task OpenContentStreamAsync_WithNdfPng_ReturnsReadableOpenStream()
     {
         using TestFile file = TestFile.Create(".ndf", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);

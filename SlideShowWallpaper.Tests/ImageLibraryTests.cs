@@ -74,6 +74,26 @@ public sealed class ImageLibraryTests
     }
 
     [Fact]
+    public void ScanFolderMetadata_WithVideoSymlink_KeepsLinkNameAndUsesTargetMetadata()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        string targetPath = Path.Combine(folder, "target.mp4");
+        string linkPath = Path.Combine(folder, "linked.mp4");
+        File.WriteAllBytes(targetPath, [1, 2, 3, 4, 5]);
+        File.SetLastWriteTimeUtc(targetPath, new DateTime(2026, 6, 23, 1, 2, 3, DateTimeKind.Utc));
+        File.CreateSymbolicLink(linkPath, targetPath);
+
+        IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc);
+
+        ImageMetadata link = Assert.Single(media, item => item.FileName == "linked.mp4");
+        Assert.Equal(linkPath, link.Path);
+        Assert.Equal(5, link.Length);
+        Assert.Equal(File.GetLastWriteTimeUtc(targetPath), link.ModifiedUtc);
+        Assert.Equal(MediaKind.Video, link.Kind);
+    }
+
+    [Fact]
     public void ScanFolderMetadata_WithNdfMedia_ReturnsDetectedMediaKinds()
     {
         string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
