@@ -36,7 +36,11 @@ public sealed class SettingsStore
                 StartWithWindows = GetBool(sections, "Settings", nameof(WallpaperConfig.StartWithWindows), false),
                 CloseToTray = GetBool(sections, "Settings", nameof(WallpaperConfig.CloseToTray), true),
                 ThemeMode = GetEnum(sections, "Settings", nameof(WallpaperConfig.ThemeMode), AppThemeMode.System),
+                LanguageMode = GetEnum(sections, "Settings", nameof(WallpaperConfig.LanguageMode), AppLanguageMode.System),
                 PlaybackEnabled = GetBool(sections, "Settings", nameof(WallpaperConfig.PlaybackEnabled), true),
+                AutoTrackNewFiles = GetBool(sections, "Settings", nameof(WallpaperConfig.AutoTrackNewFiles), true),
+                GlobalMute = GetBool(sections, "Settings", nameof(WallpaperConfig.GlobalMute), true),
+                ThumbnailCacheEnabled = GetBool(sections, "Settings", nameof(WallpaperConfig.ThumbnailCacheEnabled), true),
             };
 
             int monitorCount = GetInt(sections, "Settings", "MonitorCount", 0);
@@ -94,7 +98,11 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(WallpaperConfig.StartWithWindows), config.StartWithWindows);
         AppendValue(builder, nameof(WallpaperConfig.CloseToTray), config.CloseToTray);
         AppendValue(builder, nameof(WallpaperConfig.ThemeMode), config.ThemeMode);
+        AppendValue(builder, nameof(WallpaperConfig.LanguageMode), config.LanguageMode);
         AppendValue(builder, nameof(WallpaperConfig.PlaybackEnabled), config.PlaybackEnabled);
+        AppendValue(builder, nameof(WallpaperConfig.AutoTrackNewFiles), config.AutoTrackNewFiles);
+        AppendValue(builder, nameof(WallpaperConfig.GlobalMute), config.GlobalMute);
+        AppendValue(builder, nameof(WallpaperConfig.ThumbnailCacheEnabled), config.ThumbnailCacheEnabled);
         AppendValue(builder, "MonitorCount", config.Monitors.Count);
 
         for (int index = 0; index < config.Monitors.Count; index++)

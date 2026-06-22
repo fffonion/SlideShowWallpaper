@@ -21,6 +21,8 @@ public sealed class WallpaperPlaybackCoordinator
     private readonly MonitorProfileChangeTracker _profileChanges = new();
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
     private bool _playbackEnabled = true;
+    private bool _autoTrackNewFiles = true;
+    private bool _globalMute = true;
 
     public WallpaperPlaybackCoordinator(
         MonitorService monitorService,
@@ -49,13 +51,21 @@ public sealed class WallpaperPlaybackCoordinator
 
     public event EventHandler<CurrentWallpaperChangedEventArgs>? CurrentWallpaperChanged;
 
-    public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled)
+    public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled, bool autoTrackNewFiles = true, bool globalMute = true)
     {
+        bool globalMuteChanged = _globalMute != globalMute;
         _playbackEnabled = playbackEnabled;
+        _autoTrackNewFiles = autoTrackNewFiles;
+        _globalMute = globalMute;
         if (!_playbackEnabled)
         {
             StopPlayback();
             return;
+        }
+
+        if (!_autoTrackNewFiles)
+        {
+            _folderChangeWatcherService.Clear();
         }
 
         _monitorRects = _monitorService.GetMonitorRects();
@@ -69,7 +79,11 @@ public sealed class WallpaperPlaybackCoordinator
         foreach (MonitorProfile profile in profiles)
         {
             _profiles[profile.Id] = profile;
-            ConfigureFolderWatcher(profile);
+            if (_autoTrackNewFiles)
+            {
+                ConfigureFolderWatcher(profile);
+            }
+
             if (profile.IsStopped)
             {
                 CloseWindow(profile.Id);
@@ -80,8 +94,13 @@ public sealed class WallpaperPlaybackCoordinator
             if (!change.HasChanges
                 && _queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue)
                 && existingQueue.Count > 0
-                && _windows.ContainsKey(profile.Id))
+                && _windows.TryGetValue(profile.Id, out WallpaperWindow? existingWindow))
             {
+                if (globalMuteChanged)
+                {
+                    existingWindow.SetForceMuted(_globalMute);
+                }
+
                 continue;
             }
 
@@ -286,6 +305,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         window.ApplyProfile(profile);
+        window.SetForceMuted(_globalMute);
         _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
         ConfigureVideoCoverageTimer();
     }

@@ -18,6 +18,7 @@ public partial class App : Application
 
     public App()
     {
+        AppLanguageService.ApplyStartupLanguageOverride(_settingsStore);
         InitializeComponent();
         UnhandledException += (_, args) =>
         {

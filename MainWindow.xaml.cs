@@ -17,6 +17,9 @@ namespace SlideShowWallpaper;
 public sealed partial class MainWindow : Window
 {
     private const string SettingsNavigationTag = "__settings";
+    private const double DefaultPreviewPaneWidth = 250;
+    private const double MinimumPreviewPaneWidth = 160;
+    private const double MaximumPreviewPaneWidth = 520;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
@@ -52,6 +55,15 @@ public sealed partial class MainWindow : Window
         new(AppThemeMode.Dark, LocalizedStrings.Get("ThemeDark")),
     ];
 
+    private static IReadOnlyList<Choice<AppLanguageMode>> LanguageModeChoices =>
+    [
+        new(AppLanguageMode.System, LocalizedStrings.Get("LanguageSystem")),
+        new(AppLanguageMode.English, LocalizedStrings.Get("LanguageEnglish")),
+        new(AppLanguageMode.SimplifiedChinese, LocalizedStrings.Get("LanguageSimplifiedChinese")),
+        new(AppLanguageMode.TraditionalChinese, LocalizedStrings.Get("LanguageTraditionalChinese")),
+        new(AppLanguageMode.Japanese, LocalizedStrings.Get("LanguageJapanese")),
+    ];
+
     private static IReadOnlyList<Choice<WallpaperScaleMode>> ScaleModeChoices =>
     [
         new(WallpaperScaleMode.Fit, LocalizedStrings.Get("ScaleFit")),
@@ -73,6 +85,7 @@ public sealed partial class MainWindow : Window
     private readonly SettingsStore _settingsStore;
     private readonly AutostartService _autostartService;
     private readonly FolderPickerService _folderPickerService;
+    private readonly ThumbnailCacheService _thumbnailCacheService = new();
     private readonly TrayIconService _trayIconService;
     private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
@@ -89,6 +102,7 @@ public sealed partial class MainWindow : Window
     private bool _suppressPreviewSelection;
     private bool _isSettingsSelected;
     private bool _settingsUiUnloadedForBackground;
+    private bool _contentHeightAdjusted;
 
     private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);
 
@@ -129,8 +143,6 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.SetIcon(AppIconPaths.ResolveShellIconPath(Environment.ProcessPath, AppContext.BaseDirectory));
-        ConfigureSettingsWindow();
-
         _hwnd = WindowNative.GetWindowHandle(this);
         Closed += MainWindow_Closed;
         LoadSettings();
@@ -145,6 +157,7 @@ public sealed partial class MainWindow : Window
             HandleWindowMinimizedChanged);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
+        Root.Loaded += Root_Loaded;
         if (startInTray)
         {
             _settingsUiUnloadedForBackground = true;
@@ -154,6 +167,7 @@ public sealed partial class MainWindow : Window
             RenderTabs();
         }
 
+        ConfigureSettingsWindow();
         ApplySettings();
         _currentImageCheckpointTimer.Start();
         _playbackStatusTimer.Start();
@@ -186,7 +200,11 @@ public sealed partial class MainWindow : Window
         _viewModel.StartWithWindows = _autostartService.IsEnabled();
         _viewModel.CloseToTray = _disableCloseToTray ? false : config.CloseToTray;
         _viewModel.ThemeMode = config.ThemeMode;
+        _viewModel.LanguageMode = config.LanguageMode;
         _viewModel.PlaybackEnabled = true;
+        _viewModel.AutoTrackNewFiles = config.AutoTrackNewFiles;
+        _viewModel.GlobalMute = config.GlobalMute;
+        _viewModel.ThumbnailCacheEnabled = config.ThumbnailCacheEnabled;
         ApplyTheme(_viewModel.ThemeMode);
     }
 
@@ -357,8 +375,7 @@ public sealed partial class MainWindow : Window
         var root = new Grid
         {
             RowSpacing = 12,
-            MaxWidth = 500,
-            HorizontalAlignment = HorizontalAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -377,7 +394,11 @@ public sealed partial class MainWindow : Window
                 _autostartService.SetEnabled(value);
             }, LocalizedStrings.Get("AppSettingAutostart"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingCloseToTray"), closeToTrayCheckBox),
-            new SettingsRow(LocalizedStrings.Get("AppSettingTheme"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("AppSettingTheme")))));
+            new SettingsRow(LocalizedStrings.Get("AppSettingTheme"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("AppSettingTheme"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingLanguage"), CreateChoiceCombo(LanguageModeChoices, _viewModel.LanguageMode, SetLanguage, LocalizedStrings.Get("AppSettingLanguage"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingAutoTrackNewFiles"), CreateCheckBox(_viewModel.AutoTrackNewFiles, value => _viewModel.AutoTrackNewFiles = value, LocalizedStrings.Get("AppSettingAutoTrackNewFiles"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingGlobalMute"), CreateCheckBox(_viewModel.GlobalMute, value => _viewModel.GlobalMute = value, LocalizedStrings.Get("AppSettingGlobalMute"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache")))));
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
@@ -388,12 +409,19 @@ public sealed partial class MainWindow : Window
     {
         var root = new Grid
         {
-            ColumnSpacing = 16,
+            ColumnSpacing = 0,
             RowSpacing = 8,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) });
+        var previewColumn = new ColumnDefinition
+        {
+            Width = new GridLength(DefaultPreviewPaneWidth),
+            MinWidth = MinimumPreviewPaneWidth,
+            MaxWidth = MaximumPreviewPaneWidth,
+        };
+        root.ColumnDefinitions.Add(previewColumn);
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         TextBlock metadata = CreatePreviewMetadataText(profile);
@@ -404,24 +432,104 @@ public sealed partial class MainWindow : Window
         FrameworkElement commandBar = BuildMonitorCommandBar(profile);
         commandBar.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetRow(commandBar, 0);
-        Grid.SetColumn(commandBar, 1);
+        Grid.SetColumn(commandBar, 2);
         root.Children.Add(commandBar);
 
         FrameworkElement previewPane = BuildPreviewPane(profile, metadata);
+        previewPane.Margin = new Thickness(0, 0, 8, 0);
         Grid.SetRow(previewPane, 1);
         Grid.SetColumn(previewPane, 0);
         root.Children.Add(previewPane);
 
+        FrameworkElement resizeHandle = CreatePreviewResizeHandle(root, previewColumn);
+        Grid.SetRow(resizeHandle, 1);
+        Grid.SetColumn(resizeHandle, 1);
+        root.Children.Add(resizeHandle);
+
         var scrollViewer = new ScrollViewer
         {
             Content = BuildMonitorSettings(profile),
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
         Grid.SetRow(scrollViewer, 1);
-        Grid.SetColumn(scrollViewer, 1);
+        Grid.SetColumn(scrollViewer, 2);
         root.Children.Add(scrollViewer);
 
         return root;
+    }
+
+    private static FrameworkElement CreatePreviewResizeHandle(Grid root, ColumnDefinition previewColumn)
+    {
+        var line = new Border
+        {
+            Width = 2,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = GetThemeBrush("DividerStrokeColorDefaultBrush"),
+            Opacity = 0.65,
+        };
+        var handle = new Border
+        {
+            Width = 16,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            Child = line,
+        };
+        AutomationProperties.SetName(handle, LocalizedStrings.Get("PreviewResizeHandle"));
+
+        bool isDragging = false;
+        double startX = 0;
+        double startWidth = 0;
+
+        handle.PointerEntered += (_, _) => line.Opacity = 1;
+        handle.PointerExited += (_, _) =>
+        {
+            if (!isDragging)
+            {
+                line.Opacity = 0.65;
+            }
+        };
+        handle.PointerPressed += (_, args) =>
+        {
+            isDragging = true;
+            startX = args.GetCurrentPoint(root).Position.X;
+            startWidth = previewColumn.ActualWidth;
+            handle.CapturePointer(args.Pointer);
+            line.Opacity = 1;
+            args.Handled = true;
+        };
+        handle.PointerMoved += (_, args) =>
+        {
+            if (!isDragging)
+            {
+                return;
+            }
+
+            double currentX = args.GetCurrentPoint(root).Position.X;
+            double width = Math.Clamp(startWidth + currentX - startX, MinimumPreviewPaneWidth, MaximumPreviewPaneWidth);
+            previewColumn.Width = new GridLength(width);
+            args.Handled = true;
+        };
+        handle.PointerReleased += (_, args) =>
+        {
+            isDragging = false;
+            handle.ReleasePointerCapture(args.Pointer);
+            line.Opacity = 0.65;
+            args.Handled = true;
+        };
+        handle.PointerCanceled += (_, args) =>
+        {
+            isDragging = false;
+            handle.ReleasePointerCapture(args.Pointer);
+            line.Opacity = 0.65;
+        };
+        handle.PointerCaptureLost += (_, _) =>
+        {
+            isDragging = false;
+            line.Opacity = 0.65;
+        };
+
+        return handle;
     }
 
     private TextBlock CreatePreviewMetadataText(MonitorProfile profile)
@@ -532,7 +640,7 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems);
+            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems, CreateThumbnailLoader());
 
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
@@ -569,8 +677,7 @@ public sealed partial class MainWindow : Window
         var root = new Grid
         {
             RowSpacing = 12,
-            MaxWidth = 500,
-            HorizontalAlignment = HorizontalAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -692,21 +799,162 @@ public sealed partial class MainWindow : Window
     private void ConfigureSettingsWindow()
     {
         const int preferredWidth = 1460;
-        const int preferredHeight = 1340;
-        DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
-        RectInt32 workArea = displayArea.WorkArea;
+        RectInt32 workArea = GetPreferredSettingsWorkArea();
         int width = Math.Min(preferredWidth, workArea.Width);
-        int height = Math.Min(preferredHeight, workArea.Height);
-        AppWindow.Resize(new SizeInt32(width, height));
-        AppWindow.Move(new PointInt32(
-            workArea.X + Math.Max(0, (workArea.Width - width) / 2),
-            workArea.Y + Math.Max(0, (workArea.Height - height) / 2)));
+        int height = CalculatePreferredWindowHeight(width, workArea.Height);
+        MoveAndResizeSettingsWindow(workArea, width, height);
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = true;
             presenter.IsMaximizable = false;
         }
+    }
+
+    private int CalculatePreferredWindowHeight(int targetWidth, int maximumHeight)
+    {
+        const int minimumHeight = 720;
+        double scale = GetWindowScale();
+        int measuredHeight = _isSettingsSelected
+            ? EstimateWindowHeightForSettingsPage()
+            : EstimateWindowHeightForMonitorPage(targetWidth);
+
+        int physicalHeight = (int)Math.Ceiling(measuredHeight * scale);
+        return Math.Clamp(physicalHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);
+    }
+
+    private void Root_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_contentHeightAdjusted || _settingsUiUnloadedForBackground)
+        {
+            return;
+        }
+
+        _contentHeightAdjusted = true;
+        ResizeToMeasuredContentHeight();
+    }
+
+    private void ResizeToMeasuredContentHeight()
+    {
+        RectInt32 workArea = GetPreferredSettingsWorkArea();
+        int width = AppWindow.Size.Width > 0 ? AppWindow.Size.Width : Math.Min(1460, workArea.Width);
+        int height = CalculateMeasuredWindowHeight(width, workArea.Height);
+        MoveAndResizeSettingsWindow(workArea, width, height);
+    }
+
+    private int CalculateMeasuredWindowHeight(int targetWidth, int maximumHeight)
+    {
+        const int minimumHeight = 720;
+        double scale = GetWindowScale();
+        int estimatedHeight = CalculatePreferredWindowHeight(targetWidth, maximumHeight);
+        try
+        {
+            Root.Measure(new global::Windows.Foundation.Size(targetWidth / scale, maximumHeight / scale));
+            int measuredHeight = double.IsFinite(Root.DesiredSize.Height) && Root.DesiredSize.Height > 0
+                ? (int)Math.Ceiling(Root.DesiredSize.Height * scale)
+                : estimatedHeight;
+            return Math.Clamp(Math.Max(measuredHeight, estimatedHeight), Math.Min(minimumHeight, maximumHeight), maximumHeight);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            return estimatedHeight;
+        }
+    }
+
+    private void MoveAndResizeSettingsWindow(RectInt32 workArea, int width, int height)
+    {
+        int x = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
+        int y = workArea.Y + Math.Max(0, (workArea.Height - height) / 2);
+        AppWindow.Resize(new SizeInt32(width, height));
+        AppWindow.Move(new PointInt32(x, y));
+        NativeMethods.SetWindowPos(_hwnd, IntPtr.Zero, x, y, width, height, NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+    }
+
+    private double GetWindowScale()
+    {
+        uint dpi = _hwnd == IntPtr.Zero ? 96 : NativeMethods.GetDpiForWindow(_hwnd);
+        return Math.Max(1, dpi / 96.0);
+    }
+
+    private static RectInt32 GetPreferredSettingsWorkArea()
+    {
+        NativeMethods.RECT best = default;
+        long bestArea = -1;
+        NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr _, ref NativeMethods.RECT _, IntPtr _) =>
+        {
+            var info = new NativeMethods.MONITORINFOEX
+            {
+                cbSize = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MONITORINFOEX>(),
+            };
+            if (NativeMethods.GetMonitorInfo(monitor, ref info))
+            {
+                long area = (long)info.rcWork.Width * info.rcWork.Height;
+                if (area > bestArea)
+                {
+                    best = info.rcWork;
+                    bestArea = area;
+                }
+            }
+
+            return true;
+        }, IntPtr.Zero);
+
+        if (bestArea <= 0)
+        {
+            return new RectInt32(0, 0, 1460, 980);
+        }
+
+        return new RectInt32(best.Left, best.Top, best.Width, best.Height);
+    }
+
+    private static int EstimateWindowHeightForMonitorPage(int targetWidth)
+    {
+        const int titleBarHeight = 48;
+        const int contentTopPadding = 12;
+        const int contentBottomPadding = 24;
+        const int monitorHeaderHeight = 48;
+        const int monitorRowSpacing = 8;
+        const int sectionSpacing = 14;
+        const int previewBottomSlack = 20;
+        int settingsHeight =
+            EstimateSettingsSectionHeight(false, 1)
+            + EstimateSettingsSectionHeight(true, 2)
+            + EstimateSettingsSectionHeight(true, 5)
+            + EstimateSettingsSectionHeight(true, 3)
+            + (sectionSpacing * 3);
+        int narrowWidthSlack = targetWidth < 1200 ? 48 : 0;
+
+        return titleBarHeight
+            + contentTopPadding
+            + monitorHeaderHeight
+            + monitorRowSpacing
+            + settingsHeight
+            + contentBottomPadding
+            + previewBottomSlack
+            + narrowWidthSlack;
+    }
+
+    private static int EstimateWindowHeightForSettingsPage()
+    {
+        const int titleBarHeight = 48;
+        const int contentTopPadding = 12;
+        const int contentBottomPadding = 24;
+        return titleBarHeight
+            + contentTopPadding
+            + EstimateSettingsSectionHeight(true, 7)
+            + contentBottomPadding;
+    }
+
+    private static int EstimateSettingsSectionHeight(bool hasTitle, int rowCount)
+    {
+        const int sectionBorder = 2;
+        const int titleBlockHeight = 48;
+        const int rowHeight = 50;
+        const int dividerHeight = 1;
+        int titleHeight = hasTitle ? titleBlockHeight + dividerHeight : 0;
+        int dividers = Math.Max(0, rowCount - 1) * dividerHeight;
+        return sectionBorder + titleHeight + (rowCount * rowHeight) + dividers;
     }
 
     private Grid CreateFolderControls(MonitorProfile profile)
@@ -803,6 +1051,7 @@ public sealed partial class MainWindow : Window
         content.Children.Add(text);
 
         row.Control.VerticalAlignment = VerticalAlignment.Center;
+        row.Control.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetColumn(row.Control, 1);
         content.Children.Add(row.Control);
 
@@ -828,31 +1077,47 @@ public sealed partial class MainWindow : Window
             : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 
-    private StackPanel CreateOffsetControls(MonitorProfile profile)
+    private Grid CreateOffsetControls(MonitorProfile profile)
     {
-        var panel = new StackPanel
+        var panel = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
+            ColumnSpacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        panel.Children.Add(CreateLabeledNumberBox("X", profile.OffsetX, value => profile.OffsetX = value));
-        panel.Children.Add(CreateLabeledNumberBox("Y", profile.OffsetY, value => profile.OffsetY = value));
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        FrameworkElement xControl = CreateLabeledNumberBox("X", profile.OffsetX, value => profile.OffsetX = value);
+        Grid.SetColumn(xControl, 0);
+        panel.Children.Add(xControl);
+
+        FrameworkElement yControl = CreateLabeledNumberBox("Y", profile.OffsetY, value => profile.OffsetY = value);
+        Grid.SetColumn(yControl, 1);
+        panel.Children.Add(yControl);
         return panel;
     }
 
-    private StackPanel CreateLabeledNumberBox(string label, double value, Action<double> changed)
+    private Grid CreateLabeledNumberBox(string label, double value, Action<double> changed)
     {
-        var panel = new StackPanel
+        var panel = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 6,
+            ColumnSpacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        panel.Children.Add(new TextBlock
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var labelBlock = new TextBlock
         {
             Text = label,
             VerticalAlignment = VerticalAlignment.Center,
-        });
-        panel.Children.Add(CreateNumberBox(value, changed, label));
+        };
+        Grid.SetColumn(labelBlock, 0);
+        panel.Children.Add(labelBlock);
+
+        NumberBox numberBox = CreateNumberBox(value, changed, label);
+        Grid.SetColumn(numberBox, 1);
+        panel.Children.Add(numberBox);
         return panel;
     }
 
@@ -864,7 +1129,8 @@ public sealed partial class MainWindow : Window
         {
             ItemsSource = choices,
             SelectedItem = selectedChoice,
-            Width = 270,
+            MinWidth = 160,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         AutomationProperties.SetName(combo, automationName);
         combo.SelectionChanged += (_, _) =>
@@ -886,7 +1152,8 @@ public sealed partial class MainWindow : Window
             SmallChange = 1,
             LargeChange = 10,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-            Width = 96,
+            MinWidth = 72,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         AutomationProperties.SetName(numberBox, automationName);
         numberBox.ValueChanged += (_, args) =>
@@ -900,13 +1167,15 @@ public sealed partial class MainWindow : Window
         return numberBox;
     }
 
-    private StackPanel CreateTimedNumberBox(double value, TimeUnit unit, Action<double, TimeUnit> changed, string automationName, bool isEnabled = true)
+    private Grid CreateTimedNumberBox(double value, TimeUnit unit, Action<double, TimeUnit> changed, string automationName, bool isEnabled = true)
     {
-        var panel = new StackPanel
+        var panel = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
+            ColumnSpacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         TimeUnit selectedUnit = unit;
         var valueBox = CreateNumberBox(value, newValue =>
         {
@@ -918,11 +1187,12 @@ public sealed partial class MainWindow : Window
             double currentValue = double.IsNaN(valueBox.Value) ? value : valueBox.Value;
             changed(currentValue, newUnit);
         }, LocalizedStrings.Format("TimeUnitAutomationFormat", automationName));
-        unitCombo.Width = 128;
         valueBox.IsEnabled = isEnabled;
         unitCombo.IsEnabled = isEnabled;
 
+        Grid.SetColumn(valueBox, 0);
         panel.Children.Add(valueBox);
+        Grid.SetColumn(unitCombo, 1);
         panel.Children.Add(unitCombo);
         return panel;
     }
@@ -991,7 +1261,7 @@ public sealed partial class MainWindow : Window
         }
 
         ImagePreviewItem[] reusableItems = [.. items];
-        ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems);
+        ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems, CreateThumbnailLoader());
         MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
         if (profile is not null)
         {
@@ -1110,7 +1380,7 @@ public sealed partial class MainWindow : Window
             _suppressPreviewSelection = true;
             try
             {
-                ImagePreviewCollectionUpdater.Apply(items, shuffled);
+                ImagePreviewCollectionUpdater.Apply(items, shuffled, items, CreateThumbnailLoader());
             }
             finally
             {
@@ -1126,7 +1396,7 @@ public sealed partial class MainWindow : Window
         _settingsApplyTimer.Stop();
         WallpaperConfig config = CreateConfig();
         _settingsStore.Save(config);
-        _coordinator.ApplyProfiles(config.Monitors, config.PlaybackEnabled);
+        _coordinator.ApplyProfiles(config.Monitors, config.PlaybackEnabled, config.AutoTrackNewFiles, config.GlobalMute);
     }
 
     private void ScheduleApplySettings()
@@ -1143,7 +1413,11 @@ public sealed partial class MainWindow : Window
             StartWithWindows = _viewModel.StartWithWindows,
             CloseToTray = _disableCloseToTray ? existingConfig.CloseToTray : _viewModel.CloseToTray,
             ThemeMode = _viewModel.ThemeMode,
+            LanguageMode = _viewModel.LanguageMode,
             PlaybackEnabled = true,
+            AutoTrackNewFiles = _viewModel.AutoTrackNewFiles,
+            GlobalMute = _viewModel.GlobalMute,
+            ThumbnailCacheEnabled = _viewModel.ThumbnailCacheEnabled,
             Monitors = _viewModel.Profiles.ToList(),
         };
     }
@@ -1221,6 +1495,41 @@ public sealed partial class MainWindow : Window
         _viewModel.ThemeMode = themeMode;
         ApplyTheme(themeMode);
         ApplySettings();
+    }
+
+    private void SetLanguage(AppLanguageMode languageMode)
+    {
+        if (_viewModel.LanguageMode == languageMode)
+        {
+            return;
+        }
+
+        _viewModel.LanguageMode = languageMode;
+        AppLanguageService.Apply(languageMode);
+        LocalizedStrings.Reset();
+        Title = LocalizedStrings.Get("AppTitle");
+        AppTitleBar.Title = LocalizedStrings.Get("AppTitle");
+        RenderTabs(_selectedMonitorId);
+        ApplySettings();
+    }
+
+    private void SetThumbnailCacheEnabled(bool isEnabled)
+    {
+        if (_viewModel.ThumbnailCacheEnabled == isEnabled)
+        {
+            return;
+        }
+
+        _viewModel.ThumbnailCacheEnabled = isEnabled;
+        UnloadPreviewState();
+        RenderTabs(_selectedMonitorId);
+    }
+
+    private Func<ImageMetadata, CancellationToken, Task<string>> CreateThumbnailLoader()
+    {
+        return _viewModel.ThumbnailCacheEnabled
+            ? _thumbnailCacheService.GetOrCreateThumbnailAsync
+            : _thumbnailCacheService.CreateTemporaryThumbnailAsync;
     }
 
     private void ApplyTheme(AppThemeMode themeMode)

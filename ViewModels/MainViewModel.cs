@@ -13,7 +13,15 @@ public sealed class MainViewModel
 
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
 
+    public AppLanguageMode LanguageMode { get; set; } = AppLanguageMode.System;
+
     public bool PlaybackEnabled { get; set; } = true;
+
+    public bool AutoTrackNewFiles { get; set; } = true;
+
+    public bool GlobalMute { get; set; } = true;
+
+    public bool ThumbnailCacheEnabled { get; set; } = true;
 
     public IReadOnlyList<MonitorProfile> Profiles => Monitors.Select(monitor => monitor.Profile).ToArray();
 }

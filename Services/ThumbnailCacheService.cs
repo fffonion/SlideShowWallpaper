@@ -73,6 +73,23 @@ public sealed class ThumbnailCacheService
         return thumbnailPath;
     }
 
+    public async Task<string> CreateTemporaryThumbnailAsync(ImageMetadata metadata, CancellationToken cancellationToken = default)
+    {
+        Directory.CreateDirectory(AppTempPaths.TransientThumbnails);
+        string thumbnailPath = Path.Combine(AppTempPaths.TransientThumbnails, $"{Guid.NewGuid():N}{ThumbnailExtension}");
+        try
+        {
+            await _thumbnailWriter(metadata, thumbnailPath, DefaultMaxPixelSize, cancellationToken);
+        }
+        catch
+        {
+            DeleteIfExists(thumbnailPath);
+            throw;
+        }
+
+        return thumbnailPath;
+    }
+
     private static async Task CreateThumbnailAsync(ImageMetadata metadata, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
         if (metadata.Kind == MediaKind.Video)

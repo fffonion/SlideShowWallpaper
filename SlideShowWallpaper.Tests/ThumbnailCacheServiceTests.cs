@@ -84,6 +84,31 @@ public sealed class ThumbnailCacheServiceTests
     }
 
     [Fact]
+    public async Task CreateTemporaryThumbnailAsync_WritesJpegOutsideCacheRoot()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(root, "thumbnails");
+        string sourcePath = Path.Combine(root, "source.png");
+        Directory.CreateDirectory(root);
+        await File.WriteAllBytesAsync(sourcePath, Convert.FromBase64String(OnePixelPngBase64));
+        var info = new FileInfo(sourcePath);
+        var metadata = new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length);
+        var service = new ThumbnailCacheService(
+            cacheRoot,
+            (_, thumbnail, _, _) =>
+            {
+                File.WriteAllBytes(thumbnail, [0xFF, 0xD8, 0xFF, 0xD9]);
+                return Task.CompletedTask;
+            });
+
+        string thumbnailPath = await service.CreateTemporaryThumbnailAsync(metadata);
+
+        Assert.True(File.Exists(thumbnailPath));
+        Assert.EndsWith(".jpg", thumbnailPath, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(cacheRoot, thumbnailPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ShouldDeleteThumbnailMedia_WithNormalVideo_ReturnsFalse()
     {
         string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");

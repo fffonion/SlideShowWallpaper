@@ -28,7 +28,11 @@ public sealed class SettingsStoreTests
             StartWithWindows = true,
             CloseToTray = false,
             ThemeMode = AppThemeMode.Dark,
+            LanguageMode = AppLanguageMode.Japanese,
             PlaybackEnabled = true,
+            AutoTrackNewFiles = false,
+            GlobalMute = false,
+            ThumbnailCacheEnabled = false,
             Monitors =
             [
                 new MonitorProfile
@@ -65,6 +69,10 @@ public sealed class SettingsStoreTests
         Assert.True(loaded.StartWithWindows);
         Assert.False(loaded.CloseToTray);
         Assert.Equal(AppThemeMode.Dark, loaded.ThemeMode);
+        Assert.Equal(AppLanguageMode.Japanese, loaded.LanguageMode);
+        Assert.False(loaded.AutoTrackNewFiles);
+        Assert.False(loaded.GlobalMute);
+        Assert.False(loaded.ThumbnailCacheEnabled);
         Assert.Equal("display1", monitor.Id);
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);

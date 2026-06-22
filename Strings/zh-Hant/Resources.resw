@@ -19,9 +19,18 @@
   <data name="AppSettingAutostart" xml:space="preserve"><value>開機啟動</value></data>
   <data name="AppSettingCloseToTray" xml:space="preserve"><value>關閉到系統匣</value></data>
   <data name="AppSettingTheme" xml:space="preserve"><value>主題</value></data>
+  <data name="AppSettingLanguage" xml:space="preserve"><value>語言</value></data>
+  <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>自動追蹤新檔案</value></data>
+  <data name="AppSettingGlobalMute" xml:space="preserve"><value>全域靜音</value></data>
+  <data name="AppSettingThumbnailCache" xml:space="preserve"><value>縮圖快取</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟隨系統</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>淺色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>
+  <data name="LanguageSystem" xml:space="preserve"><value>跟隨系統</value></data>
+  <data name="LanguageEnglish" xml:space="preserve"><value>英文</value></data>
+  <data name="LanguageSimplifiedChinese" xml:space="preserve"><value>簡體中文</value></data>
+  <data name="LanguageTraditionalChinese" xml:space="preserve"><value>繁體中文</value></data>
+  <data name="LanguageJapanese" xml:space="preserve"><value>日文</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>隨機</value></data>
   <data name="PlaybackSingleLoop" xml:space="preserve"><value>單曲循環</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>名稱遞增</value></data>
@@ -88,4 +97,5 @@
   <data name="TransitionNone" xml:space="preserve"><value>無</value></data>
   <data name="TransitionFade" xml:space="preserve"><value>淡入淡出</value></data>
   <data name="TransitionSlide" xml:space="preserve"><value>滑動</value></data>
+  <data name="PreviewResizeHandle" xml:space="preserve"><value>調整預覽區域寬度</value></data>
 </root>

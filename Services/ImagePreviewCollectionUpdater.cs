@@ -13,9 +13,18 @@ public static class ImagePreviewCollectionUpdater
 
     public static void Apply(ObservableCollection<ImagePreviewItem> items, IReadOnlyList<ImageMetadata> images, IEnumerable<ImagePreviewItem> reusableItems)
     {
+        Apply(items, images, reusableItems, null);
+    }
+
+    public static void Apply(
+        ObservableCollection<ImagePreviewItem> items,
+        IReadOnlyList<ImageMetadata> images,
+        IEnumerable<ImagePreviewItem> reusableItems,
+        Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader)
+    {
         var existing = reusableItems.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
         ImagePreviewItem[] targetItems = images
-            .Select(image => existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : new ImagePreviewItem(image))
+            .Select(image => existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : CreatePreviewItem(image, thumbnailLoader))
             .ToArray();
 
         for (int index = items.Count - 1; index >= 0; index--)
@@ -62,5 +71,10 @@ public static class ImagePreviewCollectionUpdater
         }
 
         return -1;
+    }
+
+    private static ImagePreviewItem CreatePreviewItem(ImageMetadata image, Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader)
+    {
+        return thumbnailLoader is null ? new ImagePreviewItem(image) : new ImagePreviewItem(image, thumbnailLoader);
     }
 }

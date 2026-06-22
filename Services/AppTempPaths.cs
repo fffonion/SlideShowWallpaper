@@ -13,14 +13,18 @@ public static class AppTempPaths
 
     public static string ThumbnailMedia { get; } = Path.Combine(Root, "thumbnail-media");
 
+    public static string TransientThumbnails { get; } = Path.Combine(Root, "thumbnail-session");
+
     public static void Cleanup()
     {
         DateTime cutoffUtc = DateTime.UtcNow - MaxTempAge;
         DeleteOldFiles(NdfCache, cutoffUtc);
         DeleteOldFiles(ThumbnailMedia, cutoffUtc);
+        DeleteOldFiles(TransientThumbnails, cutoffUtc);
         TrimDirectory(NdfCache, MaxCacheBytes);
         TrimDirectory(ThumbnailCache, MaxCacheBytes);
         TrimDirectory(ThumbnailMedia, MaxCacheBytes / 2);
+        TrimDirectory(TransientThumbnails, MaxCacheBytes / 4);
     }
 
     public static bool HasAvailableBytes(string path, long requiredBytes)

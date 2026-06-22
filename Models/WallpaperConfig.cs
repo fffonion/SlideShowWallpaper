@@ -45,6 +45,15 @@ public enum AppThemeMode
     Dark
 }
 
+public enum AppLanguageMode
+{
+    System,
+    English,
+    SimplifiedChinese,
+    TraditionalChinese,
+    Japanese
+}
+
 public sealed class WallpaperConfig
 {
     public bool StartWithWindows { get; set; }
@@ -53,7 +62,15 @@ public sealed class WallpaperConfig
 
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
 
+    public AppLanguageMode LanguageMode { get; set; } = AppLanguageMode.System;
+
     public bool PlaybackEnabled { get; set; } = true;
+
+    public bool AutoTrackNewFiles { get; set; } = true;
+
+    public bool GlobalMute { get; set; } = true;
+
+    public bool ThumbnailCacheEnabled { get; set; } = true;
 
     public List<MonitorProfile> Monitors { get; set; } = [];
 }

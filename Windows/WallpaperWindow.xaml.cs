@@ -25,6 +25,7 @@ public sealed partial class WallpaperWindow : Window
     private string _currentImagePath = string.Empty;
     private MediaKind _currentKind = MediaKind.Image;
     private bool _videoPausedByCoverage;
+    private bool _forceMuted;
 
     public WallpaperWindow(MonitorProfile profile)
     {
@@ -63,10 +64,16 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Stretch = Stretch.Fill;
         VideoPlayer.Stretch = Stretch.Fill;
         _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
-        _mediaPlayer.IsMuted = !profile.VideoSoundEnabled;
+        ApplyMute(profile);
         ApplyImageLayout(CurrentImage, _currentTransform, profile);
         ApplyImageLayout(NextImage, _nextTransform, profile);
         ApplyVideoLayout(profile);
+    }
+
+    public void SetForceMuted(bool forceMuted)
+    {
+        _forceMuted = forceMuted;
+        ApplyMute(_profile);
     }
 
     public async Task ShowImageAsync(string path)
@@ -231,6 +238,11 @@ public sealed partial class WallpaperWindow : Window
         }
 
         NativeMethods.RemoveWindowFrame(hwnd);
+    }
+
+    private void ApplyMute(MonitorProfile profile)
+    {
+        _mediaPlayer.IsMuted = _forceMuted || !profile.VideoSoundEnabled;
     }
 
     private Task AnimateFadeAsync()
