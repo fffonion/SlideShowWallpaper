@@ -198,12 +198,11 @@ public sealed partial class MainWindow : Window
     {
         var root = new Grid
         {
-            ColumnSpacing = 8,
+            ColumnSpacing = 12,
             Padding = new Thickness(0),
             MinHeight = 38,
         };
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -225,7 +224,7 @@ public sealed partial class MainWindow : Window
             Width = 24,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        Grid.SetColumn(icon, 2);
+        Grid.SetColumn(icon, 1);
         root.Children.Add(icon);
 
         var text = new TextBlock
@@ -236,7 +235,7 @@ public sealed partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         AutomationProperties.SetName(text, profile.DisplayName);
-        Grid.SetColumn(text, 3);
+        Grid.SetColumn(text, 2);
         root.Children.Add(text);
 
         var surface = new Border
@@ -454,7 +453,7 @@ public sealed partial class MainWindow : Window
     {
         var root = new Grid
         {
-            RowSpacing = 10,
+            RowSpacing = 12,
             MaxWidth = 500,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
@@ -467,7 +466,7 @@ public sealed partial class MainWindow : Window
 
         var form = new StackPanel
         {
-            Spacing = 10,
+            Spacing = 14,
         };
         form.Children.Add(CreateSettingsSection(null, new SettingsRow(LocalizedStrings.Get("Folder"), CreateFolderControls(profile))));
         form.Children.Add(CreateSettingsSection(
@@ -641,7 +640,7 @@ public sealed partial class MainWindow : Window
                 Text = title,
                 FontSize = 22,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                Margin = new Thickness(16, 10, 16, 8),
+                Margin = new Thickness(16, 14, 16, 10),
             };
             AutomationProperties.SetName(titleBlock, title);
             stack.Children.Add(titleBlock);
@@ -673,8 +672,8 @@ public sealed partial class MainWindow : Window
         var content = new Grid
         {
             ColumnSpacing = 12,
-            MinHeight = 44,
-            Padding = new Thickness(16, 4, 16, 4),
+            MinHeight = 50,
+            Padding = new Thickness(16, 6, 16, 6),
         };
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
