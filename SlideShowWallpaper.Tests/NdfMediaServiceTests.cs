@@ -44,6 +44,34 @@ public sealed class NdfMediaServiceTests
     }
 
     [Fact]
+    public async Task MaterializeForPlaybackAsync_WithExistingCachedFile_ReusesMaterializedFile()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+        string cacheRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        string materialized = await NdfMediaService.MaterializeForPlaybackAsync(file.Path, cacheRoot, CancellationToken.None);
+        await File.WriteAllBytesAsync(materialized, [9, 8, 7], CancellationToken.None);
+
+        string secondMaterialized = await NdfMediaService.MaterializeForPlaybackAsync(file.Path, cacheRoot, CancellationToken.None);
+
+        Assert.Equal(materialized, secondMaterialized);
+        Assert.Equal([9, 8, 7], await File.ReadAllBytesAsync(secondMaterialized));
+    }
+
+    [Fact]
+    public async Task GetStorageFileForThumbnailAsync_WithNdfMp4_StreamsStrippedContent()
+    {
+        using TestFile file = TestFile.Create(".ndf", [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+
+        global::Windows.Storage.StorageFile streamedFile = await NdfMediaService.GetStorageFileForThumbnailAsync(file.Path, CancellationToken.None);
+
+        using global::Windows.Storage.Streams.IRandomAccessStream stream = await streamedFile.OpenReadAsync().AsTask();
+        using Stream reader = stream.AsStreamForRead();
+        using var memory = new MemoryStream();
+        await reader.CopyToAsync(memory);
+        Assert.Equal([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], memory.ToArray());
+    }
+
+    [Fact]
     public async Task MaterializeForPlaybackAsync_WithNormalMedia_ReturnsOriginalPath()
     {
         using TestFile file = TestFile.Create(".jpg", [0xFF, 0xD8, 0xFF]);

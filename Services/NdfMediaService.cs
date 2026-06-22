@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using SlideShowWallpaper.Models;
+using Windows.Storage;
+using Windows.Storage.Streams;
 
 namespace SlideShowWallpaper.Services;
 
@@ -85,15 +87,9 @@ public static class NdfMediaService
         string temporaryPath = $"{outputPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            await using (FileStream source = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            await using (FileStream destination = File.Open(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                if (info.Offset > 0)
-                {
-                    source.Seek(info.Offset, SeekOrigin.Begin);
-                }
-
-                await using FileStream destination = File.Open(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-                await source.CopyToAsync(destination, cancellationToken);
+                await CopyNdfContentAsync(path, info, destination, cancellationToken);
             }
 
             try
@@ -116,6 +112,46 @@ public static class NdfMediaService
 
             throw;
         }
+    }
+
+    public static async Task<IRandomAccessStream> OpenContentStreamAsync(string path, CancellationToken cancellationToken = default)
+    {
+        if (!TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            StorageFile file = await StorageFile.GetFileFromPathAsync(path).AsTask(cancellationToken);
+            return await file.OpenReadAsync().AsTask(cancellationToken);
+        }
+
+        var stream = new InMemoryRandomAccessStream();
+        using (Stream output = stream.AsStreamForWrite())
+        {
+            await CopyNdfContentAsync(path, info, output, cancellationToken);
+            await output.FlushAsync(cancellationToken);
+        }
+
+        stream.Seek(0);
+        return stream;
+    }
+
+    public static async Task<StorageFile> GetStorageFileForThumbnailAsync(string path, CancellationToken cancellationToken = default)
+    {
+        if (!TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            return await StorageFile.GetFileFromPathAsync(path).AsTask(cancellationToken);
+        }
+
+        return await StorageFile.CreateStreamedFileAsync(
+            $"{Path.GetFileNameWithoutExtension(path)}{info.Extension}",
+            async request =>
+            {
+                using (request)
+                {
+                    using Stream output = request.AsStreamForWrite();
+                    await CopyNdfContentAsync(path, info, output, cancellationToken);
+                    await output.FlushAsync(cancellationToken);
+                }
+            },
+            null).AsTask(cancellationToken);
     }
 
     private static bool IsNdfPath(string path)
@@ -299,6 +335,17 @@ public static class NdfMediaService
         string input = string.Join('\0', file.FullName, file.LastWriteTimeUtc.Ticks.ToString(), file.Length.ToString(), info.Offset.ToString(), info.Extension);
         string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input))).ToLowerInvariant();
         return Path.Combine(cacheRoot, hash[..2], $"{hash}{info.Extension}");
+    }
+
+    private static async Task CopyNdfContentAsync(string path, NdfMediaInfo info, Stream destination, CancellationToken cancellationToken)
+    {
+        await using FileStream source = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (info.Offset > 0)
+        {
+            source.Seek(info.Offset, SeekOrigin.Begin);
+        }
+
+        await source.CopyToAsync(destination, cancellationToken);
     }
 }
 

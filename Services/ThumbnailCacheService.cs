@@ -12,9 +12,7 @@ public sealed class ThumbnailCacheService
 {
     private const uint DefaultMaxPixelSize = 320;
     private readonly string _cacheRoot;
-    private readonly Func<string, string, uint, CancellationToken, Task> _imageThumbnailWriter;
-    private readonly Func<string, string, uint, CancellationToken, Task> _videoThumbnailWriter;
-    private readonly Func<string, string, CancellationToken, Task<string>> _mediaMaterializer;
+    private readonly Func<ImageMetadata, string, uint, CancellationToken, Task> _thumbnailWriter;
 
     public ThumbnailCacheService()
         : this(Path.Combine(Path.GetTempPath(), "SlideShowWallpaper", "thumbnails"))
@@ -22,20 +20,16 @@ public sealed class ThumbnailCacheService
     }
 
     public ThumbnailCacheService(string cacheRoot)
-        : this(cacheRoot, CreateImageThumbnailAsync, CreateVideoThumbnailAsync, NdfMediaService.MaterializeForPlaybackAsync)
+        : this(cacheRoot, CreateThumbnailAsync)
     {
     }
 
     internal ThumbnailCacheService(
         string cacheRoot,
-        Func<string, string, uint, CancellationToken, Task> imageThumbnailWriter,
-        Func<string, string, uint, CancellationToken, Task> videoThumbnailWriter,
-        Func<string, string, CancellationToken, Task<string>> mediaMaterializer)
+        Func<ImageMetadata, string, uint, CancellationToken, Task> thumbnailWriter)
     {
         _cacheRoot = cacheRoot;
-        _imageThumbnailWriter = imageThumbnailWriter;
-        _videoThumbnailWriter = videoThumbnailWriter;
-        _mediaMaterializer = mediaMaterializer;
+        _thumbnailWriter = thumbnailWriter;
     }
 
     public string GetThumbnailPath(ImageMetadata metadata)
@@ -57,15 +51,7 @@ public sealed class ThumbnailCacheService
         string temporaryPath = $"{thumbnailPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            string materializedPath = await _mediaMaterializer(metadata.Path, Path.Combine(_cacheRoot, "media"), cancellationToken);
-            if (metadata.Kind == MediaKind.Video)
-            {
-                await _videoThumbnailWriter(materializedPath, temporaryPath, DefaultMaxPixelSize, cancellationToken);
-            }
-            else
-            {
-                await _imageThumbnailWriter(materializedPath, temporaryPath, DefaultMaxPixelSize, cancellationToken);
-            }
+            await _thumbnailWriter(metadata, temporaryPath, DefaultMaxPixelSize, cancellationToken);
 
             if (File.Exists(thumbnailPath))
             {
@@ -85,16 +71,27 @@ public sealed class ThumbnailCacheService
         return thumbnailPath;
     }
 
+    private static async Task CreateThumbnailAsync(ImageMetadata metadata, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
+        if (metadata.Kind == MediaKind.Video)
+        {
+            await CreateVideoThumbnailAsync(metadata.Path, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+        else
+        {
+            await CreateImageThumbnailAsync(metadata.Path, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+    }
+
     private static async Task CreateImageThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
-        StorageFile sourceFile = await StorageFile.GetFileFromPathAsync(sourcePath).AsTask(cancellationToken);
-        using IRandomAccessStream sourceStream = await sourceFile.OpenReadAsync().AsTask(cancellationToken);
+        using IRandomAccessStream sourceStream = await NdfMediaService.OpenContentStreamAsync(sourcePath, cancellationToken);
         await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
     }
 
     private static async Task CreateVideoThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
-        StorageFile sourceFile = await StorageFile.GetFileFromPathAsync(sourcePath).AsTask(cancellationToken);
+        StorageFile sourceFile = await NdfMediaService.GetStorageFileForThumbnailAsync(sourcePath, cancellationToken);
         MediaClip clip = await MediaClip.CreateFromFileAsync(sourceFile).AsTask(cancellationToken);
         var composition = new MediaComposition();
         composition.Clips.Add(clip);

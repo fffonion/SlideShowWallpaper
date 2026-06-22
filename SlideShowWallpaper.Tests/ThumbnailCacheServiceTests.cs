@@ -53,40 +53,29 @@ public sealed class ThumbnailCacheServiceTests
     }
 
     [Fact]
-    public async Task GetOrCreateThumbnailAsync_WithNdfVideo_MaterializesThenWritesVideoThumbnail()
+    public async Task GetOrCreateThumbnailAsync_WithNdfVideo_WritesThumbnailWithoutMaterializedMediaCache()
     {
         string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         string sourcePath = Path.Combine(root, "source.ndf");
-        string materializedPath = Path.Combine(root, "materialized.mp4");
         await File.WriteAllBytesAsync(sourcePath, [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
         var info = new FileInfo(sourcePath);
         var metadata = new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length, MediaKind.Video);
-        string? materializerSource = null;
-        string? materializerCacheRoot = null;
-        string? videoThumbnailSource = null;
+        ImageMetadata? writerMetadata = null;
+        string thumbnailRoot = Path.Combine(root, "thumbnails");
         var service = new ThumbnailCacheService(
-            Path.Combine(root, "thumbnails"),
-            (_, _, _, _) => throw new InvalidOperationException("Image writer should not be used for video thumbnails."),
-            (source, thumbnail, _, _) =>
+            thumbnailRoot,
+            (sourceMetadata, thumbnail, _, _) =>
             {
-                videoThumbnailSource = source;
+                writerMetadata = sourceMetadata;
                 File.WriteAllBytes(thumbnail, [1, 2, 3]);
                 return Task.CompletedTask;
-            },
-            (source, cacheRoot, _) =>
-            {
-                materializerSource = source;
-                materializerCacheRoot = cacheRoot;
-                File.WriteAllBytes(materializedPath, [4, 5, 6]);
-                return Task.FromResult(materializedPath);
             });
 
         string thumbnailPath = await service.GetOrCreateThumbnailAsync(metadata);
 
-        Assert.Equal(sourcePath, materializerSource);
-        Assert.StartsWith(Path.Combine(root, "thumbnails", "media"), materializerCacheRoot, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(materializedPath, videoThumbnailSource);
+        Assert.Equal(sourcePath, writerMetadata?.Path);
         Assert.True(File.Exists(thumbnailPath));
+        Assert.False(Directory.Exists(Path.Combine(thumbnailRoot, "media")));
     }
 }
