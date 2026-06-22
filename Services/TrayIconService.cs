@@ -112,7 +112,7 @@ public sealed class TrayIconService : IDisposable
             hWnd = _windowHandle,
             uID = IconId,
             uCallbackMessage = CallbackMessage,
-            szTip = "SlideShow Wallpaper",
+            szTip = LocalizedStrings.Get("AppTitle"),
         };
     }
 
@@ -132,8 +132,8 @@ public sealed class TrayIconService : IDisposable
             NativeMethods.AppendMenu(menu, flags, (nuint)item.CommandId, item.Text);
         }
 
-        NativeMethods.AppendMenu(menu, NativeMethods.MF_STRING, 100, "Open");
-        NativeMethods.AppendMenu(menu, NativeMethods.MF_STRING, 102, "Exit");
+        NativeMethods.AppendMenu(menu, NativeMethods.MF_STRING, 100, LocalizedStrings.Get("Open"));
+        NativeMethods.AppendMenu(menu, NativeMethods.MF_STRING, 102, LocalizedStrings.Get("Exit"));
 
         NativeMethods.GetCursorPos(out NativeMethods.POINT point);
         NativeMethods.SetForegroundWindow(_windowHandle);
@@ -178,8 +178,9 @@ public sealed class TrayIconService : IDisposable
         }
     }
 
-    public static IReadOnlyList<TrayMenuItem> BuildMenuItems(IReadOnlyList<MonitorProfile> profiles)
+    public static IReadOnlyList<TrayMenuItem> BuildMenuItems(IReadOnlyList<MonitorProfile> profiles, Func<string, string>? getString = null)
     {
+        getString ??= LocalizedStrings.Get;
         var items = new List<TrayMenuItem>();
         for (int i = 0; i < profiles.Count; i++)
         {
@@ -187,13 +188,13 @@ public sealed class TrayIconService : IDisposable
             items.Add(TrayMenuItem.Header(profile.DisplayName));
             if (string.IsNullOrWhiteSpace(profile.FolderPath))
             {
-                items.Add(TrayMenuItem.DisabledCommand("Not Loaded", profile.Id));
+                items.Add(TrayMenuItem.DisabledCommand(getString("NotLoaded"), profile.Id));
             }
             else
             {
-                items.Add(TrayMenuItem.CreateCommand(2000 + i, profile.IsStopped ? "Start" : "Stop", profile.Id));
-                items.Add(TrayMenuItem.CreateCommand(3000 + i, profile.IsPaused ? "Resume" : "Pause", profile.Id));
-                items.Add(TrayMenuItem.CreateCommand(4000 + i, "Next", profile.Id));
+                items.Add(TrayMenuItem.CreateCommand(2000 + i, profile.IsStopped ? getString("Start") : getString("Stop"), profile.Id));
+                items.Add(TrayMenuItem.CreateCommand(3000 + i, profile.IsPaused ? getString("Resume") : getString("Pause"), profile.Id));
+                items.Add(TrayMenuItem.CreateCommand(4000 + i, getString("Next"), profile.Id));
             }
 
             items.Add(TrayMenuItem.Separator());

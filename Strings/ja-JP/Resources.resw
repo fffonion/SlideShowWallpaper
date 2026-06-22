@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppTitle" xml:space="preserve"><value>スライドショー壁紙</value></data>
+  <data name="MainWindow.Title" xml:space="preserve"><value>スライドショー壁紙</value></data>
+  <data name="AppTitleBar.Title" xml:space="preserve"><value>スライドショー壁紙</value></data>
+  <data name="PlayerTitle" xml:space="preserve"><value>スライドショー壁紙プレイヤー</value></data>
+  <data name="WallpaperWindow.Title" xml:space="preserve"><value>スライドショー壁紙プレイヤー</value></data>
+  <data name="RefreshButton.Label" xml:space="preserve"><value>更新</value></data>
+  <data name="AutostartButton.Label" xml:space="preserve"><value>自動起動</value></data>
+  <data name="CloseToTrayButton.Label" xml:space="preserve"><value>トレイに閉じる</value></data>
+  <data name="CloseToTrayButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>トレイに閉じる</value></data>
+  <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>テーマ</value></data>
+  <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>
+  <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
+  <data name="ThemeDark" xml:space="preserve"><value>ダーク</value></data>
+  <data name="PlaybackRandom" xml:space="preserve"><value>ランダム</value></data>
+  <data name="PlaybackNameAsc" xml:space="preserve"><value>名前 昇順</value></data>
+  <data name="PlaybackNameDesc" xml:space="preserve"><value>名前 降順</value></data>
+  <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>更新日時 昇順</value></data>
+  <data name="PlaybackModifiedDateDesc" xml:space="preserve"><value>更新日時 降順</value></data>
+  <data name="TimeSeconds" xml:space="preserve"><value>秒</value></data>
+  <data name="TimeMinutes" xml:space="preserve"><value>分</value></data>
+  <data name="TimeHours" xml:space="preserve"><value>時間</value></data>
+  <data name="TimeUnitAutomationFormat" xml:space="preserve"><value>{0} の単位</value></data>
+  <data name="Folder" xml:space="preserve"><value>フォルダー</value></data>
+  <data name="Scale" xml:space="preserve"><value>拡大縮小</value></data>
+  <data name="Order" xml:space="preserve"><value>順序</value></data>
+  <data name="Offset" xml:space="preserve"><value>オフセット</value></data>
+  <data name="Interval" xml:space="preserve"><value>間隔</value></data>
+  <data name="Transition" xml:space="preserve"><value>トランジション</value></data>
+  <data name="Duration" xml:space="preserve"><value>時間</value></data>
+  <data name="FolderNone" xml:space="preserve"><value>(なし)</value></data>
+  <data name="ScaleModeAutomation" xml:space="preserve"><value>拡大縮小モード</value></data>
+  <data name="PlaybackOrderAutomation" xml:space="preserve"><value>再生順序</value></data>
+  <data name="TransitionDurationAutomation" xml:space="preserve"><value>トランジション時間</value></data>
+  <data name="ImageCountZero" xml:space="preserve"><value>0 枚の画像</value></data>
+  <data name="ImageCountFormat" xml:space="preserve"><value>{0} 枚の画像</value></data>
+  <data name="LoadingImages" xml:space="preserve"><value>画像を読み込み中...</value></data>
+  <data name="UnableToLoadImages" xml:space="preserve"><value>画像を読み込めません</value></data>
+  <data name="LoadingImagePreviews" xml:space="preserve"><value>画像プレビューを読み込み中</value></data>
+  <data name="MonitorImageCountAutomationFormat" xml:space="preserve"><value>{0} の画像数</value></data>
+  <data name="MonitorPreviewsAutomationFormat" xml:space="preserve"><value>{0} のプレビュー</value></data>
+  <data name="Start" xml:space="preserve"><value>開始</value></data>
+  <data name="Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="Pause" xml:space="preserve"><value>一時停止</value></data>
+  <data name="Resume" xml:space="preserve"><value>再開</value></data>
+  <data name="Next" xml:space="preserve"><value>次へ</value></data>
+  <data name="Shuffle" xml:space="preserve"><value>シャッフル</value></data>
+  <data name="Open" xml:space="preserve"><value>開く</value></data>
+  <data name="Exit" xml:space="preserve"><value>終了</value></data>
+  <data name="NotLoaded" xml:space="preserve"><value>未読み込み</value></data>
+  <data name="ScaleFit" xml:space="preserve"><value>全体表示</value></data>
+  <data name="ScaleCover" xml:space="preserve"><value>カバー</value></data>
+  <data name="ScaleStretch" xml:space="preserve"><value>引き伸ばし</value></data>
+  <data name="ScaleOriginal" xml:space="preserve"><value>オリジナル</value></data>
+  <data name="TransitionNone" xml:space="preserve"><value>なし</value></data>
+  <data name="TransitionFade" xml:space="preserve"><value>フェード</value></data>
+  <data name="TransitionSlide" xml:space="preserve"><value>スライド</value></data>
+</root>

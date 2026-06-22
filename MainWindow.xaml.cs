@@ -18,27 +18,42 @@ public sealed partial class MainWindow : Window
 {
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
 
-    private static readonly IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =
+    private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
     [
-        new(PlaybackOrder.Random, "Random"),
-        new(PlaybackOrder.NameAsc, "Name Asc"),
-        new(PlaybackOrder.NameDesc, "Name Desc"),
-        new(PlaybackOrder.ModifiedDateAsc, "Modified Date Asc"),
-        new(PlaybackOrder.ModifiedDateDesc, "Modified Date Desc"),
+        new(PlaybackOrder.Random, LocalizedStrings.Get("PlaybackRandom")),
+        new(PlaybackOrder.NameAsc, LocalizedStrings.Get("PlaybackNameAsc")),
+        new(PlaybackOrder.NameDesc, LocalizedStrings.Get("PlaybackNameDesc")),
+        new(PlaybackOrder.ModifiedDateAsc, LocalizedStrings.Get("PlaybackModifiedDateAsc")),
+        new(PlaybackOrder.ModifiedDateDesc, LocalizedStrings.Get("PlaybackModifiedDateDesc")),
     ];
 
-    private static readonly IReadOnlyList<Choice<TimeUnit>> TimeUnitChoices =
+    private static IReadOnlyList<Choice<TimeUnit>> TimeUnitChoices =>
     [
-        new(TimeUnit.Seconds, "Seconds"),
-        new(TimeUnit.Minutes, "Minutes"),
-        new(TimeUnit.Hours, "Hours"),
+        new(TimeUnit.Seconds, LocalizedStrings.Get("TimeSeconds")),
+        new(TimeUnit.Minutes, LocalizedStrings.Get("TimeMinutes")),
+        new(TimeUnit.Hours, LocalizedStrings.Get("TimeHours")),
     ];
 
-    private static readonly IReadOnlyList<Choice<AppThemeMode>> ThemeModeChoices =
+    private static IReadOnlyList<Choice<AppThemeMode>> ThemeModeChoices =>
     [
-        new(AppThemeMode.System, "Follow system"),
-        new(AppThemeMode.Light, "Light"),
-        new(AppThemeMode.Dark, "Dark"),
+        new(AppThemeMode.System, LocalizedStrings.Get("ThemeSystem")),
+        new(AppThemeMode.Light, LocalizedStrings.Get("ThemeLight")),
+        new(AppThemeMode.Dark, LocalizedStrings.Get("ThemeDark")),
+    ];
+
+    private static IReadOnlyList<Choice<WallpaperScaleMode>> ScaleModeChoices =>
+    [
+        new(WallpaperScaleMode.Fit, LocalizedStrings.Get("ScaleFit")),
+        new(WallpaperScaleMode.Cover, LocalizedStrings.Get("ScaleCover")),
+        new(WallpaperScaleMode.Stretch, LocalizedStrings.Get("ScaleStretch")),
+        new(WallpaperScaleMode.Original, LocalizedStrings.Get("ScaleOriginal")),
+    ];
+
+    private static IReadOnlyList<Choice<WallpaperTransition>> TransitionChoices =>
+    [
+        new(WallpaperTransition.None, LocalizedStrings.Get("TransitionNone")),
+        new(WallpaperTransition.Fade, LocalizedStrings.Get("TransitionFade")),
+        new(WallpaperTransition.Slide, LocalizedStrings.Get("TransitionSlide")),
     ];
 
     private readonly MainViewModel _viewModel = new();
@@ -68,6 +83,8 @@ public sealed partial class MainWindow : Window
         _folderPickerService = folderPickerService;
 
         InitializeComponent();
+        Title = LocalizedStrings.Get("AppTitle");
+        AppTitleBar.Title = LocalizedStrings.Get("AppTitle");
         ThemeComboBox.ItemsSource = ThemeModeChoices;
         _settingsApplyTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
         _settingsApplyTimer.Interval = SettingsApplyDelay;
@@ -195,10 +212,10 @@ public sealed partial class MainWindow : Window
 
         var metadata = new TextBlock
         {
-            Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? "0 images" : "Loading images...",
+            Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("ImageCountZero") : LocalizedStrings.Get("LoadingImages"),
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
         };
-        AutomationProperties.SetName(metadata, $"{profile.DisplayName} image count");
+        AutomationProperties.SetName(metadata, LocalizedStrings.Format("MonitorImageCountAutomationFormat", profile.DisplayName));
         root.Children.Add(metadata);
 
         var previewHost = new Grid();
@@ -211,7 +228,7 @@ public sealed partial class MainWindow : Window
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
-        AutomationProperties.SetName(previewList, $"{profile.DisplayName} previews");
+        AutomationProperties.SetName(previewList, LocalizedStrings.Format("MonitorPreviewsAutomationFormat", profile.DisplayName));
         previewList.SelectionChanged += PreviewList_SelectionChanged;
         previewHost.Children.Add(previewList);
 
@@ -228,11 +245,11 @@ public sealed partial class MainWindow : Window
             Width = 32,
             Height = 32,
         };
-        AutomationProperties.SetName(progressRing, "Loading image previews");
+        AutomationProperties.SetName(progressRing, LocalizedStrings.Get("LoadingImagePreviews"));
         loadingPanel.Children.Add(progressRing);
         loadingPanel.Children.Add(new TextBlock
         {
-            Text = "Loading images...",
+            Text = LocalizedStrings.Get("LoadingImages"),
             HorizontalAlignment = HorizontalAlignment.Center,
         });
         previewHost.Children.Add(loadingPanel);
@@ -270,7 +287,7 @@ public sealed partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(profile.FolderPath))
         {
-            metadataText.Text = "0 images";
+            metadataText.Text = LocalizedStrings.Get("ImageCountZero");
             loadingPanel.Visibility = Visibility.Collapsed;
             progressRing.IsActive = false;
             return;
@@ -279,7 +296,7 @@ public sealed partial class MainWindow : Window
         CancelPreviewLoad(profile.Id);
         var cancellation = new CancellationTokenSource();
         _previewLoadTokens[profile.Id] = cancellation;
-        metadataText.Text = "Loading images...";
+        metadataText.Text = LocalizedStrings.Get("LoadingImages");
         loadingPanel.Visibility = Visibility.Visible;
         progressRing.IsActive = true;
 
@@ -293,7 +310,7 @@ public sealed partial class MainWindow : Window
 
             ImagePreviewCollectionUpdater.Apply(items, images);
 
-            metadataText.Text = $"{items.Count} images";
+            metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
         }
         catch (OperationCanceledException)
         {
@@ -302,7 +319,7 @@ public sealed partial class MainWindow : Window
         {
             AppLog.Write(exception);
             items.Clear();
-            metadataText.Text = "Unable to load images";
+            metadataText.Text = LocalizedStrings.Get("UnableToLoadImages");
         }
         finally
         {
@@ -341,15 +358,15 @@ public sealed partial class MainWindow : Window
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         int row = 0;
-        AddRow(form, row++, "Folder", new TextBlock { Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? "(none)" : profile.FolderPath, TextTrimming = TextTrimming.CharacterEllipsis });
-        AddRow(form, row++, "Scale", CreateEnumCombo(profile.ScaleMode, value => profile.ScaleMode = value, "Scale mode"));
-        AddRow(form, row++, "Order", CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
+        AddRow(form, row++, LocalizedStrings.Get("Folder"), new TextBlock { Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("FolderNone") : profile.FolderPath, TextTrimming = TextTrimming.CharacterEllipsis });
+        AddRow(form, row++, LocalizedStrings.Get("Scale"), CreateChoiceCombo(ScaleModeChoices, profile.ScaleMode, value => profile.ScaleMode = value, LocalizedStrings.Get("ScaleModeAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
         {
             profile.PlaybackOrder = value;
             RenderTabs(profile.Id);
-        }, "Playback order"));
-        AddRow(form, row++, "Offset", CreateOffsetControls(profile));
-        AddRow(form, row++, "Interval", CreateTimedNumberBox(
+        }, LocalizedStrings.Get("PlaybackOrderAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("Offset"), CreateOffsetControls(profile));
+        AddRow(form, row++, LocalizedStrings.Get("Interval"), CreateTimedNumberBox(
             ToDisplaySeconds(profile.IntervalSeconds, profile.IntervalUnit),
             profile.IntervalUnit,
             (value, unit) =>
@@ -357,9 +374,9 @@ public sealed partial class MainWindow : Window
                 profile.IntervalUnit = unit;
                 profile.IntervalSeconds = Math.Max(5, (int)Math.Round(TimeUnitConverter.ToSeconds(value, unit)));
             },
-            "Interval"));
-        AddRow(form, row++, "Transition", CreateEnumCombo(profile.Transition, value => profile.Transition = value, "Transition"));
-        AddRow(form, row++, "Duration", CreateTimedNumberBox(
+            LocalizedStrings.Get("Interval")));
+        AddRow(form, row++, LocalizedStrings.Get("Transition"), CreateChoiceCombo(TransitionChoices, profile.Transition, value => profile.Transition = value, LocalizedStrings.Get("Transition")));
+        AddRow(form, row++, LocalizedStrings.Get("Duration"), CreateTimedNumberBox(
             ToDisplayDuration(profile.TransitionDurationMs, profile.TransitionDurationUnit),
             profile.TransitionDurationUnit,
             (value, unit) =>
@@ -367,7 +384,7 @@ public sealed partial class MainWindow : Window
                 profile.TransitionDurationUnit = unit;
                 profile.TransitionDurationMs = Math.Max(0, TimeUnitConverter.ToMilliseconds(value, unit));
             },
-            "Transition duration"));
+            LocalizedStrings.Get("TransitionDurationAutomation")));
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);
@@ -401,14 +418,14 @@ public sealed partial class MainWindow : Window
         var folderButton = new AppBarButton
         {
             Icon = new SymbolIcon(Symbol.OpenFile),
-            Label = "Folder",
+            Label = LocalizedStrings.Get("Folder"),
         };
         folderButton.Click += async (_, _) => await OpenFolderAsync(profile);
 
         var nextButton = new AppBarButton
         {
             Icon = new SymbolIcon(Symbol.Forward),
-            Label = "Next",
+            Label = LocalizedStrings.Get("Next"),
         };
         nextButton.Click += async (_, _) =>
         {
@@ -420,7 +437,7 @@ public sealed partial class MainWindow : Window
         var shuffleButton = new AppBarButton
         {
             Icon = new FontIcon { Glyph = "\uE8B1" },
-            Label = "Shuffle",
+            Label = LocalizedStrings.Get("Shuffle"),
             IsEnabled = profile.PlaybackOrder == PlaybackOrder.Random,
         };
         shuffleButton.Click += (_, _) => ShuffleProfile(profile);
@@ -505,27 +522,6 @@ public sealed partial class MainWindow : Window
         return panel;
     }
 
-    private ComboBox CreateEnumCombo<T>(T selected, Action<T> changed, string automationName)
-        where T : struct, Enum
-    {
-        var combo = new ComboBox
-        {
-            ItemsSource = Enum.GetValues<T>(),
-            SelectedItem = selected,
-            MinWidth = 180,
-        };
-        AutomationProperties.SetName(combo, automationName);
-        combo.SelectionChanged += (_, _) =>
-        {
-            if (combo.SelectedItem is T value)
-            {
-                changed(value);
-                ScheduleApplySettings();
-            }
-        };
-        return combo;
-    }
-
     private ComboBox CreateChoiceCombo<T>(IReadOnlyList<Choice<T>> choices, T selected, Action<T> changed, string automationName)
         where T : notnull
     {
@@ -587,7 +583,7 @@ public sealed partial class MainWindow : Window
             selectedUnit = newUnit;
             double currentValue = double.IsNaN(valueBox.Value) ? value : valueBox.Value;
             changed(currentValue, newUnit);
-        }, $"{automationName} unit");
+        }, LocalizedStrings.Format("TimeUnitAutomationFormat", automationName));
         unitCombo.MinWidth = 112;
 
         panel.Children.Add(valueBox);
@@ -858,14 +854,14 @@ public sealed partial class MainWindow : Window
     private static void UpdateStopButton(AppBarToggleButton button, bool isStopped)
     {
         button.Icon = new SymbolIcon(isStopped ? Symbol.Play : Symbol.Stop);
-        button.Label = isStopped ? "Start" : "Stop";
+        button.Label = isStopped ? LocalizedStrings.Get("Start") : LocalizedStrings.Get("Stop");
         AutomationProperties.SetName(button, button.Label);
     }
 
     private static void UpdatePauseButton(AppBarToggleButton button, bool isPaused)
     {
         button.Icon = new SymbolIcon(isPaused ? Symbol.Play : Symbol.Pause);
-        button.Label = isPaused ? "Resume" : "Pause";
+        button.Label = isPaused ? LocalizedStrings.Get("Resume") : LocalizedStrings.Get("Pause");
         AutomationProperties.SetName(button, button.Label);
     }
 

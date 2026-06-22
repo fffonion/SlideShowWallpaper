@@ -22,6 +22,7 @@ public sealed partial class WallpaperWindow : Window
     {
         _profile = profile;
         InitializeComponent();
+        Title = LocalizedStrings.Get("PlayerTitle");
         SystemBackdrop = null;
         CurrentImage.RenderTransform = _currentTransform;
         NextImage.RenderTransform = _nextTransform;
