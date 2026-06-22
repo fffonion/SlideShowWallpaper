@@ -16,6 +16,9 @@
   <data name="ThemeLabel.Text" xml:space="preserve"><value>主题</value></data>
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>主题</value></data>
   <data name="Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="AppSettingAutostart" xml:space="preserve"><value>开机启动</value></data>
+  <data name="AppSettingCloseToTray" xml:space="preserve"><value>关闭到托盘</value></data>
+  <data name="AppSettingTheme" xml:space="preserve"><value>主题</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟随系统</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>浅色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>

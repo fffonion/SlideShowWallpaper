@@ -16,6 +16,9 @@
   <data name="ThemeLabel.Text" xml:space="preserve"><value>Theme</value></data>
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Theme</value></data>
   <data name="Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="AppSettingAutostart" xml:space="preserve"><value>Autostart</value></data>
+  <data name="AppSettingCloseToTray" xml:space="preserve"><value>Close to tray</value></data>
+  <data name="AppSettingTheme" xml:space="preserve"><value>Theme</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>Follow system</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>Light</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>Dark</value></data>

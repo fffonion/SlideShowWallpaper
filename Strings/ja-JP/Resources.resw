@@ -16,6 +16,9 @@
   <data name="ThemeLabel.Text" xml:space="preserve"><value>テーマ</value></data>
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>テーマ</value></data>
   <data name="Settings" xml:space="preserve"><value>設定</value></data>
+  <data name="AppSettingAutostart" xml:space="preserve"><value>自動起動</value></data>
+  <data name="AppSettingCloseToTray" xml:space="preserve"><value>トレイに閉じる</value></data>
+  <data name="AppSettingTheme" xml:space="preserve"><value>テーマ</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>ダーク</value></data>

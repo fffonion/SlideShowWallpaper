@@ -26,30 +26,10 @@
             </TitleBar.IconSource>
         </TitleBar>
 
-        <Grid Grid.Row="1" Padding="16,16,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <CommandBar
-                    HorizontalAlignment="Left"
-                    DefaultLabelPosition="Right"
-                    IsDynamicOverflowEnabled="True">
-                    <AppBarButton x:Uid="RefreshButton" Click="RefreshScreens_Click" Icon="Refresh" />
-                </CommandBar>
-            </Grid>
-
+        <Grid Grid.Row="1" Padding="16,0,0,0">
             <Grid
                 x:Name="MonitorLayout"
-                Grid.Row="1"
-                Margin="-8,12,0,0"
+                Margin="-8,0,0,0"
                 ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="228" />

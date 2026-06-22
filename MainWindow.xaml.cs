@@ -345,7 +345,7 @@ public sealed partial class MainWindow : Window
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var closeToTrayCheckBox = CreateCheckBox(_viewModel.CloseToTray, value => _viewModel.CloseToTray = value, LocalizedStrings.Get("CloseToTrayButton.Label"));
+        var closeToTrayCheckBox = CreateCheckBox(_viewModel.CloseToTray, value => _viewModel.CloseToTray = value, LocalizedStrings.Get("AppSettingCloseToTray"));
         closeToTrayCheckBox.IsEnabled = !_disableCloseToTray;
 
         var form = new StackPanel
@@ -354,13 +354,13 @@ public sealed partial class MainWindow : Window
         };
         form.Children.Add(CreateSettingsSection(
             LocalizedStrings.Get("Settings"),
-            new SettingsRow(LocalizedStrings.Get("AutostartButton.Label"), CreateCheckBox(_viewModel.StartWithWindows, value =>
+            new SettingsRow(LocalizedStrings.Get("AppSettingAutostart"), CreateCheckBox(_viewModel.StartWithWindows, value =>
             {
                 _viewModel.StartWithWindows = value;
                 _autostartService.SetEnabled(value);
-            }, LocalizedStrings.Get("AutostartButton.Label"))),
-            new SettingsRow(LocalizedStrings.Get("CloseToTrayButton.Label"), closeToTrayCheckBox),
-            new SettingsRow(LocalizedStrings.Get("ThemeLabel.Text"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("ThemeLabel.Text")))));
+            }, LocalizedStrings.Get("AppSettingAutostart"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingCloseToTray"), closeToTrayCheckBox),
+            new SettingsRow(LocalizedStrings.Get("AppSettingTheme"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("AppSettingTheme")))));
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
@@ -672,7 +672,7 @@ public sealed partial class MainWindow : Window
     private void ConfigureSettingsWindow()
     {
         const int preferredWidth = 1460;
-        const int preferredHeight = 1420;
+        const int preferredHeight = 1340;
         DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
         RectInt32 workArea = displayArea.WorkArea;
         int width = Math.Min(preferredWidth, workArea.Width);
@@ -936,21 +936,6 @@ public sealed partial class MainWindow : Window
         profile.FolderPath = folder;
         profile.SelectedImagePath = string.Empty;
         RenderTabs(profile.Id);
-        ApplySettings();
-    }
-
-    private void RefreshScreens_Click(object sender, RoutedEventArgs e)
-    {
-        WallpaperConfig existing = CreateConfig();
-        _viewModel.Monitors.Clear();
-        foreach (MonitorProfile current in _monitorService.GetCurrentMonitors())
-        {
-            MonitorProfile profile = existing.Monitors.FirstOrDefault(saved => string.Equals(saved.Id, current.Id, StringComparison.OrdinalIgnoreCase)) ?? current;
-            profile.DisplayName = current.DisplayName;
-            _viewModel.Monitors.Add(new MonitorSettingsViewModel(profile));
-        }
-
-        RenderTabs();
         ApplySettings();
     }
 
