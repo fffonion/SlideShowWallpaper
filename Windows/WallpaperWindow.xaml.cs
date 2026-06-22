@@ -36,15 +36,18 @@ public sealed partial class WallpaperWindow : Window
         _mediaPlayer.IsMuted = true;
         _mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
         _mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
+        _mediaPlayer.MediaOpened += MediaPlayer_MediaOpened;
         VideoPlayer.SetMediaPlayer(_mediaPlayer);
         ConfigureWindow();
         ApplyProfile(profile);
+        Root.SizeChanged += (_, _) => ApplyProfile(_profile);
         Closed += (_, _) =>
         {
             StopVideo();
             ClearImageSources();
             _mediaPlayer.MediaEnded -= MediaPlayer_MediaEnded;
             _mediaPlayer.MediaFailed -= MediaPlayer_MediaFailed;
+            _mediaPlayer.MediaOpened -= MediaPlayer_MediaOpened;
             _mediaPlayer.Dispose();
         };
     }
@@ -54,19 +57,14 @@ public sealed partial class WallpaperWindow : Window
     public void ApplyProfile(MonitorProfile profile)
     {
         _profile = profile;
-        Stretch stretch = WallpaperScaleModeMapper.ToImageStretch(profile.ScaleMode);
-
-        CurrentImage.Stretch = stretch;
-        NextImage.Stretch = stretch;
-        VideoPlayer.Stretch = stretch;
+        CurrentImage.Stretch = Stretch.None;
+        NextImage.Stretch = Stretch.None;
+        VideoPlayer.Stretch = Stretch.None;
         _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
         _mediaPlayer.IsMuted = !profile.VideoSoundEnabled;
-        _currentTransform.X = profile.OffsetX;
-        _currentTransform.Y = profile.OffsetY;
-        _nextTransform.X = profile.OffsetX;
-        _nextTransform.Y = profile.OffsetY;
-        _videoTransform.X = profile.OffsetX;
-        _videoTransform.Y = profile.OffsetY;
+        ApplyImageLayout(CurrentImage, _currentTransform, profile);
+        ApplyImageLayout(NextImage, _nextTransform, profile);
+        ApplyVideoLayout(profile);
     }
 
     public async Task ShowImageAsync(string path)
@@ -77,7 +75,7 @@ public sealed partial class WallpaperWindow : Window
         }
 
         StopVideo();
-        var bitmap = new BitmapImage(new Uri(path));
+        BitmapImage bitmap = await LoadBitmapAsync(path);
         NextImage.Source = bitmap;
         ApplyProfile(_profile);
 
@@ -90,13 +88,14 @@ public sealed partial class WallpaperWindow : Window
 
         if (_profile.Transition == WallpaperTransition.Slide)
         {
+            double nextToX = _nextTransform.X;
             if (hasCurrentImage)
             {
-                await AnimateSlideAsync(_profile.OffsetX, _profile.OffsetX);
+                await AnimateSlideAsync(_currentTransform.X, nextToX);
             }
             else
             {
-                await AnimateInitialSlideAsync();
+                await AnimateInitialSlideAsync(nextToX);
             }
         }
         else
@@ -168,7 +167,7 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
-        double previousOffsetX = _profile.OffsetX;
+        double previousOffsetX = _currentTransform.X;
         _profile = profile;
         NextImage.Source = CurrentImage.Source;
         ApplyImageProfile(NextImage, _nextTransform, profile);
@@ -184,7 +183,7 @@ public sealed partial class WallpaperWindow : Window
 
         if (profile.Transition == WallpaperTransition.Slide)
         {
-            await AnimateSlideAsync(previousOffsetX, profile.OffsetX);
+            await AnimateSlideAsync(previousOffsetX, _nextTransform.X);
         }
         else
         {
@@ -242,13 +241,13 @@ public sealed partial class WallpaperWindow : Window
         return BeginStoryboardAsync(storyboard);
     }
 
-    private Task AnimateInitialSlideAsync()
+    private Task AnimateInitialSlideAsync(double nextToX)
     {
         NextImage.Opacity = 1;
         _nextTransform.X = ActualWidthOrFallback();
 
         var storyboard = new Storyboard();
-        storyboard.Children.Add(CreateTranslateAnimation(_nextTransform, ActualWidthOrFallback(), _profile.OffsetX));
+        storyboard.Children.Add(CreateTranslateAnimation(_nextTransform, ActualWidthOrFallback(), nextToX));
         return BeginStoryboardAsync(storyboard);
     }
 
@@ -258,12 +257,10 @@ public sealed partial class WallpaperWindow : Window
         CurrentImage.Source = bitmap;
         _currentImagePath = path;
         CurrentImage.Opacity = 1;
-        _currentTransform.X = _profile.OffsetX;
-        _currentTransform.Y = _profile.OffsetY;
+        ApplyImageLayout(CurrentImage, _currentTransform, _profile);
         NextImage.Opacity = 0;
         NextImage.Source = null;
-        _nextTransform.X = _profile.OffsetX;
-        _nextTransform.Y = _profile.OffsetY;
+        ApplyImageLayout(NextImage, _nextTransform, _profile);
     }
 
     private void ClearImageSources()
@@ -294,6 +291,11 @@ public sealed partial class WallpaperWindow : Window
         NotifyVideoEnded();
     }
 
+    private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
+    {
+        DispatcherQueue.TryEnqueue(() => ApplyVideoLayout(_profile));
+    }
+
     private void NotifyVideoEnded()
     {
         if (_currentKind != MediaKind.Video || _profile.VideoLoop)
@@ -306,9 +308,47 @@ public sealed partial class WallpaperWindow : Window
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)
     {
-        image.Stretch = WallpaperScaleModeMapper.ToImageStretch(profile.ScaleMode);
-        transform.X = profile.OffsetX;
-        transform.Y = profile.OffsetY;
+        image.Stretch = Stretch.None;
+        ApplyImageLayout(image, transform, profile);
+    }
+
+    private static void ApplyImageLayout(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)
+    {
+        if (image.Source is not BitmapImage bitmap)
+        {
+            return;
+        }
+
+        WallpaperElementLayout layout = WallpaperLayoutCalculator.Calculate(
+            bitmap.PixelWidth,
+            bitmap.PixelHeight,
+            GetViewportWidth(image),
+            GetViewportHeight(image),
+            profile.ScaleMode,
+            profile.OffsetX,
+            profile.OffsetY);
+        image.Width = layout.Width;
+        image.Height = layout.Height;
+        transform.X = layout.OffsetX;
+        transform.Y = layout.OffsetY;
+    }
+
+    private void ApplyVideoLayout(MonitorProfile profile)
+    {
+        double sourceWidth = _mediaPlayer.PlaybackSession.NaturalVideoWidth;
+        double sourceHeight = _mediaPlayer.PlaybackSession.NaturalVideoHeight;
+        WallpaperElementLayout layout = WallpaperLayoutCalculator.Calculate(
+            sourceWidth,
+            sourceHeight,
+            ActualWidthOrFallback(),
+            ActualHeightOrFallback(),
+            profile.ScaleMode,
+            profile.OffsetX,
+            profile.OffsetY);
+        VideoPlayer.Width = layout.Width;
+        VideoPlayer.Height = layout.Height;
+        _videoTransform.X = layout.OffsetX;
+        _videoTransform.Y = layout.OffsetY;
     }
 
     private DoubleAnimation CreateOpacityAnimation(UIElement target, double from, double to)
@@ -350,5 +390,42 @@ public sealed partial class WallpaperWindow : Window
     private double ActualWidthOrFallback()
     {
         return Root.ActualWidth > 0 ? Root.ActualWidth : 800;
+    }
+
+    private double ActualHeightOrFallback()
+    {
+        return Root.ActualHeight > 0 ? Root.ActualHeight : 450;
+    }
+
+    private static double GetViewportWidth(FrameworkElement element)
+    {
+        double width = element.XamlRoot?.Size.Width ?? 0;
+        if (width > 0)
+        {
+            return width;
+        }
+
+        return element.ActualWidth > 0 ? element.ActualWidth : 800;
+    }
+
+    private static double GetViewportHeight(FrameworkElement element)
+    {
+        double height = element.XamlRoot?.Size.Height ?? 0;
+        if (height > 0)
+        {
+            return height;
+        }
+
+        return element.ActualHeight > 0 ? element.ActualHeight : 450;
+    }
+
+    private static Task<BitmapImage> LoadBitmapAsync(string path)
+    {
+        var bitmap = new BitmapImage();
+        var completion = new TaskCompletionSource<BitmapImage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        bitmap.ImageOpened += (_, _) => completion.TrySetResult(bitmap);
+        bitmap.ImageFailed += (_, args) => completion.TrySetException(new InvalidOperationException(args.ErrorMessage));
+        bitmap.UriSource = new Uri(path);
+        return completion.Task;
     }
 }
