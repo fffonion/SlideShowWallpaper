@@ -63,6 +63,7 @@ public sealed partial class MainWindow : Window
     private readonly AutostartService _autostartService;
     private readonly FolderPickerService _folderPickerService;
     private readonly TrayIconService _trayIconService;
+    private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherQueueTimer _settingsApplyTimer;
@@ -74,13 +75,15 @@ public sealed partial class MainWindow : Window
         WallpaperPlaybackCoordinator coordinator,
         SettingsStore settingsStore,
         AutostartService autostartService,
-        FolderPickerService folderPickerService)
+        FolderPickerService folderPickerService,
+        ImageOrderService imageOrderService)
     {
         _monitorService = monitorService;
         _coordinator = coordinator;
         _settingsStore = settingsStore;
         _autostartService = autostartService;
         _folderPickerService = folderPickerService;
+        _imageOrderService = imageOrderService;
 
         InitializeComponent();
         Title = LocalizedStrings.Get("AppTitle");
@@ -299,16 +302,18 @@ public sealed partial class MainWindow : Window
         metadataText.Text = LocalizedStrings.Get("LoadingImages");
         loadingPanel.Visibility = Visibility.Visible;
         progressRing.IsActive = true;
+        ImagePreviewItem[] reusableItems = [.. items];
+        items.Clear();
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await ImageLibrary.ScanFolderMetadataAsync(profile.FolderPath, profile.PlaybackOrder, cancellation.Token);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, cancellation.Token);
             if (cancellation.IsCancellationRequested)
             {
                 return;
             }
 
-            ImagePreviewCollectionUpdater.Apply(items, images);
+            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems);
 
             metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
         }
@@ -654,7 +659,10 @@ public sealed partial class MainWindow : Window
 
         profile.SelectedImagePath = item.Path;
         ApplySettings();
-        await _coordinator.ShowImageAsync(profile, item.Path);
+        IReadOnlyList<string> orderedPaths = sender is ListView { ItemsSource: IEnumerable<ImagePreviewItem> previewItems }
+            ? previewItems.Select(previewItem => previewItem.Path).ToArray()
+            : [];
+        await _coordinator.ShowImageAsync(profile, item.Path, orderedPaths);
     }
 
     private void TogglePauseFromTray(string monitorId)

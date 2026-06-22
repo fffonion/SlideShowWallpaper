@@ -96,6 +96,26 @@ public sealed class PlaybackQueueTests
         Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
     }
 
+    [Fact]
+    public void FromOrderedItems_WithRandomOrder_UsesProvidedOrderBeforeLaterShuffle()
+    {
+        var queue = PlaybackQueue.FromOrderedItems(
+        [
+            new ImagePlaybackItem(@"C:\A\b.jpg"),
+            new ImagePlaybackItem(@"C:\A\c.jpg"),
+            new ImagePlaybackItem(@"C:\A\d.jpg"),
+            new ImagePlaybackItem(@"C:\A\a.jpg"),
+        ],
+        PlaybackOrder.Random,
+        new ZeroRandom());
+
+        Assert.Equal(@"C:\A\b.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\c.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\d.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\a.jpg", queue.Next()?.Path);
+        Assert.Equal(@"C:\A\c.jpg", queue.Next()?.Path);
+    }
+
     private sealed class ZeroRandom : Random
     {
         public override int Next(int maxValue)

@@ -8,7 +8,12 @@ public static class ImagePreviewCollectionUpdater
 {
     public static void Apply(ObservableCollection<ImagePreviewItem> items, IReadOnlyList<ImageMetadata> images)
     {
-        var existing = items.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
+        Apply(items, images, items);
+    }
+
+    public static void Apply(ObservableCollection<ImagePreviewItem> items, IReadOnlyList<ImageMetadata> images, IEnumerable<ImagePreviewItem> reusableItems)
+    {
+        var existing = reusableItems.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
         items.Clear();
         foreach (ImageMetadata image in images)
         {

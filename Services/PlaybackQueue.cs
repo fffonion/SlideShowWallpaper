@@ -10,19 +10,32 @@ public sealed class PlaybackQueue
     private int _nextIndex;
 
     public PlaybackQueue(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order)
-        : this(items, order, Random.Shared)
+        : this(items, order, Random.Shared, shuffleInitial: true)
     {
     }
 
     public PlaybackQueue(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order, Random random)
+        : this(items, order, random, shuffleInitial: true)
+    {
+    }
+
+    private PlaybackQueue(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order, Random random, bool shuffleInitial)
     {
         _random = random;
         _order = order;
         _items = items.ToList();
-        ShuffleIfNeeded();
+        if (shuffleInitial)
+        {
+            ShuffleIfNeeded();
+        }
     }
 
     public int Count => _items.Count;
+
+    public static PlaybackQueue FromOrderedItems(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order, Random? random = null)
+    {
+        return new PlaybackQueue(items, order, random ?? Random.Shared, shuffleInitial: false);
+    }
 
     public ImagePlaybackItem? Next()
     {

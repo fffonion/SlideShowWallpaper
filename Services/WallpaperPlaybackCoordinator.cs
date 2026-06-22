@@ -8,6 +8,7 @@ public sealed class WallpaperPlaybackCoordinator
 {
     private readonly MonitorService _monitorService;
     private readonly DesktopHostService _desktopHostService;
+    private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
@@ -16,10 +17,11 @@ public sealed class WallpaperPlaybackCoordinator
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
     private bool _playbackEnabled = true;
 
-    public WallpaperPlaybackCoordinator(MonitorService monitorService, DesktopHostService desktopHostService)
+    public WallpaperPlaybackCoordinator(MonitorService monitorService, DesktopHostService desktopHostService, ImageOrderService imageOrderService)
     {
         _monitorService = monitorService;
         _desktopHostService = desktopHostService;
+        _imageOrderService = imageOrderService;
     }
 
     public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
@@ -125,7 +127,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 
-    public async Task ShowImageAsync(MonitorProfile profile, string path)
+    public async Task ShowImageAsync(MonitorProfile profile, string path, IReadOnlyList<string>? orderedPaths = null)
     {
         if (!_playbackEnabled || profile.IsStopped || string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
@@ -133,8 +135,12 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         _monitorRects = _monitorService.GetMonitorRects();
-        IReadOnlyList<ImageMetadata> images = await ImageLibrary.ScanFolderMetadataAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
-        ReplaceQueue(profile, images.Select(image => image.Path));
+        IReadOnlyList<string> paths = orderedPaths is { Count: > 0 }
+            ? orderedPaths
+            : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None))
+                .Select(image => image.Path)
+                .ToArray();
+        ReplaceQueue(profile, paths, preserveInitialOrder: true);
         EnsureWindow(profile);
         ConfigureTimer(profile);
         if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
@@ -205,9 +211,10 @@ public sealed class WallpaperPlaybackCoordinator
     {
         int version = _queueVersions.TryGetValue(profile.Id, out int currentVersion) ? currentVersion + 1 : 1;
         _queueVersions[profile.Id] = version;
+        bool selectedImageShown = TryShowSelectedImage(profile);
         try
         {
-            IReadOnlyList<ImageMetadata> images = await ImageLibrary.ScanFolderMetadataAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, CancellationToken.None);
             if (!_playbackEnabled
                 || profile.IsStopped
                 || !_queueVersions.TryGetValue(profile.Id, out int latestVersion)
@@ -216,7 +223,7 @@ public sealed class WallpaperPlaybackCoordinator
                 return;
             }
 
-            ReplaceQueue(profile, images.Select(image => image.Path));
+            ReplaceQueue(profile, images.Select(image => image.Path), preserveInitialOrder: true);
             if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
             {
                 CloseWindow(profile.Id);
@@ -225,7 +232,14 @@ public sealed class WallpaperPlaybackCoordinator
 
             EnsureWindow(profile);
             ConfigureTimer(profile);
-            await ShowNextAsync(profile.Id);
+            if (selectedImageShown)
+            {
+                queue.StartAfter(profile.SelectedImagePath);
+            }
+            else
+            {
+                await ShowNextAsync(profile.Id);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -236,17 +250,27 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 
-    private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths)
+    private bool TryShowSelectedImage(MonitorProfile profile)
+    {
+        if (_windows.ContainsKey(profile.Id)
+            || string.IsNullOrWhiteSpace(profile.FolderPath)
+            || string.IsNullOrWhiteSpace(profile.SelectedImagePath)
+            || !File.Exists(profile.SelectedImagePath))
+        {
+            return false;
+        }
+
+        EnsureWindow(profile);
+        _ = _windows[profile.Id].ShowImageAsync(profile.SelectedImagePath);
+        return true;
+    }
+
+    private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)
     {
         var items = paths.Select(path => new ImagePlaybackItem(path));
-        if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
-        {
-            _queues[profile.Id] = new PlaybackQueue(items, profile.PlaybackOrder);
-        }
-        else
-        {
-            queue.ReplaceItems(items);
-        }
+        _queues[profile.Id] = preserveInitialOrder
+            ? PlaybackQueue.FromOrderedItems(items, profile.PlaybackOrder)
+            : new PlaybackQueue(items, profile.PlaybackOrder);
     }
 
     private void ConfigureTimer(MonitorProfile profile)
