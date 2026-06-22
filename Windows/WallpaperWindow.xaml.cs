@@ -53,30 +53,37 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Source = bitmap;
         ApplyProfile(_profile);
 
-        if (CurrentImage.Source is null || _profile.Transition == WallpaperTransition.None || _profile.TransitionDurationMs <= 0)
+        bool hasCurrentImage = CurrentImage.Source is not null;
+        if (!WallpaperTransitionPolicy.ShouldAnimate(_profile.Transition, _profile.TransitionDurationMs))
         {
-            CurrentImage.Source = bitmap;
-            _currentImagePath = path;
-            CurrentImage.Opacity = 1;
-            NextImage.Opacity = 0;
+            CommitImage(bitmap, path);
             return;
         }
 
         if (_profile.Transition == WallpaperTransition.Slide)
         {
-            await AnimateSlideAsync(_profile.OffsetX, _profile.OffsetX);
+            if (hasCurrentImage)
+            {
+                await AnimateSlideAsync(_profile.OffsetX, _profile.OffsetX);
+            }
+            else
+            {
+                await AnimateInitialSlideAsync();
+            }
         }
         else
         {
-            await AnimateFadeAsync();
+            if (hasCurrentImage)
+            {
+                await AnimateFadeAsync();
+            }
+            else
+            {
+                await AnimateInitialFadeAsync();
+            }
         }
 
-        CurrentImage.Source = bitmap;
-        _currentImagePath = path;
-        CurrentImage.Opacity = 1;
-        _currentTransform.X = _profile.OffsetX;
-        _currentTransform.Y = _profile.OffsetY;
-        NextImage.Opacity = 0;
+        CommitImage(bitmap, path);
     }
 
     public async Task UpdateProfileWithTransitionAsync(MonitorProfile profile)
@@ -92,7 +99,7 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Source = CurrentImage.Source;
         ApplyImageProfile(NextImage, _nextTransform, profile);
 
-        if (profile.Transition == WallpaperTransition.None || profile.TransitionDurationMs <= 0)
+        if (!WallpaperTransitionPolicy.ShouldAnimate(profile.Transition, profile.TransitionDurationMs))
         {
             ApplyProfile(profile);
             CurrentImage.Opacity = 1;
@@ -138,6 +145,16 @@ public sealed partial class WallpaperWindow : Window
         return BeginStoryboardAsync(storyboard);
     }
 
+    private Task AnimateInitialFadeAsync()
+    {
+        CurrentImage.Opacity = 0;
+        NextImage.Opacity = 0;
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(CreateOpacityAnimation(NextImage, 0, 1));
+        return BeginStoryboardAsync(storyboard);
+    }
+
     private Task AnimateSlideAsync(double currentFromX, double nextToX)
     {
         NextImage.Opacity = 1;
@@ -147,6 +164,28 @@ public sealed partial class WallpaperWindow : Window
         storyboard.Children.Add(CreateTranslateAnimation(_currentTransform, currentFromX, -ActualWidthOrFallback()));
         storyboard.Children.Add(CreateTranslateAnimation(_nextTransform, ActualWidthOrFallback(), nextToX));
         return BeginStoryboardAsync(storyboard);
+    }
+
+    private Task AnimateInitialSlideAsync()
+    {
+        NextImage.Opacity = 1;
+        _nextTransform.X = ActualWidthOrFallback();
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(CreateTranslateAnimation(_nextTransform, ActualWidthOrFallback(), _profile.OffsetX));
+        return BeginStoryboardAsync(storyboard);
+    }
+
+    private void CommitImage(BitmapImage bitmap, string path)
+    {
+        CurrentImage.Source = bitmap;
+        _currentImagePath = path;
+        CurrentImage.Opacity = 1;
+        _currentTransform.X = _profile.OffsetX;
+        _currentTransform.Y = _profile.OffsetY;
+        NextImage.Opacity = 0;
+        _nextTransform.X = _profile.OffsetX;
+        _nextTransform.Y = _profile.OffsetY;
     }
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)

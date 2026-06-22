@@ -16,6 +16,10 @@ public sealed class DesktopHostService
         {
             NativeMethods.SetParent(hwnd, target.HostWindow);
             NativeMethods.GetWindowRect(target.HostWindow, out hostRect);
+            if (target.MakeIconListTransparent)
+            {
+                MakeDesktopIconListTransparent(target.HostWindow);
+            }
         }
 
         if (monitorRects.TryGetValue(monitorId, out NativeMethods.RECT rect))
@@ -41,7 +45,7 @@ public sealed class DesktopHostService
             NativeMethods.SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out _);
         }
 
-        var target = new DesktopHostTarget(IntPtr.Zero, IntPtr.Zero);
+        var target = new DesktopHostTarget(IntPtr.Zero, IntPtr.Zero, false);
         NativeMethods.EnumWindows((topHandle, _) =>
         {
             IntPtr shellView = NativeMethods.FindWindowEx(topHandle, IntPtr.Zero, "SHELLDLL_DefView", null);
@@ -49,16 +53,35 @@ public sealed class DesktopHostService
             {
                 IntPtr workerW = NativeMethods.FindWindowEx(IntPtr.Zero, topHandle, "WorkerW", null);
                 target = workerW != IntPtr.Zero
-                    ? new DesktopHostTarget(workerW, IntPtr.Zero)
-                    : new DesktopHostTarget(topHandle, shellView);
+                    ? new DesktopHostTarget(workerW, IntPtr.Zero, false)
+                    : new DesktopHostTarget(topHandle, NativeMethods.HWND_BOTTOM, true);
                 return false;
             }
 
             return true;
         }, IntPtr.Zero);
 
-        return target.HostWindow != IntPtr.Zero ? target : new DesktopHostTarget(progman, IntPtr.Zero);
+        return target.HostWindow != IntPtr.Zero ? target : new DesktopHostTarget(progman, NativeMethods.HWND_BOTTOM, true);
     }
 
-    private readonly record struct DesktopHostTarget(IntPtr HostWindow, IntPtr InsertAfterWindow);
+    private static void MakeDesktopIconListTransparent(IntPtr hostWindow)
+    {
+        IntPtr shellView = NativeMethods.FindWindowEx(hostWindow, IntPtr.Zero, "SHELLDLL_DefView", null);
+        if (shellView == IntPtr.Zero)
+        {
+            return;
+        }
+
+        IntPtr listView = NativeMethods.FindWindowEx(shellView, IntPtr.Zero, "SysListView32", null);
+        if (listView == IntPtr.Zero)
+        {
+            return;
+        }
+
+        NativeMethods.SendMessage(listView, NativeMethods.LVM_SETBKCOLOR, IntPtr.Zero, NativeMethods.CLR_NONE);
+        NativeMethods.SendMessage(listView, NativeMethods.LVM_SETTEXTBKCOLOR, IntPtr.Zero, NativeMethods.CLR_NONE);
+        NativeMethods.InvalidateRect(listView, IntPtr.Zero, true);
+    }
+
+    private readonly record struct DesktopHostTarget(IntPtr HostWindow, IntPtr InsertAfterWindow, bool MakeIconListTransparent);
 }

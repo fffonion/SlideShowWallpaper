@@ -15,6 +15,9 @@ public static partial class NativeMethods
 
     internal const int GWL_STYLE = -16;
     internal const int GWL_WNDPROC = -4;
+    internal const int LVM_FIRST = 0x1000;
+    internal const int LVM_SETBKCOLOR = LVM_FIRST + 1;
+    internal const int LVM_SETTEXTBKCOLOR = LVM_FIRST + 38;
     internal const int MF_GRAYED = 0x0001;
     internal const int MF_SEPARATOR = 0x0800;
     internal const int MF_STRING = 0x0000;
@@ -39,6 +42,8 @@ public static partial class NativeMethods
     internal const int SWP_NOMOVE = 0x0002;
     internal const int SWP_NOSIZE = 0x0001;
     internal const int SWP_FRAMECHANGED = 0x0020;
+    internal static readonly IntPtr CLR_NONE = new(unchecked((int)0xFFFFFFFF));
+    internal static readonly IntPtr HWND_BOTTOM = new(1);
 
     internal delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
     internal delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
@@ -67,6 +72,12 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
