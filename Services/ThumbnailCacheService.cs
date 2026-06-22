@@ -11,6 +11,7 @@ namespace SlideShowWallpaper.Services;
 public sealed class ThumbnailCacheService
 {
     private const uint DefaultMaxPixelSize = 320;
+    private const string ThumbnailExtension = ".jpg";
     private readonly string _cacheRoot;
     private readonly Func<ImageMetadata, string, uint, CancellationToken, Task> _thumbnailWriter;
 
@@ -36,7 +37,7 @@ public sealed class ThumbnailCacheService
     {
         string input = string.Join('\0', metadata.Path, metadata.ModifiedUtc.Ticks.ToString(), metadata.Length.ToString());
         string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input))).ToLowerInvariant();
-        return Path.Combine(_cacheRoot, hash[..2], $"{hash}.png");
+        return Path.Combine(_cacheRoot, hash[..2], $"{hash}{ThumbnailExtension}");
     }
 
     public async Task<string> GetOrCreateThumbnailAsync(ImageMetadata metadata, CancellationToken cancellationToken = default)
@@ -114,15 +115,15 @@ public sealed class ThumbnailCacheService
 
         PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
             BitmapPixelFormat.Bgra8,
-            BitmapAlphaMode.Premultiplied,
+            BitmapAlphaMode.Ignore,
             transform,
             ExifOrientationMode.RespectExifOrientation,
             ColorManagementMode.ColorManageToSRgb).AsTask(cancellationToken);
 
         using FileStream fileStream = File.Open(thumbnailPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
         using IRandomAccessStream thumbnailStream = fileStream.AsRandomAccessStream();
-        BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, thumbnailStream).AsTask(cancellationToken);
-        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, width, height, decoder.DpiX, decoder.DpiY, pixelData.DetachPixelData());
+        BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, thumbnailStream).AsTask(cancellationToken);
+        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Ignore, width, height, decoder.DpiX, decoder.DpiY, pixelData.DetachPixelData());
         await encoder.FlushAsync().AsTask(cancellationToken);
     }
 

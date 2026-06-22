@@ -18,7 +18,7 @@ public sealed class ThumbnailCacheServiceTests
         string path = service.GetThumbnailPath(metadata);
 
         Assert.StartsWith(root, path, StringComparison.OrdinalIgnoreCase);
-        Assert.EndsWith(".png", path, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(".jpg", path, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -50,6 +50,10 @@ public sealed class ThumbnailCacheServiceTests
 
         Assert.True(File.Exists(thumbnailPath));
         Assert.StartsWith(Path.Combine(root, "thumbnails"), thumbnailPath, StringComparison.OrdinalIgnoreCase);
+        byte[] header = await File.ReadAllBytesAsync(thumbnailPath);
+        Assert.True(header.Length > 2);
+        Assert.Equal(0xFF, header[0]);
+        Assert.Equal(0xD8, header[1]);
     }
 
     [Fact]
