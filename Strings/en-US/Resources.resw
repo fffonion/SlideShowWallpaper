@@ -37,6 +37,7 @@
   <data name="ScaleModeAutomation" xml:space="preserve"><value>Scale mode</value></data>
   <data name="PlaybackOrderAutomation" xml:space="preserve"><value>Playback order</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>Transition duration</value></data>
+  <data name="VideoLoop" xml:space="preserve"><value>Loop video</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 images</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} images</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>Loading images...</value></data>

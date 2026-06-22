@@ -14,5 +14,10 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Opacity="0" />
+        <MediaPlayerElement
+            x:Name="VideoPlayer"
+            AreTransportControlsEnabled="False"
+            AutoPlay="False"
+            Visibility="Collapsed" />
     </Grid>
 </Window>

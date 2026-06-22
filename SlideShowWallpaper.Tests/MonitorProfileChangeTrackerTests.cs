@@ -132,4 +132,26 @@ public sealed class MonitorProfileChangeTrackerTests
         Assert.True(change.PlaybackSettingsChanged);
         Assert.True(change.HasChanges);
     }
+
+    [Fact]
+    public void Update_WithVideoLoopChange_RequiresPlaybackSettingsRefreshOnly()
+    {
+        var tracker = new MonitorProfileChangeTracker();
+        var profile = new MonitorProfile
+        {
+            Id = "display1",
+            FolderPath = @"C:\Wallpapers",
+            PlaybackOrder = PlaybackOrder.NameAsc,
+            VideoLoop = false,
+        };
+        _ = tracker.Update(profile);
+
+        profile.VideoLoop = true;
+        MonitorProfileChange change = tracker.Update(profile);
+
+        Assert.False(change.QueueChanged);
+        Assert.False(change.VisualChanged);
+        Assert.True(change.PlaybackSettingsChanged);
+        Assert.True(change.HasChanges);
+    }
 }

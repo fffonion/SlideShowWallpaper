@@ -63,6 +63,7 @@ public sealed class SettingsStore
                     Transition = GetEnum(sections, section, nameof(MonitorProfile.Transition), WallpaperTransition.Fade),
                     TransitionDurationMs = GetInt(sections, section, nameof(MonitorProfile.TransitionDurationMs), 800),
                     TransitionDurationUnit = GetEnum(sections, section, nameof(MonitorProfile.TransitionDurationUnit), TimeUnit.Seconds),
+                    VideoLoop = GetBool(sections, section, nameof(MonitorProfile.VideoLoop), false),
                     IsPaused = GetBool(sections, section, nameof(MonitorProfile.IsPaused), false),
                     IsStopped = GetBool(sections, section, nameof(MonitorProfile.IsStopped), false),
                     SelectedImagePath = GetString(sections, section, nameof(MonitorProfile.SelectedImagePath)),
@@ -111,6 +112,7 @@ public sealed class SettingsStore
             AppendValue(builder, nameof(MonitorProfile.Transition), monitor.Transition);
             AppendValue(builder, nameof(MonitorProfile.TransitionDurationMs), monitor.TransitionDurationMs);
             AppendValue(builder, nameof(MonitorProfile.TransitionDurationUnit), monitor.TransitionDurationUnit);
+            AppendValue(builder, nameof(MonitorProfile.VideoLoop), monitor.VideoLoop);
             AppendValue(builder, nameof(MonitorProfile.IsPaused), monitor.IsPaused);
             AppendValue(builder, nameof(MonitorProfile.IsStopped), monitor.IsStopped);
             AppendValue(builder, nameof(MonitorProfile.SelectedImagePath), monitor.SelectedImagePath);

@@ -41,6 +41,39 @@ public sealed class ImageLibraryTests
     }
 
     [Fact]
+    public void IsSupportedVideoPath_accepts_video_formats_but_rejects_gif()
+    {
+        string[] supported =
+        [
+            "a.mp4",
+            "b.m4v",
+            "c.mov",
+            "d.wmv",
+            "e.avi",
+            "f.mkv",
+            "g.webm",
+        ];
+
+        Assert.All(supported, path => Assert.True(ImageLibrary.IsSupportedVideoPath(path), path));
+        Assert.False(ImageLibrary.IsSupportedVideoPath("animated.gif"));
+    }
+
+    [Fact]
+    public void ScanFolderMetadata_WithImagesAndVideos_ReturnsMixedMediaWithoutGif()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "a.png"), string.Empty);
+        File.WriteAllText(Path.Combine(folder, "b.mp4"), string.Empty);
+        File.WriteAllText(Path.Combine(folder, "c.gif"), string.Empty);
+
+        IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc);
+
+        Assert.Equal(["a.png", "b.mp4"], media.Select(item => item.FileName));
+        Assert.Equal([MediaKind.Image, MediaKind.Video], media.Select(item => item.Kind));
+    }
+
+    [Fact]
     public void FilterSupportedImages_orders_files_by_full_path()
     {
         string[] paths =

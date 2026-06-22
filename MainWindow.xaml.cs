@@ -402,6 +402,7 @@ public sealed partial class MainWindow : Window
                 profile.TransitionDurationMs = Math.Max(0, TimeUnitConverter.ToMilliseconds(value, unit));
             },
             LocalizedStrings.Get("TransitionDurationAutomation")));
+        AddRow(form, row++, LocalizedStrings.Get("VideoLoop"), CreateCheckBox(profile.VideoLoop, value => profile.VideoLoop = value, LocalizedStrings.Get("VideoLoop")));
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);
@@ -606,6 +607,26 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(valueBox);
         panel.Children.Add(unitCombo);
         return panel;
+    }
+
+    private CheckBox CreateCheckBox(bool isChecked, Action<bool> changed, string automationName)
+    {
+        var checkBox = new CheckBox
+        {
+            IsChecked = isChecked,
+        };
+        AutomationProperties.SetName(checkBox, automationName);
+        checkBox.Checked += (_, _) =>
+        {
+            changed(true);
+            ScheduleApplySettings();
+        };
+        checkBox.Unchecked += (_, _) =>
+        {
+            changed(false);
+            ScheduleApplySettings();
+        };
+        return checkBox;
     }
 
     private async Task OpenFolderAsync(MonitorProfile profile)

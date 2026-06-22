@@ -16,6 +16,17 @@ public static class ImageLibrary
         ".heif",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly FrozenSet<string> SupportedVideoExtensions = new[]
+    {
+        ".mp4",
+        ".m4v",
+        ".mov",
+        ".wmv",
+        ".avi",
+        ".mkv",
+        ".webm",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
     public static bool IsSupportedImagePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -24,6 +35,21 @@ public static class ImageLibrary
         }
 
         return SupportedExtensions.Contains(Path.GetExtension(path));
+    }
+
+    public static bool IsSupportedVideoPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        return SupportedVideoExtensions.Contains(Path.GetExtension(path));
+    }
+
+    public static bool IsSupportedMediaPath(string? path)
+    {
+        return IsSupportedImagePath(path) || IsSupportedVideoPath(path);
     }
 
     public static IEnumerable<string> FilterSupportedImages(IEnumerable<string> paths)
@@ -58,11 +84,11 @@ public static class ImageLibrary
         }
 
         var images = Directory.EnumerateFiles(folderPath)
-            .Where(IsSupportedImagePath)
+            .Where(IsSupportedMediaPath)
             .Select(path =>
             {
                 var info = new FileInfo(path);
-                return new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length);
+                return new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length, GetMediaKind(info.FullName));
             });
 
         return SortImages(images, order);
@@ -81,13 +107,13 @@ public static class ImageLibrary
             foreach (string path in Directory.EnumerateFiles(folderPath))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!IsSupportedImagePath(path))
+                if (!IsSupportedMediaPath(path))
                 {
                     continue;
                 }
 
                 var info = new FileInfo(path);
-                images.Add(new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length));
+                images.Add(new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length, GetMediaKind(info.FullName)));
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -119,5 +145,10 @@ public static class ImageLibrary
         }
 
         return shuffled;
+    }
+
+    private static MediaKind GetMediaKind(string path)
+    {
+        return IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image;
     }
 }

@@ -16,7 +16,14 @@ public static class ImagePreviewTemplateFactory
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Border Height="116" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                    <Grid>
+                        <Image Source="{Binding Thumbnail}" Stretch="Uniform" Visibility="{Binding ImageVisibility}" />
+                        <FontIcon
+                            Glyph="&#xE768;"
+                            FontSize="30"
+                            Opacity="0.72"
+                            Visibility="{Binding VideoPlaceholderVisibility}" />
+                    </Grid>
                 </Border>
                 <TextBlock Grid.Row="1" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" FontSize="12" />
                 <TextBlock Grid.Row="2" Text="{Binding Details}" TextTrimming="CharacterEllipsis" FontSize="11" Opacity="0.72" />

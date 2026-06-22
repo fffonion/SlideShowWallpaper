@@ -28,6 +28,8 @@ public sealed class MonitorProfile
 
     public TimeUnit TransitionDurationUnit { get; set; } = TimeUnit.Seconds;
 
+    public bool VideoLoop { get; set; }
+
     public bool IsPaused { get; set; }
 
     public bool IsStopped { get; set; }

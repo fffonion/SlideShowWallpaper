@@ -31,7 +31,8 @@ public sealed class MonitorProfileChangeTracker
             && !visualChanged
             && (previous.IntervalSeconds != next.IntervalSeconds
                 || previous.Transition != next.Transition
-                || previous.TransitionDurationMs != next.TransitionDurationMs);
+                || previous.TransitionDurationMs != next.TransitionDurationMs
+                || previous.VideoLoop != next.VideoLoop);
 
         return new MonitorProfileChange(queueChanged, visualChanged, playbackSettingsChanged);
     }
@@ -54,7 +55,8 @@ public sealed class MonitorProfileChangeTracker
         double OffsetY,
         int IntervalSeconds,
         WallpaperTransition Transition,
-        int TransitionDurationMs)
+        int TransitionDurationMs,
+        bool VideoLoop)
     {
         public static Snapshot From(MonitorProfile profile)
         {
@@ -66,7 +68,8 @@ public sealed class MonitorProfileChangeTracker
                 profile.OffsetY,
                 profile.IntervalSeconds,
                 profile.Transition,
-                profile.TransitionDurationMs);
+                profile.TransitionDurationMs,
+                profile.VideoLoop);
         }
     }
 }

@@ -125,20 +125,26 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 
-    public Task ShowNextAsync(string monitorId)
+    public async Task ShowNextAsync(string monitorId)
     {
         if (!_playbackEnabled)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         if (!_queues.TryGetValue(monitorId, out PlaybackQueue? queue) || !_windows.TryGetValue(monitorId, out WallpaperWindow? window))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         ImagePlaybackItem? item = queue.Next();
-        return item is null ? Task.CompletedTask : ShowWindowImageAsync(monitorId, window, item.Path);
+        if (item is null)
+        {
+            return;
+        }
+
+        await ShowWindowMediaAsync(monitorId, window, item);
+        RestartTimer(monitorId);
     }
 
     public void Shuffle(string monitorId)
@@ -172,7 +178,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         if (_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
         {
-            await ShowWindowImageAsync(profile.Id, window, path);
+            await ShowWindowMediaAsync(profile.Id, window, CreatePlaybackItem(path));
         }
     }
 
@@ -234,6 +240,8 @@ public sealed class WallpaperPlaybackCoordinator
         if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
         {
             window = new WallpaperWindow(profile);
+            string monitorId = profile.Id;
+            window.VideoEnded += (_, _) => _ = ShowNextAsync(monitorId);
             _windows[profile.Id] = window;
             window.Activate();
         }
@@ -345,24 +353,33 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         EnsureWindow(profile);
-        _ = ShowWindowImageAsync(profile.Id, _windows[profile.Id], profile.SelectedImagePath);
+        _ = ShowWindowMediaAsync(profile.Id, _windows[profile.Id], CreatePlaybackItem(profile.SelectedImagePath));
         return true;
     }
 
-    private async Task ShowWindowImageAsync(string monitorId, WallpaperWindow window, string path)
+    private async Task ShowWindowMediaAsync(string monitorId, WallpaperWindow window, ImagePlaybackItem item)
     {
-        if (!File.Exists(path))
+        if (!File.Exists(item.Path))
         {
             return;
         }
 
-        await window.ShowImageAsync(path);
-        CurrentWallpaperChanged?.Invoke(this, new CurrentWallpaperChangedEventArgs(monitorId, path));
+        if (item.Kind == MediaKind.Video)
+        {
+            bool loop = _profiles.TryGetValue(monitorId, out MonitorProfile? profile) && profile.VideoLoop;
+            await window.ShowVideoAsync(item.Path, loop);
+        }
+        else
+        {
+            await window.ShowImageAsync(item.Path);
+        }
+
+        CurrentWallpaperChanged?.Invoke(this, new CurrentWallpaperChangedEventArgs(monitorId, item.Path));
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)
     {
-        var items = paths.Select(path => new ImagePlaybackItem(path));
+        var items = paths.Select(CreatePlaybackItem);
         _queues[profile.Id] = preserveInitialOrder
             ? PlaybackQueue.FromOrderedItems(items, profile.PlaybackOrder)
             : new PlaybackQueue(items, profile.PlaybackOrder);
@@ -370,7 +387,7 @@ public sealed class WallpaperPlaybackCoordinator
 
     private void ReplaceQueueAfterCurrent(MonitorProfile profile, IEnumerable<string> paths)
     {
-        ImagePlaybackItem[] items = paths.Select(path => new ImagePlaybackItem(path)).ToArray();
+        ImagePlaybackItem[] items = paths.Select(CreatePlaybackItem).ToArray();
         if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
         {
             queue.ReplaceItemsAfterCurrent(items);
@@ -378,6 +395,11 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         _queues[profile.Id] = PlaybackQueue.FromOrderedItems(items, profile.PlaybackOrder);
+    }
+
+    private static ImagePlaybackItem CreatePlaybackItem(string path)
+    {
+        return new ImagePlaybackItem(path, ImageLibrary.IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image);
     }
 
     private void ConfigureTimer(MonitorProfile profile)
@@ -395,6 +417,20 @@ public sealed class WallpaperPlaybackCoordinator
         {
             timer.Start();
         }
+    }
+
+    private void RestartTimer(string monitorId)
+    {
+        if (!_profiles.TryGetValue(monitorId, out MonitorProfile? profile)
+            || profile.IsPaused
+            || profile.IsStopped
+            || !_timers.TryGetValue(monitorId, out DispatcherQueueTimer? timer))
+        {
+            return;
+        }
+
+        timer.Stop();
+        timer.Start();
     }
 }
 

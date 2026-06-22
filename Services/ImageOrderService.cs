@@ -64,16 +64,10 @@ public sealed class ImageOrderService
             return [];
         }
 
-        var images = new List<ImageMetadata>();
-        foreach (string path in Directory.EnumerateFiles(folderPath))
+        IReadOnlyList<ImageMetadata> images = ImageLibrary.ScanFolderMetadata(folderPath, PlaybackOrder.NameAsc);
+        if (order != PlaybackOrder.Random)
         {
-            if (!ImageLibrary.IsSupportedImagePath(path))
-            {
-                continue;
-            }
-
-            var info = new FileInfo(path);
-            images.Add(new ImageMetadata(info.FullName, info.Name, info.LastWriteTimeUtc, info.Length));
+            return ImageLibrary.SortImages(images, order);
         }
 
         lock (_sync)

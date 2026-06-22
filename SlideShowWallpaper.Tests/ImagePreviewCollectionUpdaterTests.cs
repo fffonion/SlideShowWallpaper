@@ -62,4 +62,15 @@ public sealed class ImagePreviewCollectionUpdaterTests
 
         Assert.Empty(items);
     }
+
+    [Fact]
+    public void Thumbnail_ForVideoItem_UsesPlaceholderInsteadOfLoadingImage()
+    {
+        var metadata = new ImageMetadata(@"C:\Wallpapers\clip.mp4", "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
+        var item = new ImagePreviewItem(metadata);
+
+        Assert.Null(item.Thumbnail);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
+        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.VideoPlaceholderVisibility);
+    }
 }

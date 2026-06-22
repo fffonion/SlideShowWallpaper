@@ -45,6 +45,7 @@ public sealed class SettingsStoreTests
                     Transition = WallpaperTransition.Slide,
                     TransitionDurationMs = 2400,
                     TransitionDurationUnit = TimeUnit.Seconds,
+                    VideoLoop = true,
                     IsPaused = true,
                     IsStopped = true,
                     SelectedImagePath = @"C:\Wallpapers\a.png",
@@ -65,6 +66,7 @@ public sealed class SettingsStoreTests
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);
         Assert.Equal(TimeUnit.Minutes, monitor.IntervalUnit);
+        Assert.True(monitor.VideoLoop);
         Assert.True(monitor.IsStopped);
     }
 

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SlideShowWallpaper.Models;
@@ -29,10 +30,19 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
     public string Details => $"{Metadata.ModifiedUtc.ToLocalTime():g}";
 
+    public Visibility ImageVisibility => Metadata.Kind == MediaKind.Image ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility VideoPlaceholderVisibility => Metadata.Kind == MediaKind.Video ? Visibility.Visible : Visibility.Collapsed;
+
     public ImageSource? Thumbnail
     {
         get
         {
+            if (Metadata.Kind == MediaKind.Video)
+            {
+                return null;
+            }
+
             if (_thumbnail is null && File.Exists(Path))
             {
                 StartThumbnailLoad();

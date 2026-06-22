@@ -37,6 +37,7 @@
   <data name="ScaleModeAutomation" xml:space="preserve"><value>縮放模式</value></data>
   <data name="PlaybackOrderAutomation" xml:space="preserve"><value>播放順序</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>轉場時間長度</value></data>
+  <data name="VideoLoop" xml:space="preserve"><value>循環播放影片</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 張圖片</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 張圖片</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>正在載入圖片...</value></data>

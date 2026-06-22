@@ -37,6 +37,7 @@
   <data name="ScaleModeAutomation" xml:space="preserve"><value>拡大縮小モード</value></data>
   <data name="PlaybackOrderAutomation" xml:space="preserve"><value>再生順序</value></data>
   <data name="TransitionDurationAutomation" xml:space="preserve"><value>トランジション時間</value></data>
+  <data name="VideoLoop" xml:space="preserve"><value>動画をループ再生</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 枚の画像</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 枚の画像</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>画像を読み込み中...</value></data>

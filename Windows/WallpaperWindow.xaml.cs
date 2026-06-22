@@ -7,6 +7,8 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
+using Windows.Media.Core;
+using Windows.Media.Playback;
 using WinRT.Interop;
 
 namespace SlideShowWallpaper.Windows;
@@ -15,8 +17,11 @@ public sealed partial class WallpaperWindow : Window
 {
     private readonly TranslateTransform _currentTransform = new();
     private readonly TranslateTransform _nextTransform = new();
+    private readonly TranslateTransform _videoTransform = new();
+    private readonly MediaPlayer _mediaPlayer = new();
     private MonitorProfile _profile;
     private string _currentImagePath = string.Empty;
+    private MediaKind _currentKind = MediaKind.Image;
 
     public WallpaperWindow(MonitorProfile profile)
     {
@@ -26,10 +31,24 @@ public sealed partial class WallpaperWindow : Window
         SystemBackdrop = null;
         CurrentImage.RenderTransform = _currentTransform;
         NextImage.RenderTransform = _nextTransform;
+        VideoPlayer.RenderTransform = _videoTransform;
+        _mediaPlayer.IsMuted = true;
+        _mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
+        _mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
+        VideoPlayer.SetMediaPlayer(_mediaPlayer);
         ConfigureWindow();
         ApplyProfile(profile);
-        Closed += (_, _) => ClearImageSources();
+        Closed += (_, _) =>
+        {
+            StopVideo();
+            ClearImageSources();
+            _mediaPlayer.MediaEnded -= MediaPlayer_MediaEnded;
+            _mediaPlayer.MediaFailed -= MediaPlayer_MediaFailed;
+            _mediaPlayer.Dispose();
+        };
     }
+
+    public event EventHandler? VideoEnded;
 
     public void ApplyProfile(MonitorProfile profile)
     {
@@ -38,10 +57,14 @@ public sealed partial class WallpaperWindow : Window
 
         CurrentImage.Stretch = stretch;
         NextImage.Stretch = stretch;
+        VideoPlayer.Stretch = stretch;
+        _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
         _currentTransform.X = profile.OffsetX;
         _currentTransform.Y = profile.OffsetY;
         _nextTransform.X = profile.OffsetX;
         _nextTransform.Y = profile.OffsetY;
+        _videoTransform.X = profile.OffsetX;
+        _videoTransform.Y = profile.OffsetY;
     }
 
     public async Task ShowImageAsync(string path)
@@ -51,6 +74,7 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
+        StopVideo();
         var bitmap = new BitmapImage(new Uri(path));
         NextImage.Source = bitmap;
         ApplyProfile(_profile);
@@ -86,6 +110,24 @@ public sealed partial class WallpaperWindow : Window
         }
 
         CommitImage(bitmap, path);
+    }
+
+    public Task ShowVideoAsync(string path, bool loop)
+    {
+        if (!File.Exists(path))
+        {
+            return Task.CompletedTask;
+        }
+
+        ClearImageSources();
+        _currentKind = MediaKind.Video;
+        _currentImagePath = path;
+        VideoPlayer.Visibility = Visibility.Visible;
+        _mediaPlayer.IsLoopingEnabled = loop;
+        _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(path));
+        ApplyProfile(_profile);
+        _mediaPlayer.Play();
+        return Task.CompletedTask;
     }
 
     public async Task UpdateProfileWithTransitionAsync(MonitorProfile profile)
@@ -182,6 +224,7 @@ public sealed partial class WallpaperWindow : Window
 
     private void CommitImage(BitmapImage bitmap, string path)
     {
+        _currentKind = MediaKind.Image;
         CurrentImage.Source = bitmap;
         _currentImagePath = path;
         CurrentImage.Opacity = 1;
@@ -197,6 +240,38 @@ public sealed partial class WallpaperWindow : Window
     {
         CurrentImage.Source = null;
         NextImage.Source = null;
+    }
+
+    private void StopVideo()
+    {
+        if (VideoPlayer.Visibility == Visibility.Visible)
+        {
+            _mediaPlayer.Pause();
+        }
+
+        _mediaPlayer.Source = null;
+        VideoPlayer.Visibility = Visibility.Collapsed;
+        _currentKind = MediaKind.Image;
+    }
+
+    private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
+    {
+        NotifyVideoEnded();
+    }
+
+    private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+    {
+        NotifyVideoEnded();
+    }
+
+    private void NotifyVideoEnded()
+    {
+        if (_currentKind != MediaKind.Video || _profile.VideoLoop)
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() => VideoEnded?.Invoke(this, EventArgs.Empty));
     }
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)
