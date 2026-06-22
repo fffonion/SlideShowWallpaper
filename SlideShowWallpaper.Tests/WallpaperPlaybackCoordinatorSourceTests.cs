@@ -28,10 +28,39 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
             source);
     }
 
+    [Fact]
+    public void EnsureWindow_ConfiguresVideoCoverageTimerAfterCreatingWindow()
+    {
+        string source = ReadCoordinatorSource();
+        string method = ExtractMethod(source, "private void EnsureWindow", "private async void StartRebuildQueue");
+
+        Assert.Contains("_windows[profile.Id] = window;", method);
+        Assert.Contains("ConfigureVideoCoverageTimer();", method);
+    }
+
+    [Fact]
+    public void CloseWindow_ConfiguresVideoCoverageTimerAfterRemovingWindow()
+    {
+        string source = ReadCoordinatorSource();
+        string method = ExtractMethod(source, "private void CloseWindow", "private void ConfigureFolderWatcher");
+
+        Assert.Contains("_windows.Remove(monitorId", method);
+        Assert.Contains("ConfigureVideoCoverageTimer();", method);
+    }
+
     private static string ReadCoordinatorSource()
     {
         string root = FindProjectRoot();
         return File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+    }
+
+    private static string ExtractMethod(string source, string startMarker, string endMarker)
+    {
+        int start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        int end = source.IndexOf(endMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        Assert.True(end > start);
+        return source[start..end];
     }
 
     private static string FindProjectRoot()

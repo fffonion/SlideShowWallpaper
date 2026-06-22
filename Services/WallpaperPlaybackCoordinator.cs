@@ -247,6 +247,7 @@ public sealed class WallpaperPlaybackCoordinator
             window.Close();
         }
 
+        ConfigureVideoCoverageTimer();
         _profileChanges.Forget(monitorId);
     }
 
@@ -274,6 +275,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         window.ApplyProfile(profile);
         _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
+        ConfigureVideoCoverageTimer();
     }
 
     private async void StartRebuildQueue(MonitorProfile profile)

@@ -34,7 +34,8 @@ public sealed class MonitorProfileChangeTracker
                 || previous.Transition != next.Transition
                 || previous.TransitionDurationMs != next.TransitionDurationMs
                 || previous.VideoLoop != next.VideoLoop
-                || previous.VideoSoundEnabled != next.VideoSoundEnabled);
+                || previous.VideoSoundEnabled != next.VideoSoundEnabled
+                || previous.PauseVideoWhenOtherAppMaximized != next.PauseVideoWhenOtherAppMaximized);
 
         return new MonitorProfileChange(queueChanged, visualChanged, playbackSettingsChanged);
     }
@@ -60,6 +61,7 @@ public sealed class MonitorProfileChangeTracker
         int TransitionDurationMs,
         bool VideoLoop,
         bool VideoSoundEnabled,
+        bool PauseVideoWhenOtherAppMaximized,
         PlaybackMediaFilter MediaFilter)
     {
         public static Snapshot From(MonitorProfile profile)
@@ -75,6 +77,7 @@ public sealed class MonitorProfileChangeTracker
                 profile.TransitionDurationMs,
                 profile.VideoLoop,
                 profile.VideoSoundEnabled,
+                profile.PauseVideoWhenOtherAppMaximized,
                 profile.MediaFilter);
         }
     }

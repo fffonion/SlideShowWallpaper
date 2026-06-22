@@ -178,6 +178,28 @@ public sealed class MonitorProfileChangeTrackerTests
     }
 
     [Fact]
+    public void Update_WithPauseVideoCoverageChange_RequiresPlaybackSettingsRefreshOnly()
+    {
+        var tracker = new MonitorProfileChangeTracker();
+        var profile = new MonitorProfile
+        {
+            Id = "display1",
+            FolderPath = @"C:\Wallpapers",
+            PlaybackOrder = PlaybackOrder.NameAsc,
+            PauseVideoWhenOtherAppMaximized = true,
+        };
+        _ = tracker.Update(profile);
+
+        profile.PauseVideoWhenOtherAppMaximized = false;
+        MonitorProfileChange change = tracker.Update(profile);
+
+        Assert.False(change.QueueChanged);
+        Assert.False(change.VisualChanged);
+        Assert.True(change.PlaybackSettingsChanged);
+        Assert.True(change.HasChanges);
+    }
+
+    [Fact]
     public void Update_WithMediaFilterChange_RequiresQueueRefresh()
     {
         var tracker = new MonitorProfileChangeTracker();
