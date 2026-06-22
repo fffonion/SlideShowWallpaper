@@ -7,7 +7,7 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     [Fact]
     public void ConfigureTimer_WithSingleLoop_ReturnsBeforeStartingTimer()
     {
-        string source = ReadCoordinatorSource();
+        string source = ReadCoordinatorWindowingSource();
 
         Assert.Matches(
             new Regex(
@@ -19,7 +19,7 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     [Fact]
     public void RestartTimer_WithSingleLoop_DoesNotRestartTimer()
     {
-        string source = ReadCoordinatorSource();
+        string source = ReadCoordinatorWindowingSource();
 
         Assert.Matches(
             new Regex(
@@ -31,8 +31,8 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     [Fact]
     public void EnsureWindow_ConfiguresVideoCoverageTimerAfterCreatingWindow()
     {
-        string source = ReadCoordinatorSource();
-        string method = ExtractMethod(source, "private void EnsureWindow", "private async void StartRebuildQueue");
+        string source = ReadCoordinatorWindowingSource();
+        string method = ExtractMethod(source, "private void EnsureWindow", "private async Task<bool> TryShowSelectedImageAsync");
 
         Assert.Contains("_windows[profile.Id] = window;", method);
         Assert.Contains("ConfigureVideoCoverageTimer();", method);
@@ -41,17 +41,17 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     [Fact]
     public void CloseWindow_ConfiguresVideoCoverageTimerAfterRemovingWindow()
     {
-        string source = ReadCoordinatorSource();
-        string method = ExtractMethod(source, "private void CloseWindow", "private void ConfigureFolderWatcher");
+        string source = ReadCoordinatorWindowingSource();
+        string method = ExtractMethod(source, "private void CloseWindow", "private static void CloseWindowSafely");
 
         Assert.Contains("_windows.Remove(monitorId", method);
         Assert.Contains("ConfigureVideoCoverageTimer();", method);
     }
 
-    private static string ReadCoordinatorSource()
+    private static string ReadCoordinatorWindowingSource()
     {
         string root = FindProjectRoot();
-        return File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        return File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Windowing.cs"));
     }
 
     private static string ExtractMethod(string source, string startMarker, string endMarker)
