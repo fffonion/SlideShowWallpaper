@@ -867,8 +867,11 @@ public sealed partial class MainWindow : Window
 
         MonitorTabs.TabItems.Clear();
         UnloadPreviewState();
+        _imageOrderService.ClearCache();
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-        GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
     }
 
     private void UnloadPreviewState()

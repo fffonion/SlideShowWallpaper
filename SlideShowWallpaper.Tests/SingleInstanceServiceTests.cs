@@ -30,4 +30,10 @@ public sealed class SingleInstanceServiceTests
         Task completed = await Task.WhenAny(completion.Task, Task.Delay(TimeSpan.FromSeconds(5)));
         Assert.Same(completion.Task, completed);
     }
+
+    [Fact]
+    public void DefaultInstanceKey_DoesNotDependOnExecutablePath()
+    {
+        Assert.DoesNotContain(AppContext.BaseDirectory, SingleInstanceService.DefaultInstanceKey, StringComparison.OrdinalIgnoreCase);
+    }
 }

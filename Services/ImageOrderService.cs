@@ -30,6 +30,14 @@ public sealed class ImageOrderService
         return await task.WaitAsync(cancellationToken);
     }
 
+    public void ClearCache()
+    {
+        lock (_sync)
+        {
+            _tasks.Clear();
+        }
+    }
+
     private Task<IReadOnlyList<ImageMetadata>> GetOrCreateTask(string folderPath, PlaybackOrder order, bool reload)
     {
         string key = CreateKey(folderPath, order);

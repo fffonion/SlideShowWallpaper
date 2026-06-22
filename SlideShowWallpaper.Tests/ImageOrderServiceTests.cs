@@ -22,6 +22,24 @@ public sealed class ImageOrderServiceTests
         Assert.Equal(first.Select(image => image.Path), second.Select(image => image.Path));
     }
 
+    [Fact]
+    public async Task ClearCache_AfterFolderContentsChange_ForcesNextScan()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        string imagePath = Path.Combine(folder, "a.png");
+        await File.WriteAllTextAsync(imagePath, string.Empty);
+        var service = new ImageOrderService(new ZeroRandom());
+
+        IReadOnlyList<ImageMetadata> first = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, CancellationToken.None);
+        File.Delete(imagePath);
+        service.ClearCache();
+        IReadOnlyList<ImageMetadata> second = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, CancellationToken.None);
+
+        Assert.Single(first);
+        Assert.Empty(second);
+    }
+
     private sealed class ZeroRandom : Random
     {
         public override int Next(int maxValue)

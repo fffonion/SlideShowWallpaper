@@ -10,6 +10,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 {
     private static readonly ThumbnailCacheService ThumbnailCache = new();
     private ImageSource? _thumbnail;
+    private CancellationTokenSource? _thumbnailCancellation;
     private int _thumbnailLoadVersion;
     private bool _thumbnailLoadStarted;
 
@@ -44,6 +45,8 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
     public void ClearThumbnail()
     {
         _thumbnailLoadVersion++;
+        _thumbnailCancellation?.Cancel();
+        _thumbnailCancellation = null;
         _thumbnailLoadStarted = false;
         _thumbnail = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
@@ -58,15 +61,22 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
         _thumbnailLoadStarted = true;
         int version = ++_thumbnailLoadVersion;
+        _thumbnailCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _thumbnailCancellation = cancellation;
         try
         {
-            string thumbnailPath = await ThumbnailCache.GetOrCreateThumbnailAsync(Metadata);
+            string thumbnailPath = await ThumbnailCache.GetOrCreateThumbnailAsync(Metadata, cancellation.Token);
             if (version != _thumbnailLoadVersion)
             {
                 return;
             }
 
             _thumbnail = new BitmapImage(new Uri(thumbnailPath));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception exception)
         {
@@ -81,6 +91,15 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
                 DecodePixelWidth = 128,
                 UriSource = new Uri(Path),
             };
+        }
+        finally
+        {
+            if (ReferenceEquals(_thumbnailCancellation, cancellation))
+            {
+                _thumbnailCancellation = null;
+            }
+
+            cancellation.Dispose();
         }
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));

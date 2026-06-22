@@ -27,6 +27,8 @@ public sealed class SingleInstanceService : IDisposable
         _pipeName = $"SlideShowWallpaper.{safeKey}";
     }
 
+    public static string DefaultInstanceKey => CreateDefaultInstanceKey();
+
     public bool TryAcquirePrimary()
     {
         if (_mutex is not null)
@@ -119,8 +121,7 @@ public sealed class SingleInstanceService : IDisposable
     private static string CreateDefaultInstanceKey()
     {
         string userSid = WindowsIdentity.GetCurrent().User?.Value ?? Environment.UserName;
-        string installPath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        return $"{userSid}|{installPath}";
+        return $"SlideShowWallpaper|{userSid}";
     }
 
     private static string ToSafeName(string value)
