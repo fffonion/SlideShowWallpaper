@@ -24,6 +24,22 @@ public sealed class PlaybackStatusFormatterTests
     }
 
     [Fact]
+    public void FormatPreviewStatus_WithItems_IncludesIndexCountAndRemaining()
+    {
+        string result = PlaybackStatusFormatter.FormatPreviewStatus(2, 5, 240, "{0}/{1} images · {2}", "0 images", "Remaining {0}", "{0}h {1:00}m");
+
+        Assert.Equal("2/5 images · Remaining 4m", result);
+    }
+
+    [Fact]
+    public void FormatPreviewStatus_WithNoItems_ReturnsZeroText()
+    {
+        string result = PlaybackStatusFormatter.FormatPreviewStatus(0, 0, 240, "{0}/{1} images · {2}", "0 images", "Remaining {0}", "{0}h {1:00}m");
+
+        Assert.Equal("0 images", result);
+    }
+
+    [Fact]
     public void CalculateLoopRemainingSeconds_IncludesFullLoopFromCurrentItem()
     {
         var startedAt = new DateTimeOffset(2026, 6, 22, 12, 0, 0, TimeSpan.Zero);

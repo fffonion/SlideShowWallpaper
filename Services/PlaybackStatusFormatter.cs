@@ -22,6 +22,37 @@ public static class PlaybackStatusFormatter
         return FormatLoopRemaining(remainingSeconds, LocalizedStrings.Get("LoopRemainingFormat"), LocalizedStrings.Get("LoopRemainingTimeFormat"));
     }
 
+    public static string FormatPreviewStatus(int currentIndex, int totalCount, int remainingSeconds)
+    {
+        return FormatPreviewStatus(
+            currentIndex,
+            totalCount,
+            remainingSeconds,
+            LocalizedStrings.Get("PreviewStatusFormat"),
+            LocalizedStrings.Get("ImageCountZero"),
+            LocalizedStrings.Get("LoopRemainingFormat"),
+            LocalizedStrings.Get("LoopRemainingTimeFormat"));
+    }
+
+    public static string FormatPreviewStatus(
+        int currentIndex,
+        int totalCount,
+        int remainingSeconds,
+        string format,
+        string zeroText,
+        string remainingFormat,
+        string timeFormat)
+    {
+        if (totalCount <= 0)
+        {
+            return zeroText;
+        }
+
+        int current = Math.Clamp(currentIndex, 1, totalCount);
+        string remaining = FormatLoopRemaining(remainingSeconds, remainingFormat, timeFormat);
+        return string.Format(CultureInfo.CurrentCulture, format, current, totalCount, remaining);
+    }
+
     public static string FormatLoopRemaining(int remainingSeconds, string format)
     {
         return FormatLoopRemaining(remainingSeconds, format, "{0}h {1:00}m");

@@ -77,8 +77,6 @@ public sealed partial class MainWindow : Window
     private readonly ImageOrderService _imageOrderService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, TextBlock> _currentIndexTexts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, TextBlock> _loopRemainingTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherQueueTimer _currentImageCheckpointTimer;
     private readonly DispatcherQueueTimer _playbackStatusTimer;
@@ -294,7 +292,6 @@ public sealed partial class MainWindow : Window
             RowSpacing = 8,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -310,38 +307,7 @@ public sealed partial class MainWindow : Window
         Grid.SetColumn(scrollViewer, 1);
         root.Children.Add(scrollViewer);
 
-        FrameworkElement statusBar = BuildPlaybackStatusBar(profile);
-        Grid.SetRow(statusBar, 1);
-        Grid.SetColumnSpan(statusBar, 2);
-        root.Children.Add(statusBar);
-
         return root;
-    }
-
-    private FrameworkElement BuildPlaybackStatusBar(MonitorProfile profile)
-    {
-        var panel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 18,
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-
-        var currentIndexText = new TextBlock();
-        AutomationProperties.SetName(currentIndexText, LocalizedStrings.Get("CurrentIndexAutomation"));
-        _currentIndexTexts[profile.Id] = currentIndexText;
-        panel.Children.Add(currentIndexText);
-
-        var loopRemainingText = new TextBlock
-        {
-            Opacity = 0.72,
-        };
-        AutomationProperties.SetName(loopRemainingText, LocalizedStrings.Get("LoopRemainingAutomation"));
-        _loopRemainingTexts[profile.Id] = loopRemainingText;
-        panel.Children.Add(loopRemainingText);
-
-        UpdatePlaybackStatusText(profile);
-        return panel;
     }
 
     private FrameworkElement BuildPreviewPane(MonitorProfile profile)
@@ -356,8 +322,9 @@ public sealed partial class MainWindow : Window
 
         var metadata = new TextBlock
         {
-            Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("ImageCountZero") : LocalizedStrings.Get("LoadingImages"),
+            Text = string.IsNullOrWhiteSpace(profile.FolderPath) ? LocalizedStrings.Get("ImageCountZero") : FormatPreviewStatusText(profile),
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextWrapping = TextWrapping.WrapWholeWords,
         };
         _previewMetadataTexts[profile.Id] = metadata;
         AutomationProperties.SetName(metadata, LocalizedStrings.Format("MonitorImageCountAutomationFormat", profile.DisplayName));
@@ -458,7 +425,6 @@ public sealed partial class MainWindow : Window
             ImagePreviewCollectionUpdater.Apply(items, images, reusableItems);
 
             profile.TotalMediaCount = items.Count;
-            metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
             UpdatePlaybackStatusText(profile);
         }
         catch (OperationCanceledException)
@@ -942,11 +908,6 @@ public sealed partial class MainWindow : Window
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
         }
-
-        if (_previewMetadataTexts.TryGetValue(args.MonitorId, out TextBlock? metadataText))
-        {
-            metadataText.Text = LocalizedStrings.Format("ImageCountFormat", items.Count);
-        }
     }
 
     private void Coordinator_CurrentWallpaperChanged(object? sender, CurrentWallpaperChangedEventArgs args)
@@ -1200,8 +1161,6 @@ public sealed partial class MainWindow : Window
 
         _previewItems.Clear();
         _previewMetadataTexts.Clear();
-        _currentIndexTexts.Clear();
-        _loopRemainingTexts.Clear();
     }
 
     private void UpdateAllPlaybackStatusTexts()
@@ -1214,22 +1173,22 @@ public sealed partial class MainWindow : Window
 
     private void UpdatePlaybackStatusText(MonitorProfile profile)
     {
-        if (_currentIndexTexts.TryGetValue(profile.Id, out TextBlock? currentIndexText))
+        if (_previewMetadataTexts.TryGetValue(profile.Id, out TextBlock? metadataText))
         {
-            currentIndexText.Text = PlaybackStatusFormatter.FormatCurrentIndex(profile.CurrentMediaIndex, profile.TotalMediaCount);
+            metadataText.Text = FormatPreviewStatusText(profile);
         }
+    }
 
-        if (_loopRemainingTexts.TryGetValue(profile.Id, out TextBlock? loopRemainingText))
-        {
-            int remainingSeconds = PlaybackStatusFormatter.CalculateLoopRemainingSeconds(
-                profile.CurrentMediaIndex,
-                profile.TotalMediaCount,
-                profile.IntervalSeconds,
-                profile.CurrentMediaStartedAt,
-                DateTimeOffset.Now,
-                profile.PlaybackOrder);
-            loopRemainingText.Text = PlaybackStatusFormatter.FormatLoopRemaining(remainingSeconds);
-        }
+    private static string FormatPreviewStatusText(MonitorProfile profile)
+    {
+        int remainingSeconds = PlaybackStatusFormatter.CalculateLoopRemainingSeconds(
+            profile.CurrentMediaIndex,
+            profile.TotalMediaCount,
+            profile.IntervalSeconds,
+            profile.CurrentMediaStartedAt,
+            DateTimeOffset.Now,
+            profile.PlaybackOrder);
+        return PlaybackStatusFormatter.FormatPreviewStatus(profile.CurrentMediaIndex, profile.TotalMediaCount, remainingSeconds);
     }
 
     private static double ToDisplaySeconds(int seconds, TimeUnit unit)

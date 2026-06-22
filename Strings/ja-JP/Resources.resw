@@ -52,6 +52,7 @@
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>画像と動画</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0 枚の画像</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0} 枚の画像</value></data>
+  <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1} 枚の画像、{2}</value></data>
   <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
   <data name="LoopRemainingFormat" xml:space="preserve"><value>残り {0}</value></data>
   <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}時間 {1:00}分</value></data>
