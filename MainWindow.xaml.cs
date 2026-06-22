@@ -410,7 +410,7 @@ public sealed partial class MainWindow : Window
         var root = new Grid
         {
             RowSpacing = 14,
-            MaxWidth = 680,
+            MaxWidth = 760,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -425,7 +425,7 @@ public sealed partial class MainWindow : Window
             RowSpacing = 12,
             ColumnSpacing = 12,
         };
-        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         int row = 0;
@@ -544,8 +544,8 @@ public sealed partial class MainWindow : Window
 
     private void ConfigureSettingsWindow()
     {
-        const int width = 1180;
-        const int preferredHeight = 1280;
+        const int width = 1240;
+        const int preferredHeight = 1300;
         DisplayArea displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
         RectInt32 workArea = displayArea.WorkArea;
         int height = Math.Min(preferredHeight, workArea.Height);
