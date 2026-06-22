@@ -2,7 +2,7 @@
 
 WinUI 3 desktop app for running per-monitor wallpaper slideshows on Windows.
 
-![SlideShow Wallpaper main window](docs/screenshots/main-window-en-screen.jpg)
+![SlideShow Wallpaper main window](docs/screenshots/main-window-en-screen.png)
 
 ## Features
 
