@@ -214,6 +214,7 @@ public sealed partial class MainWindow : Window
             Height = 22,
             CornerRadius = new CornerRadius(2),
             Background = GetThemeBrush("AccentFillColorDefaultBrush"),
+            HorizontalAlignment = HorizontalAlignment.Left,
             Opacity = 0,
             VerticalAlignment = VerticalAlignment.Center,
         };
