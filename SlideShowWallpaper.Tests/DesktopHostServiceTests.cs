@@ -19,4 +19,22 @@ public sealed class DesktopHostServiceTests
 
         Assert.Equal(0x0014u, flags);
     }
+
+    [Fact]
+    public void CreateShellViewInsertAfterWindow_WithIconList_UsesIconList()
+    {
+        var iconList = new IntPtr(42);
+
+        IntPtr insertAfter = DesktopHostService.CreateShellViewInsertAfterWindow(iconList);
+
+        Assert.Equal(iconList, insertAfter);
+    }
+
+    [Fact]
+    public void CreateShellViewInsertAfterWindow_WithoutIconList_UsesBottom()
+    {
+        IntPtr insertAfter = DesktopHostService.CreateShellViewInsertAfterWindow(IntPtr.Zero);
+
+        Assert.NotEqual(IntPtr.Zero, insertAfter);
+    }
 }

@@ -16,9 +16,9 @@ public sealed class DesktopHostService
         {
             NativeMethods.SetParent(hwnd, target.HostWindow);
             NativeMethods.GetWindowRect(target.HostWindow, out hostRect);
-            if (target.MakeIconListTransparent)
+            if (target.IconListWindow != IntPtr.Zero)
             {
-                MakeDesktopIconListTransparent(target.HostWindow);
+                MakeDesktopIconListTransparent(target.IconListWindow);
             }
         }
 
@@ -37,6 +37,11 @@ public sealed class DesktopHostService
             : (uint)NativeMethods.SWP_NOACTIVATE;
     }
 
+    public static IntPtr CreateShellViewInsertAfterWindow(IntPtr iconListWindow)
+    {
+        return iconListWindow == IntPtr.Zero ? NativeMethods.HWND_BOTTOM : iconListWindow;
+    }
+
     private static DesktopHostTarget GetDesktopHostTarget()
     {
         IntPtr progman = NativeMethods.FindWindow("Progman", null);
@@ -45,43 +50,32 @@ public sealed class DesktopHostService
             NativeMethods.SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out _);
         }
 
-        var target = new DesktopHostTarget(IntPtr.Zero, IntPtr.Zero, false);
+        var target = new DesktopHostTarget(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         NativeMethods.EnumWindows((topHandle, _) =>
         {
             IntPtr shellView = NativeMethods.FindWindowEx(topHandle, IntPtr.Zero, "SHELLDLL_DefView", null);
             if (shellView != IntPtr.Zero)
             {
+                IntPtr iconList = NativeMethods.FindWindowEx(shellView, IntPtr.Zero, "SysListView32", null);
                 IntPtr workerW = NativeMethods.FindWindowEx(IntPtr.Zero, topHandle, "WorkerW", null);
                 target = workerW != IntPtr.Zero
-                    ? new DesktopHostTarget(workerW, IntPtr.Zero, false)
-                    : new DesktopHostTarget(topHandle, NativeMethods.HWND_BOTTOM, true);
+                    ? new DesktopHostTarget(workerW, IntPtr.Zero, IntPtr.Zero)
+                    : new DesktopHostTarget(shellView, CreateShellViewInsertAfterWindow(iconList), iconList);
                 return false;
             }
 
             return true;
         }, IntPtr.Zero);
 
-        return target.HostWindow != IntPtr.Zero ? target : new DesktopHostTarget(progman, NativeMethods.HWND_BOTTOM, true);
+        return target.HostWindow != IntPtr.Zero ? target : new DesktopHostTarget(progman, NativeMethods.HWND_BOTTOM, IntPtr.Zero);
     }
 
-    private static void MakeDesktopIconListTransparent(IntPtr hostWindow)
+    private static void MakeDesktopIconListTransparent(IntPtr listView)
     {
-        IntPtr shellView = NativeMethods.FindWindowEx(hostWindow, IntPtr.Zero, "SHELLDLL_DefView", null);
-        if (shellView == IntPtr.Zero)
-        {
-            return;
-        }
-
-        IntPtr listView = NativeMethods.FindWindowEx(shellView, IntPtr.Zero, "SysListView32", null);
-        if (listView == IntPtr.Zero)
-        {
-            return;
-        }
-
         NativeMethods.SendMessage(listView, NativeMethods.LVM_SETBKCOLOR, IntPtr.Zero, NativeMethods.CLR_NONE);
         NativeMethods.SendMessage(listView, NativeMethods.LVM_SETTEXTBKCOLOR, IntPtr.Zero, NativeMethods.CLR_NONE);
         NativeMethods.InvalidateRect(listView, IntPtr.Zero, true);
     }
 
-    private readonly record struct DesktopHostTarget(IntPtr HostWindow, IntPtr InsertAfterWindow, bool MakeIconListTransparent);
+    private readonly record struct DesktopHostTarget(IntPtr HostWindow, IntPtr InsertAfterWindow, IntPtr IconListWindow);
 }
