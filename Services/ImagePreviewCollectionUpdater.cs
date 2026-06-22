@@ -14,10 +14,30 @@ public static class ImagePreviewCollectionUpdater
     public static void Apply(ObservableCollection<ImagePreviewItem> items, IReadOnlyList<ImageMetadata> images, IEnumerable<ImagePreviewItem> reusableItems)
     {
         var existing = reusableItems.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
-        items.Clear();
-        foreach (ImageMetadata image in images)
+        ImagePreviewItem[] targetItems = images
+            .Select(image => existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : new ImagePreviewItem(image))
+            .ToArray();
+
+        for (int index = items.Count - 1; index >= 0; index--)
         {
-            items.Add(existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : new ImagePreviewItem(image));
+            if (!targetItems.Any(item => string.Equals(item.Path, items[index].Path, StringComparison.OrdinalIgnoreCase)))
+            {
+                items.RemoveAt(index);
+            }
+        }
+
+        for (int targetIndex = 0; targetIndex < targetItems.Length; targetIndex++)
+        {
+            ImagePreviewItem targetItem = targetItems[targetIndex];
+            int currentIndex = IndexOf(items, targetItem.Path);
+            if (currentIndex < 0)
+            {
+                items.Insert(targetIndex, targetItem);
+            }
+            else if (currentIndex != targetIndex)
+            {
+                items.Move(currentIndex, targetIndex);
+            }
         }
     }
 
@@ -29,5 +49,18 @@ public static class ImagePreviewCollectionUpdater
         }
 
         items.Clear();
+    }
+
+    private static int IndexOf(ObservableCollection<ImagePreviewItem> items, string path)
+    {
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (string.Equals(items[index].Path, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 }

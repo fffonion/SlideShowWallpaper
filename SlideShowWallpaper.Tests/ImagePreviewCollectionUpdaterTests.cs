@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using SlideShowWallpaper.ViewModels;
@@ -45,6 +46,28 @@ public sealed class ImagePreviewCollectionUpdaterTests
 
         Assert.Same(secondItem, items[0]);
         Assert.Same(firstItem, items[1]);
+    }
+
+    [Fact]
+    public void Apply_WithSamePreviewObjects_ReordersWithoutResettingCollection()
+    {
+        var first = new ImageMetadata(@"C:\Wallpapers\a.png", "a.png", DateTime.UnixEpoch, 1);
+        var second = new ImageMetadata(@"C:\Wallpapers\b.png", "b.png", DateTime.UnixEpoch, 1);
+        var firstItem = new ImagePreviewItem(first);
+        var secondItem = new ImagePreviewItem(second);
+        var items = new ObservableCollection<ImagePreviewItem>
+        {
+            firstItem,
+            secondItem,
+        };
+        var actions = new List<NotifyCollectionChangedAction>();
+        items.CollectionChanged += (_, args) => actions.Add(args.Action);
+
+        ImagePreviewCollectionUpdater.Apply(items, [second, first]);
+
+        Assert.Same(secondItem, items[0]);
+        Assert.Same(firstItem, items[1]);
+        Assert.DoesNotContain(NotifyCollectionChangedAction.Reset, actions);
     }
 
     [Fact]

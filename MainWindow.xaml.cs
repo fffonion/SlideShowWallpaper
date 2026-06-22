@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
     private bool _exitRequested;
+    private bool _suppressPreviewSelection;
 
     public MainWindow(
         MonitorService monitorService,
@@ -779,6 +780,11 @@ public sealed partial class MainWindow : Window
 
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressPreviewSelection)
+        {
+            return;
+        }
+
         if (sender is not ListView { Tag: MonitorProfile profile, SelectedItem: ImagePreviewItem item })
         {
             return;
@@ -857,7 +863,15 @@ public sealed partial class MainWindow : Window
             IReadOnlyList<ImageMetadata> shuffled = ImageLibrary.SortImages(
                 items.Select(item => item.Metadata),
                 PlaybackOrder.Random);
-            ImagePreviewCollectionUpdater.Apply(items, shuffled);
+            _suppressPreviewSelection = true;
+            try
+            {
+                ImagePreviewCollectionUpdater.Apply(items, shuffled);
+            }
+            finally
+            {
+                _suppressPreviewSelection = false;
+            }
         }
 
         _coordinator.Shuffle(profile.Id);
