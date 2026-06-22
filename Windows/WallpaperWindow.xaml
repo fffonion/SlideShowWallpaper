@@ -4,22 +4,56 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid x:Name="Root" Background="Black">
-        <Image
-            x:Name="CurrentImage"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Opacity="1" />
-        <Image
-            x:Name="NextImage"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Opacity="0" />
-        <MediaPlayerElement
-            x:Name="VideoPlayer"
-            AreTransportControlsEnabled="False"
-            AutoPlay="False"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Visibility="Collapsed" />
+        <Canvas x:Name="MediaCanvas">
+            <Image
+                x:Name="CurrentImage"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Opacity="1" />
+            <Image
+                x:Name="NextImage"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Opacity="0" />
+            <MediaPlayerElement
+                x:Name="VideoPlayer"
+                AreTransportControlsEnabled="False"
+                AutoPlay="False"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Visibility="Collapsed" />
+        </Canvas>
+        <Border
+            x:Name="ErrorOverlay"
+            Background="#D0000000"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Visibility="Collapsed">
+            <Grid Padding="32">
+                <Border
+                    MaxWidth="760"
+                    Padding="20"
+                    Background="#F0202020"
+                    BorderBrush="#66FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <StackPanel Spacing="8">
+                        <TextBlock
+                            x:Name="ErrorTitleText"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="White"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            x:Name="ErrorDetailText"
+                            FontSize="13"
+                            Foreground="#FFE5E5E5"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -221,7 +221,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         foreach (WallpaperWindow window in _windows.Values)
         {
-            window.Close();
+            CloseWindowSafely(window);
         }
 
         _windows.Clear();
@@ -244,7 +244,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         if (_windows.Remove(monitorId, out WallpaperWindow? window))
         {
-            window.Close();
+            CloseWindowSafely(window);
         }
 
         ConfigureVideoCoverageTimer();
@@ -260,6 +260,18 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         _folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, () => DispatchFolderChange(profile.Id));
+    }
+
+    private static void CloseWindowSafely(WallpaperWindow window)
+    {
+        try
+        {
+            window.Close();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private void EnsureWindow(MonitorProfile profile)

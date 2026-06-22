@@ -65,6 +65,10 @@
   <data name="LoopRemainingAutomation" xml:space="preserve"><value>循环剩余时长</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>正在加载图片...</value></data>
   <data name="UnableToLoadImages" xml:space="preserve"><value>无法加载图片</value></data>
+  <data name="VideoPlaybackErrorTitle" xml:space="preserve"><value>无法播放视频</value></data>
+  <data name="VideoPlaybackErrorFormat" xml:space="preserve"><value>{0}&#x0A;{1}</value></data>
+  <data name="VideoPlaybackFileMissing" xml:space="preserve"><value>视频文件不存在或无法打开。</value></data>
+  <data name="VideoPlaybackMissingLinkTargetFormat" xml:space="preserve"><value>链接的视频目标不存在：{0}</value></data>
   <data name="LoadingImagePreviews" xml:space="preserve"><value>正在加载图片预览</value></data>
   <data name="MonitorImageCountAutomationFormat" xml:space="preserve"><value>{0} 图片数量</value></data>
   <data name="MonitorPreviewsAutomationFormat" xml:space="preserve"><value>{0} 预览</value></data>

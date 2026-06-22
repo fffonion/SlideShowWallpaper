@@ -15,13 +15,14 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void WallpaperWindow_CentersWallpaperElementsForRelativeOffsets()
+    public void WallpaperWindow_AnchorsWallpaperElementsForCanvasOffsets()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml"));
 
-        Assert.Equal(3, CountOccurrences(source, "HorizontalAlignment=\"Center\""));
-        Assert.Equal(3, CountOccurrences(source, "VerticalAlignment=\"Center\""));
+        AssertWallpaperElementAnchored(source, "CurrentImage");
+        AssertWallpaperElementAnchored(source, "NextImage");
+        AssertWallpaperElementAnchored(source, "VideoPlayer");
     }
 
     [Fact]
@@ -50,16 +51,15 @@ public sealed class WallpaperWindowSourceTests
         return directory?.FullName ?? throw new DirectoryNotFoundException("Project root not found.");
     }
 
-    private static int CountOccurrences(string source, string value)
+    private static void AssertWallpaperElementAnchored(string source, string name)
     {
-        int count = 0;
-        int index = 0;
-        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += value.Length;
-        }
+        int nameIndex = source.IndexOf($"x:Name=\"{name}\"", StringComparison.Ordinal);
+        Assert.True(nameIndex >= 0, $"Could not find {name}.");
+        int endIndex = source.IndexOf("/>", nameIndex, StringComparison.Ordinal);
+        Assert.True(endIndex > nameIndex, $"Could not find the end of {name}.");
+        string element = source[nameIndex..endIndex];
 
-        return count;
+        Assert.Contains("HorizontalAlignment=\"Left\"", element);
+        Assert.Contains("VerticalAlignment=\"Top\"", element);
     }
 }

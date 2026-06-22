@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Controls;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
@@ -75,6 +76,7 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
+        HideError();
         StopVideo();
         var bitmap = new BitmapImage();
         Task bitmapOpened = AttachBitmapLoadHandlers(bitmap);
@@ -121,21 +123,37 @@ public sealed partial class WallpaperWindow : Window
     {
         if (!File.Exists(path))
         {
+            ShowVideoError(path, LocalizedStrings.Get("VideoPlaybackFileMissing"));
+            return;
+        }
+
+        if (FileLinkResolver.TryGetMissingLinkTarget(path, out string missingTarget))
+        {
+            ShowVideoError(path, LocalizedStrings.Format("VideoPlaybackMissingLinkTargetFormat", missingTarget));
             return;
         }
 
         ClearImageSources();
+        HideError();
         _currentKind = MediaKind.Video;
         _currentImagePath = path;
         VideoPlayer.Visibility = Visibility.Visible;
-        _mediaPlayer.IsLoopingEnabled = loop;
-        StorageFile file = await StorageFile.GetFileFromPathAsync(path);
-        _mediaPlayer.Source = MediaSource.CreateFromStorageFile(file);
-        ApplyProfile(_profile);
-        _mediaPlayer.Play();
-        if (_videoPausedByCoverage)
+        try
         {
-            _mediaPlayer.Pause();
+            _mediaPlayer.IsLoopingEnabled = loop;
+            StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+            _mediaPlayer.Source = MediaSource.CreateFromStorageFile(file);
+            ApplyProfile(_profile);
+            _mediaPlayer.Play();
+            if (_videoPausedByCoverage)
+            {
+                _mediaPlayer.Pause();
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            ShowVideoError(path, exception.Message);
         }
     }
 
@@ -274,12 +292,20 @@ public sealed partial class WallpaperWindow : Window
 
     private void StopVideo()
     {
-        if (VideoPlayer.Visibility == Visibility.Visible)
+        try
         {
-            _mediaPlayer.Pause();
+            if (VideoPlayer.Visibility == Visibility.Visible)
+            {
+                _mediaPlayer.Pause();
+            }
+
+            _mediaPlayer.Source = null;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
         }
 
-        _mediaPlayer.Source = null;
         VideoPlayer.Visibility = Visibility.Collapsed;
         _currentKind = MediaKind.Image;
     }
@@ -291,13 +317,45 @@ public sealed partial class WallpaperWindow : Window
 
     private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
     {
-        AppLog.Write($"Media failed: {args.Error} {args.ErrorMessage}");
-        NotifyVideoEnded();
+        string errorMessage = string.IsNullOrWhiteSpace(args.ErrorMessage)
+            ? args.Error.ToString()
+            : $"{args.Error}: {args.ErrorMessage}";
+        AppLog.Write($"Media failed: {errorMessage}");
+        DispatcherQueue.TryEnqueue(() => ShowVideoError(_currentImagePath, errorMessage));
     }
 
     private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
     {
-        DispatcherQueue.TryEnqueue(() => ApplyVideoLayout(_profile));
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            HideError();
+            ApplyVideoLayout(_profile);
+        });
+    }
+
+    private void ShowVideoError(string path, string message)
+    {
+        try
+        {
+            _mediaPlayer.Pause();
+            _mediaPlayer.Source = null;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
+        VideoPlayer.Visibility = Visibility.Collapsed;
+        ErrorTitleText.Text = LocalizedStrings.Get("VideoPlaybackErrorTitle");
+        ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", Path.GetFileName(path), message);
+        ErrorOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void HideError()
+    {
+        ErrorOverlay.Visibility = Visibility.Collapsed;
+        ErrorTitleText.Text = string.Empty;
+        ErrorDetailText.Text = string.Empty;
     }
 
     private void NotifyVideoEnded()
@@ -333,8 +391,10 @@ public sealed partial class WallpaperWindow : Window
             profile.OffsetY);
         image.Width = layout.Width;
         image.Height = layout.Height;
-        transform.X = layout.OffsetX;
-        transform.Y = layout.OffsetY;
+        Canvas.SetLeft(image, layout.OffsetX);
+        Canvas.SetTop(image, layout.OffsetY);
+        transform.X = 0;
+        transform.Y = 0;
     }
 
     private void ApplyVideoLayout(MonitorProfile profile)
@@ -351,8 +411,10 @@ public sealed partial class WallpaperWindow : Window
             profile.OffsetY);
         VideoPlayer.Width = layout.Width;
         VideoPlayer.Height = layout.Height;
-        _videoTransform.X = layout.OffsetX;
-        _videoTransform.Y = layout.OffsetY;
+        Canvas.SetLeft(VideoPlayer, layout.OffsetX);
+        Canvas.SetTop(VideoPlayer, layout.OffsetY);
+        _videoTransform.X = 0;
+        _videoTransform.Y = 0;
     }
 
     private DoubleAnimation CreateOpacityAnimation(UIElement target, double from, double to)

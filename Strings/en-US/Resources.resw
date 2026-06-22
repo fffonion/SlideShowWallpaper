@@ -65,6 +65,10 @@
   <data name="LoopRemainingAutomation" xml:space="preserve"><value>Remaining loop time</value></data>
   <data name="LoadingImages" xml:space="preserve"><value>Loading images...</value></data>
   <data name="UnableToLoadImages" xml:space="preserve"><value>Unable to load images</value></data>
+  <data name="VideoPlaybackErrorTitle" xml:space="preserve"><value>Unable to play video</value></data>
+  <data name="VideoPlaybackErrorFormat" xml:space="preserve"><value>{0}&#x0A;{1}</value></data>
+  <data name="VideoPlaybackFileMissing" xml:space="preserve"><value>The video file was not found or cannot be opened.</value></data>
+  <data name="VideoPlaybackMissingLinkTargetFormat" xml:space="preserve"><value>The linked video target was not found: {0}</value></data>
   <data name="LoadingImagePreviews" xml:space="preserve"><value>Loading image previews</value></data>
   <data name="MonitorImageCountAutomationFormat" xml:space="preserve"><value>{0} image count</value></data>
   <data name="MonitorPreviewsAutomationFormat" xml:space="preserve"><value>{0} previews</value></data>

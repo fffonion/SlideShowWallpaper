@@ -30,7 +30,9 @@ public static class WallpaperLayoutCalculator
         double height = scaleMode == WallpaperScaleMode.Stretch ? viewportHeight : sourceHeight * scale;
         double clampedOffsetX = ClampOffset(offsetX, width, viewportWidth);
         double clampedOffsetY = ClampOffset(offsetY, height, viewportHeight);
-        return new WallpaperElementLayout(width, height, -clampedOffsetX, -clampedOffsetY);
+        double left = (viewportWidth - width) / 2 + clampedOffsetX;
+        double top = (viewportHeight - height) / 2 + clampedOffsetY;
+        return new WallpaperElementLayout(width, height, left, top);
     }
 
     private static double ClampOffset(double offset, double contentSize, double viewportSize)
