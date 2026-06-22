@@ -15,13 +15,13 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void WallpaperWindow_AnchorsWallpaperElementsAtTopLeftForCalculatedOffsets()
+    public void WallpaperWindow_CentersWallpaperElementsForRelativeOffsets()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml"));
 
-        Assert.Equal(3, CountOccurrences(source, "HorizontalAlignment=\"Left\""));
-        Assert.Equal(3, CountOccurrences(source, "VerticalAlignment=\"Top\""));
+        Assert.Equal(3, CountOccurrences(source, "HorizontalAlignment=\"Center\""));
+        Assert.Equal(3, CountOccurrences(source, "VerticalAlignment=\"Center\""));
     }
 
     [Fact]

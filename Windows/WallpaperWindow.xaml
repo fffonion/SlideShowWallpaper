@@ -6,20 +6,20 @@
     <Grid x:Name="Root" Background="Black">
         <Image
             x:Name="CurrentImage"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Opacity="1" />
         <Image
             x:Name="NextImage"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Opacity="0" />
         <MediaPlayerElement
             x:Name="VideoPlayer"
             AreTransportControlsEnabled="False"
             AutoPlay="False"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Visibility="Collapsed" />
     </Grid>
 </Window>
