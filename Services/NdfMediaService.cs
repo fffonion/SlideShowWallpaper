@@ -74,7 +74,7 @@ public static class NdfMediaService
     {
         if (!TryGetMediaInfo(path, out NdfMediaInfo info))
         {
-            return path;
+            return FileLinkResolver.GetFinalPath(path);
         }
 
         string outputPath = GetMaterializedPath(path, info, cacheRoot);

@@ -75,8 +75,11 @@ public sealed partial class WallpaperWindow : Window
         }
 
         StopVideo();
-        BitmapImage bitmap = await LoadBitmapAsync(path);
+        var bitmap = new BitmapImage();
+        Task bitmapOpened = AttachBitmapLoadHandlers(bitmap);
         NextImage.Source = bitmap;
+        bitmap.UriSource = new Uri(path);
+        await bitmapOpened;
         ApplyProfile(_profile);
 
         bool hasCurrentImage = CurrentImage.Source is not null;
@@ -288,6 +291,7 @@ public sealed partial class WallpaperWindow : Window
 
     private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
     {
+        AppLog.Write($"Media failed: {args.Error} {args.ErrorMessage}");
         NotifyVideoEnded();
     }
 
@@ -419,13 +423,11 @@ public sealed partial class WallpaperWindow : Window
         return element.ActualHeight > 0 ? element.ActualHeight : 450;
     }
 
-    private static Task<BitmapImage> LoadBitmapAsync(string path)
+    private static Task AttachBitmapLoadHandlers(BitmapImage bitmap)
     {
-        var bitmap = new BitmapImage();
-        var completion = new TaskCompletionSource<BitmapImage>(TaskCreationOptions.RunContinuationsAsynchronously);
-        bitmap.ImageOpened += (_, _) => completion.TrySetResult(bitmap);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        bitmap.ImageOpened += (_, _) => completion.TrySetResult();
         bitmap.ImageFailed += (_, args) => completion.TrySetException(new InvalidOperationException(args.ErrorMessage));
-        bitmap.UriSource = new Uri(path);
         return completion.Task;
     }
 }

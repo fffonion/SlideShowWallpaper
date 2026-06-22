@@ -114,6 +114,21 @@ public sealed class NdfMediaServiceTests
         Assert.Equal(file.Path, materialized);
     }
 
+    [Fact]
+    public async Task MaterializeForPlaybackAsync_WithVideoSymlink_ReturnsTargetPath()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string targetPath = Path.Combine(root, "target.mp4");
+        string linkPath = Path.Combine(root, "linked.mp4");
+        await File.WriteAllBytesAsync(targetPath, [1, 2, 3, 4, 5]);
+        File.CreateSymbolicLink(linkPath, targetPath);
+
+        string materialized = await NdfMediaService.MaterializeForPlaybackAsync(linkPath, CancellationToken.None);
+
+        Assert.Equal(targetPath, materialized);
+    }
+
     private sealed class TestFile : IDisposable
     {
         private TestFile(string path)

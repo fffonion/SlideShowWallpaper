@@ -37,8 +37,25 @@ public sealed class WallpaperLayoutCalculatorTests
 
         Assert.Equal(2133.33, layout.Width, 2);
         Assert.Equal(1200, layout.Height, 2);
-        Assert.Equal(106.67, layout.OffsetX, 2);
+        Assert.Equal(-106.67, layout.OffsetX, 2);
         Assert.Equal(0, layout.OffsetY, 2);
+    }
+
+    [Fact]
+    public void Calculate_WithCoverAndHorizontalOffset_KeepsContentCoveringViewport()
+    {
+        WallpaperElementLayout layout = WallpaperLayoutCalculator.Calculate(
+            2000,
+            500,
+            1920,
+            720,
+            WallpaperScaleMode.Cover,
+            240,
+            0);
+
+        Assert.True((layout.Width - 1920) / 2 + layout.OffsetX >= 0);
+        Assert.True((layout.Width - 1920) / 2 - layout.OffsetX >= 0);
+        Assert.Equal(-240, layout.OffsetX, 2);
     }
 
     [Fact]
@@ -56,7 +73,7 @@ public sealed class WallpaperLayoutCalculatorTests
         Assert.Equal(1920, layout.Width, 2);
         Assert.Equal(3413.33, layout.Height, 2);
         Assert.Equal(0, layout.OffsetX, 2);
-        Assert.Equal(-1166.67, layout.OffsetY, 2);
+        Assert.Equal(1166.67, layout.OffsetY, 2);
     }
 
     [Fact]

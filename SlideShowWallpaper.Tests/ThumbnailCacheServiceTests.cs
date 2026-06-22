@@ -82,4 +82,38 @@ public sealed class ThumbnailCacheServiceTests
         Assert.True(File.Exists(thumbnailPath));
         Assert.False(Directory.Exists(Path.Combine(thumbnailRoot, "media")));
     }
+
+    [Fact]
+    public void ShouldDeleteThumbnailMedia_WithNormalVideo_ReturnsFalse()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");
+        File.WriteAllBytes(path, [1, 2, 3]);
+        try
+        {
+            bool shouldDelete = ThumbnailCacheService.ShouldDeleteThumbnailMedia(path);
+
+            Assert.False(shouldDelete);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ShouldDeleteThumbnailMedia_WithNdfVideo_ReturnsTrue()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ndf");
+        File.WriteAllBytes(path, [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+        try
+        {
+            bool shouldDelete = ThumbnailCacheService.ShouldDeleteThumbnailMedia(path);
+
+            Assert.True(shouldDelete);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

@@ -282,9 +282,10 @@ public sealed class WallpaperPlaybackCoordinator
     {
         int version = _queueVersions.TryGetValue(profile.Id, out int currentVersion) ? currentVersion + 1 : 1;
         _queueVersions[profile.Id] = version;
-        bool selectedImageShown = TryShowSelectedImage(profile);
+        bool selectedImageShown = false;
         try
         {
+            selectedImageShown = await TryShowSelectedImageAsync(profile);
             IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None);
             if (!_playbackEnabled
                 || profile.IsStopped
@@ -371,7 +372,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
     }
 
-    private bool TryShowSelectedImage(MonitorProfile profile)
+    private async Task<bool> TryShowSelectedImageAsync(MonitorProfile profile)
     {
         if (_windows.ContainsKey(profile.Id)
             || string.IsNullOrWhiteSpace(profile.FolderPath)
@@ -383,7 +384,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         EnsureWindow(profile);
-        _ = ShowWindowMediaSafeAsync(profile.Id, _windows[profile.Id], CreatePlaybackItem(profile.SelectedImagePath));
+        await ShowWindowMediaSafeAsync(profile.Id, _windows[profile.Id], CreatePlaybackItem(profile.SelectedImagePath));
         return true;
     }
 

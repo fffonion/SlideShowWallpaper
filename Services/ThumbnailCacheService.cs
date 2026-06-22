@@ -93,10 +93,11 @@ public sealed class ThumbnailCacheService
     private static async Task CreateVideoThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
         string? temporaryMediaPath = null;
+        bool deleteTemporaryMedia = ShouldDeleteThumbnailMedia(sourcePath);
         try
         {
             StorageFile sourceFile = await NdfMediaService.GetStorageFileForThumbnailAsync(sourcePath, AppTempPaths.ThumbnailMedia, cancellationToken);
-            temporaryMediaPath = sourceFile.Path;
+            temporaryMediaPath = deleteTemporaryMedia ? sourceFile.Path : null;
             MediaClip clip = await MediaClip.CreateFromFileAsync(sourceFile).AsTask(cancellationToken);
             var composition = new MediaComposition();
             composition.Clips.Add(clip);
@@ -145,6 +146,11 @@ public sealed class ThumbnailCacheService
 
         double scale = Math.Min(1.0, maxPixelSize / (double)Math.Max(sourceWidth, sourceHeight));
         return ((uint)Math.Max(1, Math.Round(sourceWidth * scale)), (uint)Math.Max(1, Math.Round(sourceHeight * scale)));
+    }
+
+    internal static bool ShouldDeleteThumbnailMedia(string sourcePath)
+    {
+        return NdfMediaService.TryGetMediaInfo(sourcePath, out _);
     }
 
     private static void DeleteIfExists(string? path)
