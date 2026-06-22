@@ -17,6 +17,7 @@ namespace SlideShowWallpaper;
 
 public sealed partial class MainWindow : Window
 {
+    private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
 
     private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
@@ -68,6 +69,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DispatcherQueueTimer _currentImageCheckpointTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly IntPtr _hwnd;
     private bool _exitRequested;
@@ -95,6 +97,10 @@ public sealed partial class MainWindow : Window
         _settingsApplyTimer.Interval = SettingsApplyDelay;
         _settingsApplyTimer.IsRepeating = false;
         _settingsApplyTimer.Tick += (_, _) => ApplySettings();
+        _currentImageCheckpointTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _currentImageCheckpointTimer.Interval = CurrentImageCheckpointInterval;
+        _currentImageCheckpointTimer.IsRepeating = true;
+        _currentImageCheckpointTimer.Tick += (_, _) => SaveCurrentImageCheckpoint();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -106,8 +112,10 @@ public sealed partial class MainWindow : Window
         LoadSettings();
         _trayIconService = new TrayIconService(_hwnd, () => _viewModel.Profiles, ShowSettingsWindow, ExitApplication, NextFromTray, TogglePauseFromTray, ToggleStopFromTray);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
+        _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
         RenderTabs();
         ApplySettings();
+        _currentImageCheckpointTimer.Start();
     }
 
     private MonitorProfile? SelectedProfile => MonitorTabs.SelectedItem is TabViewItem { Tag: MonitorProfile profile }
@@ -669,6 +677,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void Coordinator_CurrentWallpaperChanged(object? sender, CurrentWallpaperChangedEventArgs args)
+    {
+        _ = CurrentWallpaperSelectionUpdater.Update(_viewModel.Profiles, args.MonitorId, args.ImagePath);
+    }
+
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListView { Tag: MonitorProfile profile, SelectedItem: ImagePreviewItem item })
@@ -786,6 +799,7 @@ public sealed partial class MainWindow : Window
         _settingsApplyTimer.Stop();
         if (_exitRequested || !_viewModel.CloseToTray)
         {
+            _currentImageCheckpointTimer.Stop();
             UnloadPreviewState();
             ShutdownApplication();
             return;
@@ -818,8 +832,14 @@ public sealed partial class MainWindow : Window
     private void ShutdownApplication()
     {
         _coordinator.OrderedImagesChanged -= Coordinator_OrderedImagesChanged;
+        _coordinator.CurrentWallpaperChanged -= Coordinator_CurrentWallpaperChanged;
         _trayIconService.Dispose();
         _coordinator.Shutdown();
+    }
+
+    private void SaveCurrentImageCheckpoint()
+    {
+        _settingsStore.Save(CreateConfig());
     }
 
     private void SetTheme(AppThemeMode themeMode)

@@ -39,6 +39,8 @@ public sealed class WallpaperPlaybackCoordinator
 
     public event EventHandler<OrderedImagesChangedEventArgs>? OrderedImagesChanged;
 
+    public event EventHandler<CurrentWallpaperChangedEventArgs>? CurrentWallpaperChanged;
+
     public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled)
     {
         _playbackEnabled = playbackEnabled;
@@ -136,7 +138,7 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         ImagePlaybackItem? item = queue.Next();
-        return item is null ? Task.CompletedTask : window.ShowImageAsync(item.Path);
+        return item is null ? Task.CompletedTask : ShowWindowImageAsync(monitorId, window, item.Path);
     }
 
     public void Shuffle(string monitorId)
@@ -170,7 +172,7 @@ public sealed class WallpaperPlaybackCoordinator
 
         if (_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
         {
-            await window.ShowImageAsync(path);
+            await ShowWindowImageAsync(profile.Id, window, path);
         }
     }
 
@@ -343,8 +345,19 @@ public sealed class WallpaperPlaybackCoordinator
         }
 
         EnsureWindow(profile);
-        _ = _windows[profile.Id].ShowImageAsync(profile.SelectedImagePath);
+        _ = ShowWindowImageAsync(profile.Id, _windows[profile.Id], profile.SelectedImagePath);
         return true;
+    }
+
+    private async Task ShowWindowImageAsync(string monitorId, WallpaperWindow window, string path)
+    {
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        await window.ShowImageAsync(path);
+        CurrentWallpaperChanged?.Invoke(this, new CurrentWallpaperChangedEventArgs(monitorId, path));
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)
@@ -386,3 +399,5 @@ public sealed class WallpaperPlaybackCoordinator
 }
 
 public sealed record OrderedImagesChangedEventArgs(string MonitorId, IReadOnlyList<ImageMetadata> Images);
+
+public sealed record CurrentWallpaperChangedEventArgs(string MonitorId, string ImagePath);
