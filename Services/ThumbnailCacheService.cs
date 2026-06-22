@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SlideShowWallpaper.Models;
 using Windows.Graphics.Imaging;
+using Windows.Media.Editing;
 using Windows.Storage;
 using Windows.Storage.Streams;
 
@@ -11,6 +12,9 @@ public sealed class ThumbnailCacheService
 {
     private const uint DefaultMaxPixelSize = 320;
     private readonly string _cacheRoot;
+    private readonly Func<string, string, uint, CancellationToken, Task> _imageThumbnailWriter;
+    private readonly Func<string, string, uint, CancellationToken, Task> _videoThumbnailWriter;
+    private readonly Func<string, string, CancellationToken, Task<string>> _mediaMaterializer;
 
     public ThumbnailCacheService()
         : this(Path.Combine(Path.GetTempPath(), "SlideShowWallpaper", "thumbnails"))
@@ -18,8 +22,20 @@ public sealed class ThumbnailCacheService
     }
 
     public ThumbnailCacheService(string cacheRoot)
+        : this(cacheRoot, CreateImageThumbnailAsync, CreateVideoThumbnailAsync, NdfMediaService.MaterializeForPlaybackAsync)
+    {
+    }
+
+    internal ThumbnailCacheService(
+        string cacheRoot,
+        Func<string, string, uint, CancellationToken, Task> imageThumbnailWriter,
+        Func<string, string, uint, CancellationToken, Task> videoThumbnailWriter,
+        Func<string, string, CancellationToken, Task<string>> mediaMaterializer)
     {
         _cacheRoot = cacheRoot;
+        _imageThumbnailWriter = imageThumbnailWriter;
+        _videoThumbnailWriter = videoThumbnailWriter;
+        _mediaMaterializer = mediaMaterializer;
     }
 
     public string GetThumbnailPath(ImageMetadata metadata)
@@ -41,7 +57,16 @@ public sealed class ThumbnailCacheService
         string temporaryPath = $"{thumbnailPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            await CreateThumbnailAsync(metadata.Path, temporaryPath, DefaultMaxPixelSize, cancellationToken);
+            string materializedPath = await _mediaMaterializer(metadata.Path, Path.Combine(_cacheRoot, "media"), cancellationToken);
+            if (metadata.Kind == MediaKind.Video)
+            {
+                await _videoThumbnailWriter(materializedPath, temporaryPath, DefaultMaxPixelSize, cancellationToken);
+            }
+            else
+            {
+                await _imageThumbnailWriter(materializedPath, temporaryPath, DefaultMaxPixelSize, cancellationToken);
+            }
+
             if (File.Exists(thumbnailPath))
             {
                 File.Delete(temporaryPath);
@@ -60,10 +85,27 @@ public sealed class ThumbnailCacheService
         return thumbnailPath;
     }
 
-    private static async Task CreateThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    private static async Task CreateImageThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
         StorageFile sourceFile = await StorageFile.GetFileFromPathAsync(sourcePath).AsTask(cancellationToken);
         using IRandomAccessStream sourceStream = await sourceFile.OpenReadAsync().AsTask(cancellationToken);
+        await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+    }
+
+    private static async Task CreateVideoThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
+        StorageFile sourceFile = await StorageFile.GetFileFromPathAsync(sourcePath).AsTask(cancellationToken);
+        MediaClip clip = await MediaClip.CreateFromFileAsync(sourceFile).AsTask(cancellationToken);
+        var composition = new MediaComposition();
+        composition.Clips.Add(clip);
+        var properties = clip.GetVideoEncodingProperties();
+        (uint width, uint height) = GetScaledSize(properties.Width, properties.Height, maxPixelSize);
+        using IRandomAccessStream sourceStream = await composition.GetThumbnailAsync(TimeSpan.Zero, (int)width, (int)height, VideoFramePrecision.NearestFrame).AsTask(cancellationToken);
+        await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+    }
+
+    private static async Task CreateThumbnailFromStreamAsync(IRandomAccessStream sourceStream, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(sourceStream).AsTask(cancellationToken);
         (uint width, uint height) = GetScaledSize(decoder.PixelWidth, decoder.PixelHeight, maxPixelSize);
         var transform = new BitmapTransform

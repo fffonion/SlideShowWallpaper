@@ -8,6 +8,9 @@ namespace SlideShowWallpaper.Tests;
 
 public sealed class ImagePreviewCollectionUpdaterTests
 {
+    private const string OnePixelPngBase64 =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+
     [Fact]
     public void Apply_ReordersItemsAndReusesExistingPreviewObjects()
     {
@@ -87,14 +90,45 @@ public sealed class ImagePreviewCollectionUpdaterTests
     }
 
     [Fact]
-    public void Thumbnail_ForVideoItem_UsesPlaceholderInsteadOfLoadingImage()
+    public async Task Thumbnail_ForVideoItem_LoadsThumbnailImage()
     {
-        var metadata = new ImageMetadata(@"C:\Wallpapers\clip.mp4", "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
-        var item = new ImagePreviewItem(metadata);
+        string videoPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");
+        string thumbnailPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(videoPath, [1, 2, 3]);
+        await File.WriteAllBytesAsync(thumbnailPath, Convert.FromBase64String(OnePixelPngBase64));
+        var metadata = new ImageMetadata(videoPath, "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
+        string? loadedThumbnailPath = null;
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) => Task.FromResult(thumbnailPath),
+            path =>
+            {
+                loadedThumbnailPath = path;
+                return null;
+            });
+        try
+        {
+            var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(ImagePreviewItem.Thumbnail))
+                {
+                    changed.TrySetResult();
+                }
+            };
 
-        Assert.Null(item.Thumbnail);
-        Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.ImageVisibility);
-        Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.PlaceholderVisibility);
+            _ = item.Thumbnail;
+            await changed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.Equal(thumbnailPath, loadedThumbnailPath);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Visible, item.ImageVisibility);
+            Assert.Equal(Microsoft.UI.Xaml.Visibility.Collapsed, item.PlaceholderVisibility);
+        }
+        finally
+        {
+            File.Delete(videoPath);
+            File.Delete(thumbnailPath);
+        }
     }
 
     [Fact]

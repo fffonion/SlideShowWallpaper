@@ -11,10 +11,12 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 {
     private static readonly ThumbnailCacheService ThumbnailCache = new();
     private readonly Func<ImageMetadata, CancellationToken, Task<string>> _thumbnailLoader;
+    private readonly Func<string, ImageSource?> _thumbnailFactory;
     private ImageSource? _thumbnail;
     private CancellationTokenSource? _thumbnailCancellation;
     private int _thumbnailLoadVersion;
     private bool _thumbnailLoadStarted;
+    private bool _thumbnailLoaded;
     private bool _thumbnailFailed;
 
     public ImagePreviewItem(ImageMetadata metadata)
@@ -23,9 +25,15 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
     }
 
     public ImagePreviewItem(ImageMetadata metadata, Func<ImageMetadata, CancellationToken, Task<string>> thumbnailLoader)
+        : this(metadata, thumbnailLoader, path => new BitmapImage(new Uri(path)))
+    {
+    }
+
+    internal ImagePreviewItem(ImageMetadata metadata, Func<ImageMetadata, CancellationToken, Task<string>> thumbnailLoader, Func<string, ImageSource?> thumbnailFactory)
     {
         Metadata = metadata;
         _thumbnailLoader = thumbnailLoader;
+        _thumbnailFactory = thumbnailFactory;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -38,20 +46,15 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
 
     public string Details => $"{Metadata.ModifiedUtc.ToLocalTime():g}";
 
-    public Visibility ImageVisibility => Metadata.Kind == MediaKind.Image && !_thumbnailFailed ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImageVisibility => !_thumbnailFailed && (Metadata.Kind == MediaKind.Image || _thumbnailLoaded) ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility PlaceholderVisibility => Metadata.Kind == MediaKind.Video || _thumbnailFailed ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PlaceholderVisibility => _thumbnailFailed || (Metadata.Kind == MediaKind.Video && !_thumbnailLoaded) ? Visibility.Visible : Visibility.Collapsed;
 
     public ImageSource? Thumbnail
     {
         get
         {
-            if (Metadata.Kind == MediaKind.Video)
-            {
-                return null;
-            }
-
-            if (_thumbnail is null && File.Exists(Path))
+            if (_thumbnail is null && !_thumbnailLoaded && File.Exists(Path))
             {
                 StartThumbnailLoad();
             }
@@ -66,6 +69,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         _thumbnailCancellation?.Cancel();
         _thumbnailCancellation = null;
         _thumbnailLoadStarted = false;
+        _thumbnailLoaded = false;
         _thumbnailFailed = false;
         _thumbnail = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
@@ -93,7 +97,8 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
                 return;
             }
 
-            _thumbnail = new BitmapImage(new Uri(thumbnailPath));
+            _thumbnail = _thumbnailFactory(thumbnailPath);
+            _thumbnailLoaded = true;
             _thumbnailFailed = false;
         }
         catch (OperationCanceledException)
@@ -109,6 +114,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
             }
 
             _thumbnailFailed = true;
+            _thumbnailLoaded = false;
             _thumbnail = null;
         }
         finally

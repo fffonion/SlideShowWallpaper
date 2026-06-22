@@ -5,6 +5,8 @@ namespace SlideShowWallpaper.Services;
 
 public static class ImageLibrary
 {
+    private const int MinimumNdfShortSide = 1080;
+
     private static readonly FrozenSet<string> SupportedExtensions = new[]
     {
         ".jpg",
@@ -36,7 +38,7 @@ public static class ImageLibrary
 
         if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
         {
-            return info.Kind == MediaKind.Image;
+            return info.Kind == MediaKind.Image && IsLargeEnoughNdfMedia(info);
         }
 
         return SupportedExtensions.Contains(Path.GetExtension(path));
@@ -51,7 +53,7 @@ public static class ImageLibrary
 
         if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
         {
-            return info.Kind == MediaKind.Video;
+            return info.Kind == MediaKind.Video && IsLargeEnoughNdfMedia(info);
         }
 
         return SupportedVideoExtensions.Contains(Path.GetExtension(path));
@@ -175,5 +177,10 @@ public static class ImageLibrary
         }
 
         return IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image;
+    }
+
+    private static bool IsLargeEnoughNdfMedia(NdfMediaInfo info)
+    {
+        return info.Width <= 0 || info.Height <= 0 || Math.Min(info.Width, info.Height) >= MinimumNdfShortSide;
     }
 }

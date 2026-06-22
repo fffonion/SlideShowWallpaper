@@ -78,13 +78,28 @@ public sealed class ImageLibraryTests
     {
         string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
-        File.WriteAllBytes(Path.Combine(folder, "image.ndf"), [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-        File.WriteAllBytes(Path.Combine(folder, "video.ndf"), [0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+        File.WriteAllBytes(Path.Combine(folder, "image.ndf"), CreatePngNdf(1920, 1080));
+        File.WriteAllBytes(Path.Combine(folder, "video.ndf"), CreateMp4Ndf(1920, 1080));
 
         IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc);
 
         Assert.Equal(["image.ndf", "video.ndf"], media.Select(item => item.FileName));
         Assert.Equal([MediaKind.Image, MediaKind.Video], media.Select(item => item.Kind));
+    }
+
+    [Fact]
+    public void ScanFolderMetadata_WithLowResolutionNdfMedia_SkipsThumbnailAssets()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "image-low.ndf"), CreatePngNdf(640, 360));
+        File.WriteAllBytes(Path.Combine(folder, "image-full.ndf"), CreatePngNdf(1920, 1080));
+        File.WriteAllBytes(Path.Combine(folder, "video-low.ndf"), CreateMp4Ndf(640, 360));
+        File.WriteAllBytes(Path.Combine(folder, "video-full.ndf"), CreateMp4Ndf(1920, 1080));
+
+        IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc);
+
+        Assert.Equal(["image-full.ndf", "video-full.ndf"], media.Select(item => item.FileName));
     }
 
     [Fact]
@@ -153,5 +168,48 @@ public sealed class ImageLibraryTests
         {
             return 0;
         }
+    }
+
+    private static byte[] CreatePngNdf(int width, int height)
+    {
+        byte[] bytes = new byte[24];
+        byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        signature.CopyTo(bytes, 0);
+        WriteUInt32(bytes, 16, width);
+        WriteUInt32(bytes, 20, height);
+        return bytes;
+    }
+
+    private static byte[] CreateMp4Ndf(int width, int height)
+    {
+        byte[] trackHeader = [0x00, 0x00, 0x00, 0x00, .. CreateFixed16(width), .. CreateFixed16(height)];
+        return [0x00, 0x00, .. CreateBox("ftyp", new byte[16]), .. CreateBox("moov", CreateBox("trak", CreateBox("tkhd", trackHeader)))];
+    }
+
+    private static byte[] CreateBox(string type, byte[] payload)
+    {
+        byte[] bytes = new byte[payload.Length + 8];
+        WriteUInt32(bytes, 0, bytes.Length);
+        bytes[4] = (byte)type[0];
+        bytes[5] = (byte)type[1];
+        bytes[6] = (byte)type[2];
+        bytes[7] = (byte)type[3];
+        payload.CopyTo(bytes, 8);
+        return bytes;
+    }
+
+    private static byte[] CreateFixed16(int value)
+    {
+        byte[] bytes = new byte[4];
+        WriteUInt32(bytes, 0, value << 16);
+        return bytes;
+    }
+
+    private static void WriteUInt32(byte[] bytes, int offset, int value)
+    {
+        bytes[offset] = (byte)((value >> 24) & 0xFF);
+        bytes[offset + 1] = (byte)((value >> 16) & 0xFF);
+        bytes[offset + 2] = (byte)((value >> 8) & 0xFF);
+        bytes[offset + 3] = (byte)(value & 0xFF);
     }
 }
