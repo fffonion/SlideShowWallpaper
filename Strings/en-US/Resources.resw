@@ -63,10 +63,10 @@
   <data name="MediaFilterImages" xml:space="preserve"><value>Images</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>Videos</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>Images and videos</value></data>
-  <data name="ImageCountZero" xml:space="preserve"><value>0 images</value></data>
-  <data name="ImageCountFormat" xml:space="preserve"><value>{0} images</value></data>
-  <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1} images · {2}</value></data>
-  <data name="PreviewStatusNoRemainingFormat" xml:space="preserve"><value>{0}/{1} images</value></data>
+  <data name="ImageCountZero" xml:space="preserve"><value>0 media</value></data>
+  <data name="ImageCountFormat" xml:space="preserve"><value>{0} media</value></data>
+  <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1} media · {2}</value></data>
+  <data name="PreviewStatusNoRemainingFormat" xml:space="preserve"><value>{0}/{1} media</value></data>
   <data name="CurrentIndexFormat" xml:space="preserve"><value>{0}/{1}</value></data>
   <data name="LoopRemainingFormat" xml:space="preserve"><value>Remaining {0}</value></data>
   <data name="LoopRemainingTimeFormat" xml:space="preserve"><value>{0}h {1:00}m</value></data>

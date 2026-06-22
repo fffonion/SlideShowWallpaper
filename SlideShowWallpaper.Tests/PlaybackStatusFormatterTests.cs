@@ -26,33 +26,33 @@ public sealed class PlaybackStatusFormatterTests
     [Fact]
     public void FormatPreviewStatus_WithItems_IncludesIndexCountAndRemaining()
     {
-        string result = PlaybackStatusFormatter.FormatPreviewStatus(2, 5, 240, "{0}/{1} images · {2}", "0 images", "Remaining {0}", "{0}h {1:00}m");
+        string result = PlaybackStatusFormatter.FormatPreviewStatus(2, 5, 240, "{0}/{1} media · {2}", "0 media", "Remaining {0}", "{0}h {1:00}m");
 
-        Assert.Equal("2/5 images · Remaining 4m", result);
+        Assert.Equal("2/5 media · Remaining 4m", result);
     }
 
     [Fact]
     public void FormatPreviewStatus_WithNoItems_ReturnsZeroText()
     {
-        string result = PlaybackStatusFormatter.FormatPreviewStatus(0, 0, 240, "{0}/{1} images · {2}", "0 images", "Remaining {0}", "{0}h {1:00}m");
+        string result = PlaybackStatusFormatter.FormatPreviewStatus(0, 0, 240, "{0}/{1} media · {2}", "0 media", "Remaining {0}", "{0}h {1:00}m");
 
-        Assert.Equal("0 images", result);
+        Assert.Equal("0 media", result);
     }
 
     [Fact]
     public void FormatPreviewStatusWithoutRemaining_WithItems_ExcludesRemainingText()
     {
-        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(2, 5, "{0}/{1} images", "0 images");
+        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(2, 5, "{0}/{1} media", "0 media");
 
-        Assert.Equal("2/5 images", result);
+        Assert.Equal("2/5 media", result);
     }
 
     [Fact]
     public void FormatPreviewStatusWithoutRemaining_WithNoItems_ReturnsZeroText()
     {
-        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(0, 0, "{0}/{1} images", "0 images");
+        string result = PlaybackStatusFormatter.FormatPreviewStatusWithoutRemaining(0, 0, "{0}/{1} media", "0 media");
 
-        Assert.Equal("0 images", result);
+        Assert.Equal("0 media", result);
     }
 
     [Fact]
