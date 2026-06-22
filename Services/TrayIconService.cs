@@ -13,6 +13,7 @@ public sealed class TrayIconService : IDisposable
     private readonly Action<string> _next;
     private readonly Action<string> _togglePause;
     private readonly Action<string> _toggleStop;
+    private readonly Action<bool> _minimizedChanged;
     private readonly Func<IReadOnlyList<MonitorProfile>> _profiles;
     private readonly NativeMethods.WindowProc _windowProc;
     private IntPtr _previousWindowProc;
@@ -26,7 +27,8 @@ public sealed class TrayIconService : IDisposable
         Action exit,
         Action<string> next,
         Action<string> togglePause,
-        Action<string> toggleStop)
+        Action<string> toggleStop,
+        Action<bool>? minimizedChanged = null)
     {
         _windowHandle = windowHandle;
         _profiles = profiles;
@@ -35,6 +37,7 @@ public sealed class TrayIconService : IDisposable
         _next = next;
         _togglePause = togglePause;
         _toggleStop = toggleStop;
+        _minimizedChanged = minimizedChanged ?? (_ => { });
         _windowProc = WndProc;
         _previousWindowProc = NativeMethods.SetWindowLongPtr(_windowHandle, NativeMethods.GWL_WNDPROC, _windowProc);
         AddIcon();
@@ -73,6 +76,19 @@ public sealed class TrayIconService : IDisposable
             {
                 ShowContextMenu();
                 return IntPtr.Zero;
+            }
+        }
+
+        if (msg == NativeMethods.WM_SIZE)
+        {
+            int sizeCommand = wParam.ToInt32();
+            if (sizeCommand == NativeMethods.SIZE_MINIMIZED)
+            {
+                _minimizedChanged(true);
+            }
+            else if (sizeCommand is NativeMethods.SIZE_RESTORED or NativeMethods.SIZE_MAXIMIZED)
+            {
+                _minimizedChanged(false);
             }
         }
 

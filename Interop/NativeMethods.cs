@@ -25,6 +25,7 @@ public static partial class NativeMethods
     internal const int TPM_RETURNCMD = 0x0100;
     internal const int SW_HIDE = 0;
     internal const int SW_SHOWMAXIMIZED = 3;
+    internal const int SW_MINIMIZE = 6;
     internal const int SW_RESTORE = 9;
     internal const int SW_SHOW = 5;
     internal const int WM_APP = 0x8000;
@@ -33,6 +34,10 @@ public static partial class NativeMethods
     internal const int WM_DESTROY = 0x0002;
     internal const int WM_LBUTTONUP = 0x0202;
     internal const int WM_RBUTTONUP = 0x0205;
+    internal const int WM_SIZE = 0x0005;
+    internal const int SIZE_RESTORED = 0;
+    internal const int SIZE_MINIMIZED = 1;
+    internal const int SIZE_MAXIMIZED = 2;
     internal const int NIF_MESSAGE = 0x00000001;
     internal const int NIF_ICON = 0x00000002;
     internal const int NIF_TIP = 0x00000004;
@@ -83,6 +88,12 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+    [DllImport("kernel32.dll")]
+    internal static extern IntPtr GetCurrentProcess();
+
+    [DllImport("psapi.dll", SetLastError = true)]
+    internal static extern bool EmptyWorkingSet(IntPtr hProcess);
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);

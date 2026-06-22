@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Runtime;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -89,6 +88,7 @@ public sealed partial class MainWindow : Window
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
     private bool _isSettingsSelected;
+    private bool _settingsUiUnloadedForBackground;
 
     private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);
 
@@ -99,7 +99,8 @@ public sealed partial class MainWindow : Window
         AutostartService autostartService,
         FolderPickerService folderPickerService,
         ImageOrderService imageOrderService,
-        bool disableCloseToTray = false)
+        bool disableCloseToTray = false,
+        bool startInTray = false)
     {
         _monitorService = monitorService;
         _coordinator = coordinator;
@@ -133,10 +134,26 @@ public sealed partial class MainWindow : Window
         _hwnd = WindowNative.GetWindowHandle(this);
         Closed += MainWindow_Closed;
         LoadSettings();
-        _trayIconService = new TrayIconService(_hwnd, () => _viewModel.Profiles, ShowSettingsWindow, ExitApplication, NextFromTray, TogglePauseFromTray, ToggleStopFromTray);
+        _trayIconService = new TrayIconService(
+            _hwnd,
+            () => _viewModel.Profiles,
+            ShowSettingsWindow,
+            ExitApplication,
+            NextFromTray,
+            TogglePauseFromTray,
+            ToggleStopFromTray,
+            HandleWindowMinimizedChanged);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
-        RenderTabs();
+        if (startInTray)
+        {
+            _settingsUiUnloadedForBackground = true;
+        }
+        else
+        {
+            RenderTabs();
+        }
+
         ApplySettings();
         _currentImageCheckpointTimer.Start();
         _playbackStatusTimer.Start();
@@ -1150,15 +1167,29 @@ public sealed partial class MainWindow : Window
 
     public void ShowSettingsWindow()
     {
-        if (MonitorNavigationPanel.Children.Count == 0)
-        {
-            RenderTabs();
-        }
+        EnsureSettingsUiLoaded();
 
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_RESTORE);
         Activate();
         NativeMethods.SetForegroundWindow(_hwnd);
+    }
+
+    private void HandleWindowMinimizedChanged(bool isMinimized)
+    {
+        if (_exitRequested)
+        {
+            return;
+        }
+
+        if (isMinimized)
+        {
+            UnloadSettingsUiForBackground();
+        }
+        else
+        {
+            EnsureSettingsUiLoaded();
+        }
     }
 
     private void ExitApplication()
@@ -1226,6 +1257,16 @@ public sealed partial class MainWindow : Window
 
     private void UnloadSettingsUiForTray()
     {
+        UnloadSettingsUiForBackground();
+    }
+
+    private void UnloadSettingsUiForBackground()
+    {
+        if (_settingsUiUnloadedForBackground)
+        {
+            return;
+        }
+
         _previewSessionVersion++;
         foreach (string monitorId in _previewLoadTokens.Keys.ToArray())
         {
@@ -1237,10 +1278,19 @@ public sealed partial class MainWindow : Window
         MonitorContent.Content = null;
         UnloadPreviewState();
         _imageOrderService.ClearCache();
-        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-        GC.WaitForPendingFinalizers();
-        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        _settingsUiUnloadedForBackground = true;
+        ProcessMemoryTrimmer.TrimCurrentProcess();
+    }
+
+    private void EnsureSettingsUiLoaded()
+    {
+        if (!_settingsUiUnloadedForBackground && MonitorNavigationPanel.Children.Count > 0)
+        {
+            return;
+        }
+
+        _settingsUiUnloadedForBackground = false;
+        RenderTabs(_selectedMonitorId);
     }
 
     private bool IsPreviewLoadExpired(string monitorId, CancellationTokenSource cancellation, int previewSessionVersion)
