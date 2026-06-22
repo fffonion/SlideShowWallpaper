@@ -198,12 +198,14 @@ public sealed partial class MainWindow : Window
     {
         var root = new Grid
         {
-            ColumnSpacing = 12,
+            ColumnSpacing = 0,
             Padding = new Thickness(0),
             MinHeight = 38,
         };
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var indicator = new Border
@@ -224,7 +226,7 @@ public sealed partial class MainWindow : Window
             Width = 24,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        Grid.SetColumn(icon, 1);
+        Grid.SetColumn(icon, 2);
         root.Children.Add(icon);
 
         var text = new TextBlock
@@ -235,7 +237,7 @@ public sealed partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         AutomationProperties.SetName(text, profile.DisplayName);
-        Grid.SetColumn(text, 2);
+        Grid.SetColumn(text, 4);
         root.Children.Add(text);
 
         var surface = new Border
