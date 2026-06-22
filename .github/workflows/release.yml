@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - '*'
   release:
     types:
       - published
@@ -28,10 +31,12 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore dependencies
-        run: dotnet restore .\SlideShowWallpaper.csproj
+        run: |
+          dotnet restore .\SlideShowWallpaper.Tests\SlideShowWallpaper.Tests.csproj -p:Platform=x64
+          dotnet restore .\SlideShowWallpaper.csproj -p:Platform=x64 -r win-x64
 
       - name: Run tests
-        run: dotnet test .\SlideShowWallpaper.Tests\SlideShowWallpaper.Tests.csproj --configuration Release --no-restore
+        run: dotnet test .\SlideShowWallpaper.Tests\SlideShowWallpaper.Tests.csproj --configuration Release --no-restore -p:Platform=x64
 
       - name: Build single-file executable
         run: dotnet msbuild .\SlideShowWallpaper.csproj -t:BuildSingleFile -p:Configuration=Release -p:Platform=x64 -v minimal
@@ -39,7 +44,11 @@ jobs:
       - name: Resolve release metadata
         shell: pwsh
         run: |
-          $tag = if ('${{ github.event_name }}' -eq 'release') { '${{ github.event.release.tag_name }}' } else { '${{ inputs.tag }}' }
+          $tag = switch ('${{ github.event_name }}') {
+            'release' { '${{ github.event.release.tag_name }}' }
+            'workflow_dispatch' { '${{ inputs.tag }}' }
+            default { '${{ github.ref_name }}' }
+          }
           if ([string]::IsNullOrWhiteSpace($tag)) {
             throw 'Release tag is required.'
           }
@@ -59,8 +68,8 @@ jobs:
           "RELEASE_BUNDLE_PATH=$bundlePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "RELEASE_SHA_PATH=$shaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Create release when manually triggered
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create release when triggered without release event
+        if: github.event_name != 'release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
