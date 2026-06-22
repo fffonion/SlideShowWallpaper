@@ -17,6 +17,7 @@ namespace SlideShowWallpaper;
 
 public sealed partial class MainWindow : Window
 {
+    private const string SettingsNavigationTag = "__settings";
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
@@ -86,6 +87,7 @@ public sealed partial class MainWindow : Window
     private string? _selectedMonitorId;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
+    private bool _isSettingsSelected;
 
     private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);
 
@@ -109,7 +111,6 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Title = LocalizedStrings.Get("AppTitle");
         AppTitleBar.Title = LocalizedStrings.Get("AppTitle");
-        ThemeComboBox.ItemsSource = ThemeModeChoices;
         _settingsApplyTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
         _settingsApplyTimer.Interval = SettingsApplyDelay;
         _settingsApplyTimer.IsRepeating = false;
@@ -168,9 +169,6 @@ public sealed partial class MainWindow : Window
         _viewModel.CloseToTray = _disableCloseToTray ? false : config.CloseToTray;
         _viewModel.ThemeMode = config.ThemeMode;
         _viewModel.PlaybackEnabled = true;
-        AutostartButton.IsChecked = _viewModel.StartWithWindows;
-        CloseToTrayButton.IsChecked = _viewModel.CloseToTray;
-        ThemeComboBox.SelectedItem = FindChoice(ThemeModeChoices, _viewModel.ThemeMode);
         ApplyTheme(_viewModel.ThemeMode);
     }
 
@@ -184,9 +182,23 @@ public sealed partial class MainWindow : Window
             MonitorNavigationPanel.Children.Add(CreateMonitorNavigationItem(item.Profile));
         }
 
+        SettingsNavigationPanel.Children.Clear();
+        SettingsNavigationPanel.Children.Add(CreateSettingsNavigationItem());
+
+        if (_isSettingsSelected)
+        {
+            _selectedMonitorId = null;
+            UpdateMonitorNavigationVisuals();
+            ShowSelectedMonitorPage();
+            return;
+        }
+
         if (MonitorNavigationPanel.Children.Count == 0)
         {
             _selectedMonitorId = null;
+            _isSettingsSelected = true;
+            UpdateMonitorNavigationVisuals();
+            ShowSelectedMonitorPage();
             return;
         }
 
@@ -198,6 +210,17 @@ public sealed partial class MainWindow : Window
     }
 
     private Button CreateMonitorNavigationItem(MonitorProfile profile)
+    {
+        return CreateNavigationItem(profile.DisplayName, "\uE7F4", profile, MonitorNavigationItem_Click);
+    }
+
+    private Button CreateSettingsNavigationItem()
+    {
+        string label = LocalizedStrings.Get("Settings");
+        return CreateNavigationItem(label, "\uE713", SettingsNavigationTag, SettingsNavigationItem_Click);
+    }
+
+    private Button CreateNavigationItem(string label, string glyph, object tag, RoutedEventHandler clickHandler)
     {
         var root = new Grid
         {
@@ -225,7 +248,7 @@ public sealed partial class MainWindow : Window
 
         var icon = new FontIcon
         {
-            Glyph = "\uE7F4",
+            Glyph = glyph,
             FontSize = 17,
             Width = 24,
             VerticalAlignment = VerticalAlignment.Center,
@@ -235,12 +258,12 @@ public sealed partial class MainWindow : Window
 
         var text = new TextBlock
         {
-            Text = profile.DisplayName,
+            Text = label,
             FontSize = 14,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        AutomationProperties.SetName(text, profile.DisplayName);
+        AutomationProperties.SetName(text, label);
         Grid.SetColumn(text, 4);
         root.Children.Add(text);
 
@@ -255,7 +278,7 @@ public sealed partial class MainWindow : Window
         var item = new Button
         {
             Content = surface,
-            Tag = profile,
+            Tag = tag,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             MinHeight = 38,
@@ -263,9 +286,10 @@ public sealed partial class MainWindow : Window
             Background = GetThemeBrush("SubtleFillColorTransparentBrush"),
             BorderThickness = new Thickness(0),
         };
-        item.Click += MonitorNavigationItem_Click;
+        item.Click += clickHandler;
         surface.Tag = new MonitorNavigationVisuals(surface, indicator);
-        AutomationProperties.SetName(item, profile.DisplayName);
+        AutomationProperties.SetName(item, label);
+        AutomationProperties.SetAutomationId(item, tag is MonitorProfile profile ? $"MonitorNavigationItem_{profile.Id}" : "SettingsNavigationItem");
         return item;
     }
 
@@ -278,16 +302,68 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
-            bool isSelected = string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase);
-            visuals.Surface.Background = GetThemeBrush(isSelected ? "SubtleFillColorSecondaryBrush" : "SubtleFillColorTransparentBrush");
-            visuals.Indicator.Opacity = isSelected ? 1 : 0;
-            item.Background = GetThemeBrush("SubtleFillColorTransparentBrush");
+            bool isSelected = !_isSettingsSelected && string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase);
+            UpdateNavigationButtonVisual(item, visuals, isSelected);
         }
+
+        foreach (UIElement element in SettingsNavigationPanel.Children)
+        {
+            if (element is Button { Tag: string tag, Content: Border { Tag: MonitorNavigationVisuals visuals } } item
+                && string.Equals(tag, SettingsNavigationTag, StringComparison.Ordinal))
+            {
+                UpdateNavigationButtonVisual(item, visuals, _isSettingsSelected);
+            }
+        }
+    }
+
+    private static void UpdateNavigationButtonVisual(Button item, MonitorNavigationVisuals visuals, bool isSelected)
+    {
+        visuals.Surface.Background = GetThemeBrush(isSelected ? "SubtleFillColorSecondaryBrush" : "SubtleFillColorTransparentBrush");
+        visuals.Indicator.Opacity = isSelected ? 1 : 0;
+        item.Background = GetThemeBrush("SubtleFillColorTransparentBrush");
     }
 
     private void ShowSelectedMonitorPage()
     {
+        if (_isSettingsSelected)
+        {
+            MonitorContent.Content = BuildAppSettingsPage();
+            return;
+        }
+
         MonitorContent.Content = SelectedProfile is { } profile ? BuildMonitorPage(profile) : null;
+    }
+
+    private UIElement BuildAppSettingsPage()
+    {
+        var root = new Grid
+        {
+            RowSpacing = 12,
+            MaxWidth = 500,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var closeToTrayCheckBox = CreateCheckBox(_viewModel.CloseToTray, value => _viewModel.CloseToTray = value, LocalizedStrings.Get("CloseToTrayButton.Label"));
+        closeToTrayCheckBox.IsEnabled = !_disableCloseToTray;
+
+        var form = new StackPanel
+        {
+            Spacing = 14,
+        };
+        form.Children.Add(CreateSettingsSection(
+            LocalizedStrings.Get("Settings"),
+            new SettingsRow(LocalizedStrings.Get("AutostartButton.Label"), CreateCheckBox(_viewModel.StartWithWindows, value =>
+            {
+                _viewModel.StartWithWindows = value;
+                _autostartService.SetEnabled(value);
+            }, LocalizedStrings.Get("AutostartButton.Label"))),
+            new SettingsRow(LocalizedStrings.Get("CloseToTrayButton.Label"), closeToTrayCheckBox),
+            new SettingsRow(LocalizedStrings.Get("ThemeLabel.Text"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("ThemeLabel.Text")))));
+
+        Grid.SetRow(form, 0);
+        root.Children.Add(form);
+        return root;
     }
 
     private UIElement BuildMonitorPage(MonitorProfile profile)
@@ -871,34 +947,22 @@ public sealed partial class MainWindow : Window
         ApplySettings();
     }
 
-    private void AutostartButton_Click(object sender, RoutedEventArgs e)
-    {
-        _viewModel.StartWithWindows = AutostartButton.IsChecked == true;
-        _autostartService.SetEnabled(_viewModel.StartWithWindows);
-        ApplySettings();
-    }
-
-    private void CloseToTrayButton_Click(object sender, RoutedEventArgs e)
-    {
-        _viewModel.CloseToTray = CloseToTrayButton.IsChecked == true;
-        ApplySettings();
-    }
-
-    private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ThemeComboBox.SelectedItem is Choice<AppThemeMode> choice)
-        {
-            SetTheme(choice.Value);
-        }
-    }
-
     private void MonitorNavigationItem_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: MonitorProfile profile })
         {
             _selectedMonitorId = profile.Id;
+            _isSettingsSelected = false;
         }
 
+        UpdateMonitorNavigationVisuals();
+        ShowSelectedMonitorPage();
+    }
+
+    private void SettingsNavigationItem_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedMonitorId = null;
+        _isSettingsSelected = true;
         UpdateMonitorNavigationVisuals();
         ShowSelectedMonitorPage();
     }
@@ -1154,6 +1218,7 @@ public sealed partial class MainWindow : Window
         }
 
         MonitorNavigationPanel.Children.Clear();
+        SettingsNavigationPanel.Children.Clear();
         MonitorContent.Content = null;
         UnloadPreviewState();
         _imageOrderService.ClearCache();
