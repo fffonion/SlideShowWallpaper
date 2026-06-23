@@ -179,20 +179,19 @@ public sealed class ThumbnailCacheServiceTests
     }
 
     [Fact]
-    public void VideoThumbnailGeneration_FallsBackToMediaCompositionWithoutFfmpeg()
+    public void VideoThumbnailGeneration_FallsBackToActiveSystemThumbnailWithoutComposition()
     {
         string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Services", "ThumbnailCacheService.cs"));
 
         Assert.Contains("private static readonly SemaphoreSlim VideoThumbnailGate = new(1, 1);", source);
         Assert.Contains("await VideoThumbnailGate.WaitAsync(cancellationToken);", source);
         Assert.Contains("VideoThumbnailGate.Release();", source);
-        Assert.Contains("CreateSystemVideoThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cancellationToken)", source);
-        Assert.Contains("CreateVideoFrameThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cancellationToken)", source);
+        Assert.Contains("CreateSystemVideoThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cachedOnly: true, cancellationToken)", source);
+        Assert.Contains("CreateSystemVideoThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cachedOnly: false, cancellationToken)", source);
         Assert.Contains("ThumbnailOptions.ReturnOnlyIfCached | ThumbnailOptions.UseCurrentScale", source);
-        Assert.Contains("MediaClip.CreateFromFileAsync(sourceFile)", source);
-        Assert.Contains("new MediaComposition", source);
-        Assert.Contains("VideoFramePrecision.NearestKeyFrame", source);
-        Assert.Contains("TimeSpan.FromSeconds(3)", source);
+        Assert.DoesNotContain("MediaClip", source);
+        Assert.DoesNotContain("MediaComposition", source);
+        Assert.DoesNotContain("VideoFramePrecision", source);
         Assert.DoesNotContain("ffmpeg", source, StringComparison.OrdinalIgnoreCase);
     }
 
