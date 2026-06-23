@@ -222,6 +222,7 @@ public sealed partial class MainWindow
             IsLoopingEnabled = true,
             IsMuted = true,
         };
+        _previewPopupPlayer.MediaOpened += PreviewPopupPlayer_MediaOpened;
         _previewPopupPlayer.MediaFailed += PreviewPopupPlayer_MediaFailed;
         _previewPopupImage = new Microsoft.UI.Xaml.Controls.Image
         {
@@ -233,26 +234,34 @@ public sealed partial class MainWindow
         _previewPopupVideo = new MediaPlayerElement
         {
             AreTransportControlsEnabled = false,
-            Stretch = Stretch.Uniform,
+            Stretch = Stretch.Fill,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             Visibility = Visibility.Collapsed,
         };
         _previewPopupVideo.SetMediaPlayer(_previewPopupPlayer);
+        _previewPopupVideoFrame = new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = Visibility.Collapsed,
+            Child = _previewPopupVideo,
+        };
+        SetPreviewPopupVideoFrameSize(16, 9);
 
         var content = new Grid();
         content.Children.Add(_previewPopupImage);
-        content.Children.Add(_previewPopupVideo);
+        content.Children.Add(_previewPopupVideoFrame);
 
         var surface = new Border
         {
             Width = PreviewPopupWidth,
             Height = PreviewPopupHeight,
-            Padding = new Thickness(8),
+            Padding = new Thickness(PreviewPopupPadding),
             CornerRadius = new CornerRadius(8),
             Background = GetThemeBrush("CardBackgroundFillColorDefaultBrush"),
             BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
-            BorderThickness = new Thickness(1),
+            BorderThickness = new Thickness(PreviewPopupBorderThickness),
             Child = content,
         };
 
@@ -273,7 +282,13 @@ public sealed partial class MainWindow
         StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath).AsTask(cancellationToken);
         _previewPopupImage.Source = null;
         _previewPopupImage.Visibility = Visibility.Collapsed;
+        if (_previewPopupVideoFrame is not null)
+        {
+            _previewPopupVideoFrame.Visibility = Visibility.Visible;
+        }
+
         _previewPopupVideo.Visibility = Visibility.Visible;
+        SetPreviewPopupVideoFrameSize(16, 9);
         _previewPopupPlayer.IsLoopingEnabled = true;
         _previewPopupPlayer.IsMuted = PreviewPopupPolicy.ShouldMuteVideo(_viewModel.GlobalMute, profile);
         _previewPopupPlayer.Source = MediaSource.CreateFromStorageFile(file);
@@ -289,6 +304,11 @@ public sealed partial class MainWindow
 
         _previewPopupPlayer.Pause();
         _previewPopupPlayer.Source = null;
+        if (_previewPopupVideoFrame is not null)
+        {
+            _previewPopupVideoFrame.Visibility = Visibility.Collapsed;
+        }
+
         _previewPopupVideo.Visibility = Visibility.Collapsed;
         _previewPopupImage.Source = new BitmapImage(new Uri(playbackPath));
         _previewPopupImage.Visibility = Visibility.Visible;
@@ -323,6 +343,33 @@ public sealed partial class MainWindow
         AppLog.Write($"Preview media failed: {errorMessage}");
     }
 
+    private void PreviewPopupPlayer_MediaOpened(MediaPlayer sender, object args)
+    {
+        double width = sender.PlaybackSession.NaturalVideoWidth;
+        double height = sender.PlaybackSession.NaturalVideoHeight;
+        _ = DispatcherQueue.TryEnqueue(() => SetPreviewPopupVideoFrameSize(width, height));
+    }
+
+    private void SetPreviewPopupVideoFrameSize(double mediaWidth, double mediaHeight)
+    {
+        if (_previewPopupVideoFrame is null)
+        {
+            return;
+        }
+
+        PreviewPopupMediaLayout layout = PreviewPopupLayoutCalculator.Calculate(
+            mediaWidth,
+            mediaHeight,
+            PreviewPopupWidth - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2),
+            PreviewPopupHeight - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2));
+        _previewPopupVideoFrame.Width = layout.Width;
+        _previewPopupVideoFrame.Height = layout.Height;
+        _previewPopupVideoFrame.Clip = new RectangleGeometry
+        {
+            Rect = new Rect(0, 0, layout.Width, layout.Height),
+        };
+    }
+
     private void CancelPreviewPopup()
     {
         _previewPopupTimer.Stop();
@@ -352,6 +399,11 @@ public sealed partial class MainWindow
             _previewPopupVideo.Visibility = Visibility.Collapsed;
         }
 
+        if (_previewPopupVideoFrame is not null)
+        {
+            _previewPopupVideoFrame.Visibility = Visibility.Collapsed;
+        }
+
         if (_previewPopup is not null)
         {
             _previewPopup.IsOpen = false;
@@ -376,11 +428,13 @@ public sealed partial class MainWindow
         CancelPreviewPopup();
         if (_previewPopupPlayer is not null)
         {
+            _previewPopupPlayer.MediaOpened -= PreviewPopupPlayer_MediaOpened;
             _previewPopupPlayer.MediaFailed -= PreviewPopupPlayer_MediaFailed;
             _previewPopupPlayer.Dispose();
             _previewPopupPlayer = null;
         }
 
+        _previewPopupVideoFrame = null;
         _previewPopupVideo = null;
         _previewPopupImage = null;
         _previewPopup = null;

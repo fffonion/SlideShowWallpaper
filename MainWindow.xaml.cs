@@ -30,6 +30,8 @@ public sealed partial class MainWindow : Window
     private const double MaximumPreviewPaneWidth = 520;
     private const double PreviewPopupWidth = 420;
     private const double PreviewPopupHeight = 260;
+    private const double PreviewPopupPadding = 8;
+    private const double PreviewPopupBorderThickness = 1;
     private const double PreviewPopupGap = 8;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
@@ -114,6 +116,7 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
     private Popup? _previewPopup;
     private Microsoft.UI.Xaml.Controls.Image? _previewPopupImage;
+    private Border? _previewPopupVideoFrame;
     private MediaPlayerElement? _previewPopupVideo;
     private MediaPlayer? _previewPopupPlayer;
     private CancellationTokenSource? _previewPopupCancellation;
