@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SlideShowWallpaper.Models;
 using Windows.Graphics.Imaging;
+using Windows.Media.Editing;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.Storage.Streams;
@@ -115,8 +116,49 @@ public sealed class ThumbnailCacheService
 
     private static async Task CreateImageThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
+        try
+        {
+            await CreateImageThumbnailFromDecodedStreamAsync(sourcePath, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            AppLog.Write(exception);
+            DeleteIfExists(thumbnailPath);
+            await CreateImageThumbnailFromShellAsync(sourcePath, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+    }
+
+    private static async Task CreateImageThumbnailFromDecodedStreamAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
         using IRandomAccessStream sourceStream = await NdfMediaService.OpenContentStreamAsync(sourcePath, cancellationToken);
         await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+    }
+
+    private static async Task CreateImageThumbnailFromShellAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
+        string? temporaryMediaPath = null;
+        bool deleteTemporaryMedia = ShouldDeleteThumbnailMedia(sourcePath);
+        try
+        {
+            StorageFile sourceFile = await NdfMediaService.GetStorageFileForThumbnailAsync(sourcePath, AppTempPaths.ThumbnailMedia, cancellationToken);
+            temporaryMediaPath = deleteTemporaryMedia ? sourceFile.Path : null;
+            using StorageItemThumbnail sourceStream = await sourceFile
+                .GetThumbnailAsync(
+                    ThumbnailMode.PicturesView,
+                    maxPixelSize,
+                    ThumbnailOptions.UseCurrentScale)
+                .AsTask(cancellationToken);
+            if (sourceStream is null || sourceStream.Size == 0)
+            {
+                throw new InvalidDataException($"No image thumbnail for {Path.GetFileName(sourcePath)}.");
+            }
+
+            await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+        finally
+        {
+            DeleteIfExists(temporaryMediaPath);
+        }
     }
 
     private static async Task CreateVideoThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
@@ -140,23 +182,67 @@ public sealed class ThumbnailCacheService
         {
             StorageFile sourceFile = await NdfMediaService.GetStorageFileForThumbnailAsync(sourcePath, AppTempPaths.ThumbnailMedia, cancellationToken);
             temporaryMediaPath = deleteTemporaryMedia ? sourceFile.Path : null;
-            using StorageItemThumbnail sourceStream = await sourceFile
-                .GetThumbnailAsync(
-                    ThumbnailMode.VideosView,
-                    maxPixelSize,
-                    ThumbnailOptions.ReturnOnlyIfCached | ThumbnailOptions.UseCurrentScale)
-                .AsTask(cancellationToken);
-            if (sourceStream.Size == 0)
+            try
             {
-                throw new InvalidDataException($"No cached system thumbnail for {Path.GetFileName(sourcePath)}.");
+                await CreateSystemVideoThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cancellationToken);
             }
-
-            await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                AppLog.Write(exception);
+                DeleteIfExists(thumbnailPath);
+                await CreateVideoFrameThumbnailAsync(sourceFile, thumbnailPath, maxPixelSize, cancellationToken);
+            }
         }
         finally
         {
             DeleteIfExists(temporaryMediaPath);
         }
+    }
+
+    private static async Task CreateSystemVideoThumbnailAsync(StorageFile sourceFile, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
+        using StorageItemThumbnail sourceStream = await sourceFile
+            .GetThumbnailAsync(
+                ThumbnailMode.VideosView,
+                maxPixelSize,
+                ThumbnailOptions.ReturnOnlyIfCached | ThumbnailOptions.UseCurrentScale)
+            .AsTask(cancellationToken);
+        if (sourceStream is null || sourceStream.Size == 0)
+        {
+            throw new InvalidDataException($"No cached system thumbnail for {sourceFile.Name}.");
+        }
+
+        await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+    }
+
+    private static async Task CreateVideoFrameThumbnailAsync(StorageFile sourceFile, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
+        MediaClip clip = await MediaClip.CreateFromFileAsync(sourceFile).AsTask(cancellationToken);
+        var composition = new MediaComposition();
+        composition.Clips.Add(clip);
+        (int width, int height) = GetVideoThumbnailSize(clip, maxPixelSize);
+        TimeSpan frameTime = TimeSpan.FromSeconds(3);
+        if (clip.OriginalDuration > TimeSpan.Zero && frameTime >= clip.OriginalDuration)
+        {
+            frameTime = TimeSpan.FromTicks(Math.Max(0, clip.OriginalDuration.Ticks / 2));
+        }
+
+        using IRandomAccessStream sourceStream = await composition
+            .GetThumbnailAsync(frameTime, width, height, VideoFramePrecision.NearestKeyFrame)
+            .AsTask(cancellationToken);
+        if (sourceStream.Size == 0)
+        {
+            throw new InvalidDataException($"No decoded video thumbnail for {sourceFile.Name}.");
+        }
+
+        await CreateThumbnailFromStreamAsync(sourceStream, thumbnailPath, maxPixelSize, cancellationToken);
+    }
+
+    private static (int Width, int Height) GetVideoThumbnailSize(MediaClip clip, uint maxPixelSize)
+    {
+        global::Windows.Media.MediaProperties.VideoEncodingProperties properties = clip.GetVideoEncodingProperties();
+        (uint width, uint height) = GetScaledSize(properties.Width, properties.Height, maxPixelSize);
+        return ((int)Math.Max(1, width), (int)Math.Max(1, height));
     }
 
     private static async Task CreateThumbnailFromStreamAsync(IRandomAccessStream sourceStream, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
