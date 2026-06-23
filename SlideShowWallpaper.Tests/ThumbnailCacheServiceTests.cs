@@ -109,6 +109,42 @@ public sealed class ThumbnailCacheServiceTests
     }
 
     [Fact]
+    public async Task GetCacheSizeBytesAsync_WithCachedFiles_ReturnsTotalSize()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(root, "thumbnails");
+        Directory.CreateDirectory(Path.Combine(cacheRoot, "aa"));
+        await File.WriteAllBytesAsync(Path.Combine(cacheRoot, "aa", "first.jpg"), [1, 2, 3]);
+        await File.WriteAllBytesAsync(Path.Combine(cacheRoot, "second.jpg"), [4, 5]);
+        var service = new ThumbnailCacheService(cacheRoot);
+
+        long size = await service.GetCacheSizeBytesAsync();
+
+        Assert.Equal(5, size);
+    }
+
+    [Fact]
+    public async Task ClearCacheAsync_RemovesOnlyThumbnailCacheRootFiles()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(root, "thumbnails");
+        string mediaRoot = Path.Combine(root, "media");
+        string cachedFile = Path.Combine(cacheRoot, "aa", "thumb.jpg");
+        string sourceFile = Path.Combine(mediaRoot, "wallpaper.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(cachedFile)!);
+        Directory.CreateDirectory(mediaRoot);
+        await File.WriteAllBytesAsync(cachedFile, [1, 2, 3]);
+        await File.WriteAllBytesAsync(sourceFile, [4, 5, 6, 7]);
+        var service = new ThumbnailCacheService(cacheRoot);
+
+        await service.ClearCacheAsync();
+
+        Assert.False(File.Exists(cachedFile));
+        Assert.True(File.Exists(sourceFile));
+        Assert.Equal(0, await service.GetCacheSizeBytesAsync());
+    }
+
+    [Fact]
     public void ShouldDeleteThumbnailMedia_WithNormalVideo_ReturnsFalse()
     {
         string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");

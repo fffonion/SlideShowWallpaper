@@ -44,6 +44,65 @@ public sealed partial class MainWindow
         return panel;
     }
 
+    private Grid CreateThumbnailCacheControls()
+    {
+        var panel = new Grid
+        {
+            ColumnSpacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        CheckBox cacheCheckBox = CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache"));
+        Grid.SetColumn(cacheCheckBox, 0);
+        panel.Children.Add(cacheCheckBox);
+
+        var statusHost = new Grid
+        {
+            MinWidth = 96,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        _thumbnailCacheSizeProgress = new ProgressRing
+        {
+            Width = 18,
+            Height = 18,
+            IsActive = true,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(_thumbnailCacheSizeProgress, LocalizedStrings.Get("ThumbnailCacheSizeLoading"));
+        statusHost.Children.Add(_thumbnailCacheSizeProgress);
+
+        _thumbnailCacheSizeText = new TextBlock
+        {
+            Text = string.Empty,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Visibility = Visibility.Collapsed,
+        };
+        AutomationProperties.SetName(_thumbnailCacheSizeText, LocalizedStrings.Get("ThumbnailCacheSize"));
+        statusHost.Children.Add(_thumbnailCacheSizeText);
+        Grid.SetColumn(statusHost, 1);
+        panel.Children.Add(statusHost);
+
+        _clearThumbnailCacheButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Delete),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(_clearThumbnailCacheButton, LocalizedStrings.Get("ClearThumbnailCache"));
+        ToolTipService.SetToolTip(_clearThumbnailCacheButton, LocalizedStrings.Get("ClearThumbnailCache"));
+        _clearThumbnailCacheButton.Click += async (_, _) => await ClearThumbnailCacheAsync();
+        Grid.SetColumn(_clearThumbnailCacheButton, 2);
+        panel.Children.Add(_clearThumbnailCacheButton);
+
+        return panel;
+    }
+
     private static Border CreateSettingsSection(string? title, params SettingsRow[] rows)
     {
         var stack = new StackPanel();

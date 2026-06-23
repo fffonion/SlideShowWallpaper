@@ -23,6 +23,9 @@
   <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>新しいファイルを自動追跡</value></data>
   <data name="AppSettingGlobalMute" xml:space="preserve"><value>すべての動画をミュート</value></data>
   <data name="AppSettingThumbnailCache" xml:space="preserve"><value>サムネイルキャッシュ</value></data>
+  <data name="ThumbnailCacheSize" xml:space="preserve"><value>サムネイルキャッシュサイズ</value></data>
+  <data name="ThumbnailCacheSizeLoading" xml:space="preserve"><value>サムネイルキャッシュサイズを計算中</value></data>
+  <data name="ClearThumbnailCache" xml:space="preserve"><value>サムネイルキャッシュをクリア</value></data>
   <data name="AppSettingPauseVideoWhenDisplayOffOrSleeping" xml:space="preserve"><value>ディスプレイオフまたはシステムスリープ中は動画を一時停止</value></data>
   <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>動画プレビュー遅延（秒）</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>

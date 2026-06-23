@@ -99,6 +99,109 @@ public sealed partial class MainWindow
         RenderTabs(_selectedMonitorId);
     }
 
+    private async void StartThumbnailCacheSizeLoad()
+    {
+        int version = ++_thumbnailCacheSizeLoadVersion;
+        _thumbnailCacheSizeCancellation?.Cancel();
+        _thumbnailCacheSizeCancellation?.Dispose();
+        _thumbnailCacheSizeCancellation = new CancellationTokenSource();
+        CancellationToken cancellationToken = _thumbnailCacheSizeCancellation.Token;
+
+        ShowThumbnailCacheSizeLoading();
+        try
+        {
+            long sizeBytes = await _thumbnailCacheService.GetCacheSizeBytesAsync(cancellationToken);
+            if (cancellationToken.IsCancellationRequested || version != _thumbnailCacheSizeLoadVersion)
+            {
+                return;
+            }
+
+            ShowThumbnailCacheSize(FormatFileSize(sizeBytes));
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            ShowThumbnailCacheSize(FormatFileSize(0));
+        }
+    }
+
+    private async Task ClearThumbnailCacheAsync()
+    {
+        _thumbnailCacheSizeLoadVersion++;
+        _thumbnailCacheSizeCancellation?.Cancel();
+        _clearThumbnailCacheButton?.Focus(FocusState.Programmatic);
+        SetThumbnailCacheControlsEnabled(false);
+        ShowThumbnailCacheSizeLoading();
+        try
+        {
+            await _thumbnailCacheService.ClearCacheAsync();
+            ShowThumbnailCacheSize(FormatFileSize(0));
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            StartThumbnailCacheSizeLoad();
+        }
+        finally
+        {
+            SetThumbnailCacheControlsEnabled(true);
+        }
+    }
+
+    private void ShowThumbnailCacheSizeLoading()
+    {
+        if (_thumbnailCacheSizeProgress is not null)
+        {
+            _thumbnailCacheSizeProgress.IsActive = true;
+            _thumbnailCacheSizeProgress.Visibility = Visibility.Visible;
+        }
+
+        if (_thumbnailCacheSizeText is not null)
+        {
+            _thumbnailCacheSizeText.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void ShowThumbnailCacheSize(string sizeText)
+    {
+        if (_thumbnailCacheSizeProgress is not null)
+        {
+            _thumbnailCacheSizeProgress.IsActive = false;
+            _thumbnailCacheSizeProgress.Visibility = Visibility.Collapsed;
+        }
+
+        if (_thumbnailCacheSizeText is not null)
+        {
+            _thumbnailCacheSizeText.Text = sizeText;
+            _thumbnailCacheSizeText.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void SetThumbnailCacheControlsEnabled(bool isEnabled)
+    {
+        if (_clearThumbnailCacheButton is not null)
+        {
+            _clearThumbnailCacheButton.IsEnabled = isEnabled;
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = Math.Max(0, bytes);
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return unit == 0 ? $"{value:0} {units[unit]}" : $"{value:0.##} {units[unit]}";
+    }
+
     private Func<ImageMetadata, CancellationToken, Task<string>> CreateThumbnailLoader()
     {
         return _viewModel.ThumbnailCacheEnabled
@@ -144,6 +247,12 @@ public sealed partial class MainWindow
         SettingsNavigationPanel.Children.Clear();
         MonitorContent.Content = null;
         UnloadPreviewState();
+        _thumbnailCacheSizeCancellation?.Cancel();
+        _thumbnailCacheSizeCancellation?.Dispose();
+        _thumbnailCacheSizeCancellation = null;
+        _thumbnailCacheSizeText = null;
+        _thumbnailCacheSizeProgress = null;
+        _clearThumbnailCacheButton = null;
         _settingsUiUnloadedForBackground = true;
         ProcessMemoryTrimmer.TrimCurrentProcess();
     }

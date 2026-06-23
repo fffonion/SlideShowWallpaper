@@ -21,6 +21,7 @@ public sealed partial class MainWindow
 
         var closeToTrayCheckBox = CreateCheckBox(_viewModel.CloseToTray, value => _viewModel.CloseToTray = value, LocalizedStrings.Get("AppSettingCloseToTray"));
         closeToTrayCheckBox.IsEnabled = !_disableCloseToTray;
+        FrameworkElement thumbnailCacheControls = CreateThumbnailCacheControls();
 
         var form = new StackPanel
         {
@@ -38,7 +39,7 @@ public sealed partial class MainWindow
             new SettingsRow(LocalizedStrings.Get("AppSettingLanguage"), CreateChoiceCombo(LanguageModeChoices, _viewModel.LanguageMode, SetLanguage, LocalizedStrings.Get("AppSettingLanguage"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingAutoTrackNewFiles"), CreateCheckBox(_viewModel.AutoTrackNewFiles, value => _viewModel.AutoTrackNewFiles = value, LocalizedStrings.Get("AppSettingAutoTrackNewFiles"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingGlobalMute"), CreateCheckBox(_viewModel.GlobalMute, value => _viewModel.GlobalMute = value, LocalizedStrings.Get("AppSettingGlobalMute"))),
-            new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), thumbnailCacheControls),
             new SettingsRow(LocalizedStrings.Get("AppSettingPauseVideoWhenDisplayOffOrSleeping"), CreateCheckBox(
                 _viewModel.PauseVideoWhenDisplayOffOrSleeping,
                 value => _viewModel.PauseVideoWhenDisplayOffOrSleeping = value,
@@ -54,6 +55,7 @@ public sealed partial class MainWindow
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
+        StartThumbnailCacheSizeLoad();
         return root;
     }
 

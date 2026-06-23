@@ -23,6 +23,9 @@
   <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>自動追蹤新檔案</value></data>
   <data name="AppSettingGlobalMute" xml:space="preserve"><value>全域靜音</value></data>
   <data name="AppSettingThumbnailCache" xml:space="preserve"><value>縮圖快取</value></data>
+  <data name="ThumbnailCacheSize" xml:space="preserve"><value>縮圖快取大小</value></data>
+  <data name="ThumbnailCacheSizeLoading" xml:space="preserve"><value>正在計算縮圖快取大小</value></data>
+  <data name="ClearThumbnailCache" xml:space="preserve"><value>清除縮圖快取</value></data>
   <data name="AppSettingPauseVideoWhenDisplayOffOrSleeping" xml:space="preserve"><value>螢幕關閉或系統睡眠時暫停影片</value></data>
   <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>影片預覽延遲（秒）</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟隨系統</value></data>

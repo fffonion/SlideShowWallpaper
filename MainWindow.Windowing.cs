@@ -10,7 +10,7 @@ public sealed partial class MainWindow
 {
     private void ConfigureSettingsWindow()
     {
-        const int preferredWidth = 1460;
+        const int preferredWidth = 1540;
         RectInt32 workArea = GetPreferredSettingsWorkArea();
         int width = Math.Min(preferredWidth, workArea.Width);
         int height = CalculatePreferredWindowHeight(width, workArea.Height);
@@ -49,7 +49,7 @@ public sealed partial class MainWindow
     private void ResizeToMeasuredContentHeight()
     {
         RectInt32 workArea = GetPreferredSettingsWorkArea();
-        int width = AppWindow.Size.Width > 0 ? AppWindow.Size.Width : Math.Min(1460, workArea.Width);
+        int width = AppWindow.Size.Width > 0 ? AppWindow.Size.Width : Math.Min(1540, workArea.Width);
         int height = CalculateMeasuredWindowHeight(width, workArea.Height);
         MoveAndResizeSettingsWindow(workArea, width, height);
     }
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
 
         if (bestArea <= 0)
         {
-            return new RectInt32(0, 0, 1460, 980);
+            return new RectInt32(0, 0, 1540, 980);
         }
 
         return new RectInt32(best.Left, best.Top, best.Width, best.Height);

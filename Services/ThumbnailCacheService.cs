@@ -34,6 +34,16 @@ public sealed class ThumbnailCacheService
         _thumbnailWriter = thumbnailWriter;
     }
 
+    public Task<long> GetCacheSizeBytesAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => GetCacheSizeBytes(cancellationToken), cancellationToken);
+    }
+
+    public Task ClearCacheAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => ClearCache(cancellationToken), cancellationToken);
+    }
+
     public string GetThumbnailPath(ImageMetadata metadata)
     {
         string input = string.Join('\0', metadata.Path, metadata.ModifiedUtc.Ticks.ToString(), metadata.Length.ToString());
@@ -193,6 +203,120 @@ public sealed class ThumbnailCacheService
     internal static bool ShouldDeleteThumbnailMedia(string sourcePath)
     {
         return NdfMediaService.TryGetMediaInfo(sourcePath, out _);
+    }
+
+    private long GetCacheSizeBytes(CancellationToken cancellationToken)
+    {
+        long totalBytes = 0;
+        foreach (string file in EnumerateCacheFiles())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                totalBytes += new FileInfo(file).Length;
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return totalBytes;
+    }
+
+    private void ClearCache(CancellationToken cancellationToken)
+    {
+        foreach (string file in EnumerateCacheFiles())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DeleteIfExists(file);
+        }
+
+        DeleteEmptyCacheDirectories(cancellationToken);
+    }
+
+    private IEnumerable<string> EnumerateCacheFiles()
+    {
+        if (!IsUsableCacheRoot())
+        {
+            return [];
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = System.IO.FileAttributes.ReparsePoint,
+        };
+
+        try
+        {
+            return Directory.EnumerateFiles(_cacheRoot, "*", options).ToArray();
+        }
+        catch (IOException)
+        {
+            return [];
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private void DeleteEmptyCacheDirectories(CancellationToken cancellationToken)
+    {
+        if (!IsUsableCacheRoot())
+        {
+            return;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = System.IO.FileAttributes.ReparsePoint,
+        };
+
+        foreach (string directory in Directory.EnumerateDirectories(_cacheRoot, "*", options).OrderByDescending(path => path.Length))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                {
+                    Directory.Delete(directory);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    private bool IsUsableCacheRoot()
+    {
+        if (!Directory.Exists(_cacheRoot))
+        {
+            return false;
+        }
+
+        try
+        {
+            return !new DirectoryInfo(_cacheRoot).Attributes.HasFlag(System.IO.FileAttributes.ReparsePoint);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static void DeleteIfExists(string? path)

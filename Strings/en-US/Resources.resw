@@ -23,6 +23,9 @@
   <data name="AppSettingAutoTrackNewFiles" xml:space="preserve"><value>Automatically track new files</value></data>
   <data name="AppSettingGlobalMute" xml:space="preserve"><value>Mute all videos</value></data>
   <data name="AppSettingThumbnailCache" xml:space="preserve"><value>Thumbnail cache</value></data>
+  <data name="ThumbnailCacheSize" xml:space="preserve"><value>Thumbnail cache size</value></data>
+  <data name="ThumbnailCacheSizeLoading" xml:space="preserve"><value>Calculating thumbnail cache size</value></data>
+  <data name="ClearThumbnailCache" xml:space="preserve"><value>Clear thumbnail cache</value></data>
   <data name="AppSettingPauseVideoWhenDisplayOffOrSleeping" xml:space="preserve"><value>Pause video when display is off or system is sleeping</value></data>
   <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>Video preview delay (seconds)</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>Follow system</value></data>

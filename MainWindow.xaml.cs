@@ -108,6 +108,10 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _previewPopupTimer;
     private readonly IntPtr _hwnd;
     private readonly bool _disableCloseToTray;
+    private TextBlock? _thumbnailCacheSizeText;
+    private ProgressRing? _thumbnailCacheSizeProgress;
+    private Button? _clearThumbnailCacheButton;
+    private CancellationTokenSource? _thumbnailCacheSizeCancellation;
     private Popup? _previewPopup;
     private Microsoft.UI.Xaml.Controls.Image? _previewPopupImage;
     private MediaPlayerElement? _previewPopupVideo;
@@ -123,6 +127,7 @@ public sealed partial class MainWindow : Window
     private bool _isSettingsSelected;
     private bool _settingsUiUnloadedForBackground;
     private bool _contentHeightAdjusted;
+    private int _thumbnailCacheSizeLoadVersion;
 
     private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);
 
