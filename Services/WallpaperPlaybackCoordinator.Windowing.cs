@@ -35,7 +35,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
     }
 
-    private void EnsureWindow(MonitorProfile profile)
+    private void EnsureWindow(MonitorProfile profile, bool applyProfile = true)
     {
         if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
         {
@@ -46,7 +46,11 @@ public sealed partial class WallpaperPlaybackCoordinator
             window.Activate();
         }
 
-        window.ApplyProfile(profile);
+        if (applyProfile)
+        {
+            window.ApplyProfile(profile);
+        }
+
         window.SetForceMuted(_globalMute);
         _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
         ConfigureVideoCoverageTimer();

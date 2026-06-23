@@ -48,6 +48,17 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         Assert.Contains("ConfigureVideoCoverageTimer();", method);
     }
 
+    [Fact]
+    public void ManualShowImage_DoesNotApplyExistingWindowProfileBeforeMediaSwitch()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "public async Task ShowImageAsync", "public void Shutdown");
+
+        Assert.Contains("EnsureWindow(profile, applyProfile: false);", method);
+        Assert.DoesNotContain("EnsureWindow(profile);", method);
+    }
+
     private static string ReadCoordinatorWindowingSource()
     {
         string root = FindProjectRoot();

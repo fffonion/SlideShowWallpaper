@@ -90,7 +90,7 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Source = bitmap;
         bitmap.UriSource = new Uri(path);
         await bitmapOpened;
-        ApplyProfile(_profile);
+        PrepareNextImageForTransition();
 
         bool hasCurrentImage = CurrentImage.Source is not null;
         if (!WallpaperTransitionPolicy.ShouldAnimate(_profile.Transition, _profile.TransitionDurationMs))
@@ -294,6 +294,14 @@ public sealed partial class WallpaperWindow : Window
         NextImage.Opacity = 0;
         NextImage.Source = null;
         ApplyImageLayout(NextImage, _nextTransform, _profile);
+    }
+
+    private void PrepareNextImageForTransition()
+    {
+        NextImage.Stretch = Stretch.Fill;
+        ApplyImageLayout(NextImage, _nextTransform, _profile);
+        _mediaPlayer.IsLoopingEnabled = _profile.VideoLoop;
+        ApplyMute(_profile);
     }
 
     private void ClearImageSources()

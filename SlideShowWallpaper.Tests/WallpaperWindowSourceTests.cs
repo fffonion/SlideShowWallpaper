@@ -40,6 +40,19 @@ public sealed class WallpaperWindowSourceTests
         Assert.DoesNotContain("ActualHeightOrFallback()", applyVideoLayout);
     }
 
+    [Fact]
+    public void ShowImageAsync_PreparesNextImageWithoutReapplyingCurrentImageProfile()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string showImageAsync = source[
+            source.IndexOf("public async Task ShowImageAsync", StringComparison.Ordinal)..
+            source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("PrepareNextImageForTransition();", showImageAsync);
+        Assert.DoesNotContain("ApplyProfile(_profile);", showImageAsync);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

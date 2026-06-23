@@ -227,7 +227,7 @@ public sealed partial class WallpaperPlaybackCoordinator
                     .Select(image => image.Path)
                     .ToArray();
             ReplaceQueue(profile, paths, preserveInitialOrder: true);
-            EnsureWindow(profile);
+            EnsureWindow(profile, applyProfile: false);
             ConfigureTimer(profile);
             if (_queues.TryGetValue(profile.Id, out PlaybackQueue? queue))
             {
