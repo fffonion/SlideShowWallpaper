@@ -254,7 +254,7 @@ public sealed partial class MainWindow
         _thumbnailCacheSizeProgress = null;
         _clearThumbnailCacheButton = null;
         _settingsUiUnloadedForBackground = true;
-        ProcessMemoryTrimmer.TrimCurrentProcess();
+        TrimBackgroundMemory();
     }
 
     private void EnsureSettingsUiLoaded()
@@ -266,5 +266,10 @@ public sealed partial class MainWindow
 
         _settingsUiUnloadedForBackground = false;
         RenderTabs(_selectedMonitorId);
+    }
+
+    private static void TrimBackgroundMemory()
+    {
+        ProcessMemoryTrimmer.TrimCurrentProcess();
     }
 }

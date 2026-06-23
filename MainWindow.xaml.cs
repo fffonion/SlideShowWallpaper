@@ -210,6 +210,10 @@ public sealed partial class MainWindow : Window
         ApplySettings();
         _currentImageCheckpointTimer.Start();
         _playbackStatusTimer.Start();
+        if (startInTray)
+        {
+            TrimBackgroundMemory();
+        }
     }
 
     private void HandleDisplayPowerPauseChanged(bool isPaused)
