@@ -2,6 +2,22 @@ namespace SlideShowWallpaper.Services;
 
 public static class PreviewPopupLayoutCalculator
 {
+    public static PreviewPopupSurfaceLayout CalculateSurface(
+        double sourceWidth,
+        double sourceHeight,
+        double landscapeWidth,
+        double landscapeHeight)
+    {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || landscapeWidth <= 0 || landscapeHeight <= 0)
+        {
+            return new PreviewPopupSurfaceLayout(Math.Max(1, landscapeWidth), Math.Max(1, landscapeHeight));
+        }
+
+        return sourceHeight > sourceWidth
+            ? new PreviewPopupSurfaceLayout(Math.Max(1, landscapeHeight), Math.Max(1, landscapeWidth))
+            : new PreviewPopupSurfaceLayout(Math.Max(1, landscapeWidth), Math.Max(1, landscapeHeight));
+    }
+
     public static PreviewPopupMediaLayout Calculate(
         double sourceWidth,
         double sourceHeight,
@@ -19,5 +35,7 @@ public static class PreviewPopupLayoutCalculator
             Math.Max(1, sourceHeight * scale));
     }
 }
+
+public readonly record struct PreviewPopupSurfaceLayout(double Width, double Height);
 
 public readonly record struct PreviewPopupMediaLayout(double Width, double Height);

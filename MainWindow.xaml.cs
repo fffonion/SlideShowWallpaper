@@ -115,6 +115,7 @@ public sealed partial class MainWindow : Window
     private Button? _clearThumbnailCacheButton;
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
     private Popup? _previewPopup;
+    private Border? _previewPopupSurface;
     private Microsoft.UI.Xaml.Controls.Image? _previewPopupImage;
     private Border? _previewPopupVideoFrame;
     private MediaPlayerElement? _previewPopupVideo;
@@ -130,6 +131,8 @@ public sealed partial class MainWindow : Window
     private bool _isSettingsSelected;
     private bool _settingsUiUnloadedForBackground;
     private bool _contentHeightAdjusted;
+    private double _previewPopupCurrentWidth = PreviewPopupWidth;
+    private double _previewPopupCurrentHeight = PreviewPopupHeight;
     private int _thumbnailCacheSizeLoadVersion;
 
     private sealed record MonitorNavigationVisuals(Border Surface, Border Indicator);

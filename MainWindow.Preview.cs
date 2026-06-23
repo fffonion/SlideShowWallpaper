@@ -12,6 +12,7 @@ using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using SlideShowWallpaper.ViewModels;
 using Windows.Foundation;
+using Windows.Graphics.Imaging;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
@@ -168,9 +169,11 @@ public sealed partial class MainWindow
             }
 
             EnsurePreviewPopup();
+            PreviewPopupMediaLayout mediaSize = await GetPreviewPopupMediaSizeAsync(item.Path, playbackPath, item.Metadata.Kind, cancellation.Token);
+            ConfigurePreviewPopupSurface(mediaSize.Width, mediaSize.Height);
             if (item.Metadata.Kind == MediaKind.Video)
             {
-                await ShowPreviewPopupVideoAsync(playbackPath, profile, cancellation.Token);
+                await ShowPreviewPopupVideoAsync(playbackPath, profile, mediaSize, cancellation.Token);
             }
             else
             {
@@ -253,7 +256,7 @@ public sealed partial class MainWindow
         content.Children.Add(_previewPopupImage);
         content.Children.Add(_previewPopupVideoFrame);
 
-        var surface = new Border
+        _previewPopupSurface = new Border
         {
             Width = PreviewPopupWidth,
             Height = PreviewPopupHeight,
@@ -267,12 +270,12 @@ public sealed partial class MainWindow
 
         _previewPopup = new Popup
         {
-            Child = surface,
+            Child = _previewPopupSurface,
             IsLightDismissEnabled = false,
         };
     }
 
-    private async Task ShowPreviewPopupVideoAsync(string playbackPath, MonitorProfile profile, CancellationToken cancellationToken)
+    private async Task ShowPreviewPopupVideoAsync(string playbackPath, MonitorProfile profile, PreviewPopupMediaLayout mediaSize, CancellationToken cancellationToken)
     {
         if (_previewPopupPlayer is null || _previewPopupVideo is null || _previewPopupImage is null)
         {
@@ -288,7 +291,7 @@ public sealed partial class MainWindow
         }
 
         _previewPopupVideo.Visibility = Visibility.Visible;
-        SetPreviewPopupVideoFrameSize(16, 9);
+        SetPreviewPopupVideoFrameSize(mediaSize.Width, mediaSize.Height);
         _previewPopupPlayer.IsLoopingEnabled = true;
         _previewPopupPlayer.IsMuted = PreviewPopupPolicy.ShouldMuteVideo(_viewModel.GlobalMute, profile);
         _previewPopupPlayer.Source = MediaSource.CreateFromStorageFile(file);
@@ -325,12 +328,12 @@ public sealed partial class MainWindow
         double rootWidth = Root.ActualWidth > 0 ? Root.ActualWidth : AppWindow.Size.Width;
         double rootHeight = Root.ActualHeight > 0 ? Root.ActualHeight : AppWindow.Size.Height;
         double x = anchorPoint.X + anchor.ActualWidth + PreviewPopupGap;
-        if (x + PreviewPopupWidth > rootWidth)
+        if (x + _previewPopupCurrentWidth > rootWidth)
         {
-            x = Math.Max(0, anchorPoint.X - PreviewPopupWidth - PreviewPopupGap);
+            x = Math.Max(0, anchorPoint.X - _previewPopupCurrentWidth - PreviewPopupGap);
         }
 
-        double y = Math.Clamp(anchorPoint.Y, 0, Math.Max(0, rootHeight - PreviewPopupHeight));
+        double y = Math.Clamp(anchorPoint.Y, 0, Math.Max(0, rootHeight - _previewPopupCurrentHeight));
         _previewPopup.HorizontalOffset = x;
         _previewPopup.VerticalOffset = y;
     }
@@ -347,7 +350,57 @@ public sealed partial class MainWindow
     {
         double width = sender.PlaybackSession.NaturalVideoWidth;
         double height = sender.PlaybackSession.NaturalVideoHeight;
-        _ = DispatcherQueue.TryEnqueue(() => SetPreviewPopupVideoFrameSize(width, height));
+        _ = DispatcherQueue.TryEnqueue(() =>
+        {
+            ConfigurePreviewPopupSurface(width, height);
+            SetPreviewPopupVideoFrameSize(width, height);
+            if (_previewPopupPendingContainer is not null)
+            {
+                PositionPreviewPopup(_previewPopupPendingContainer);
+            }
+        });
+    }
+
+    private static async Task<PreviewPopupMediaLayout> GetPreviewPopupMediaSizeAsync(
+        string sourcePath,
+        string playbackPath,
+        MediaKind kind,
+        CancellationToken cancellationToken)
+    {
+        if (NdfMediaService.TryGetMediaInfo(sourcePath, out NdfMediaInfo ndfInfo)
+            && ndfInfo.Width > 0
+            && ndfInfo.Height > 0)
+        {
+            return new PreviewPopupMediaLayout(ndfInfo.Width, ndfInfo.Height);
+        }
+
+        StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath).AsTask(cancellationToken);
+        if (kind == MediaKind.Video)
+        {
+            global::Windows.Storage.FileProperties.VideoProperties properties = await file.Properties.GetVideoPropertiesAsync().AsTask(cancellationToken);
+            return new PreviewPopupMediaLayout(properties.Width, properties.Height);
+        }
+
+        using global::Windows.Storage.Streams.IRandomAccessStream stream = await file.OpenReadAsync().AsTask(cancellationToken);
+        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream).AsTask(cancellationToken);
+        return new PreviewPopupMediaLayout(decoder.PixelWidth, decoder.PixelHeight);
+    }
+
+    private void ConfigurePreviewPopupSurface(double mediaWidth, double mediaHeight)
+    {
+        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(
+            mediaWidth,
+            mediaHeight,
+            PreviewPopupWidth,
+            PreviewPopupHeight);
+        _previewPopupCurrentWidth = layout.Width;
+        _previewPopupCurrentHeight = layout.Height;
+
+        if (_previewPopupSurface is not null)
+        {
+            _previewPopupSurface.Width = layout.Width;
+            _previewPopupSurface.Height = layout.Height;
+        }
     }
 
     private void SetPreviewPopupVideoFrameSize(double mediaWidth, double mediaHeight)
@@ -360,8 +413,8 @@ public sealed partial class MainWindow
         PreviewPopupMediaLayout layout = PreviewPopupLayoutCalculator.Calculate(
             mediaWidth,
             mediaHeight,
-            PreviewPopupWidth - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2),
-            PreviewPopupHeight - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2));
+            _previewPopupCurrentWidth - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2),
+            _previewPopupCurrentHeight - ((PreviewPopupPadding + PreviewPopupBorderThickness) * 2));
         _previewPopupVideoFrame.Width = layout.Width;
         _previewPopupVideoFrame.Height = layout.Height;
         _previewPopupVideoFrame.Clip = new RectangleGeometry
@@ -408,6 +461,8 @@ public sealed partial class MainWindow
         {
             _previewPopup.IsOpen = false;
         }
+
+        ConfigurePreviewPopupSurface(16, 9);
     }
 
     private void UpdatePreviewPopupMute()
@@ -437,6 +492,7 @@ public sealed partial class MainWindow
         _previewPopupVideoFrame = null;
         _previewPopupVideo = null;
         _previewPopupImage = null;
+        _previewPopupSurface = null;
         _previewPopup = null;
     }
 
