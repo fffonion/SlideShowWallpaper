@@ -53,6 +53,44 @@ public sealed class WallpaperWindowSourceTests
         Assert.DoesNotContain("ApplyProfile(_profile);", showImageAsync);
     }
 
+    [Fact]
+    public void ShowVideoAsync_GuardsAsyncSourceAssignmentWithRequestVersion()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string showVideoAsync = source[
+            source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)..
+            source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)];
+
+        Assert.Contains("int requestVersion = BeginMediaRequest();", showVideoAsync);
+        Assert.Contains("MediaPlayer player = ReplaceMediaPlayer(loop);", showVideoAsync);
+        Assert.Contains("!IsCurrentMediaRequest(requestVersion) || !ReferenceEquals(player, _mediaPlayer)", showVideoAsync);
+    }
+
+    [Fact]
+    public void WallpaperWindow_IgnoresEventsFromReplacedMediaPlayers()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+
+        Assert.Contains("if (!ReferenceEquals(sender, _mediaPlayer))", source);
+        Assert.Contains("if (IsCurrentMediaRequest(requestVersion) && _currentKind == MediaKind.Video && _currentImagePath == path)", source);
+    }
+
+    [Fact]
+    public void StopVideo_CancelsPendingRequestsAndClearsPlayerSource()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string stopVideo = source[
+            source.IndexOf("private void StopVideo", StringComparison.Ordinal)..
+            source.IndexOf("private void MediaPlayer_MediaEnded", StringComparison.Ordinal)];
+
+        Assert.Contains("CancelMediaRequest();", stopVideo);
+        Assert.Contains("ResetMediaPlayerSource(_mediaPlayer);", stopVideo);
+        Assert.Contains("VideoPlayer.Visibility = Visibility.Collapsed;", stopVideo);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

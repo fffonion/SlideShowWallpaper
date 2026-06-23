@@ -20,10 +20,12 @@ public sealed partial class WallpaperWindow : Window
     private readonly TranslateTransform _currentTransform = new();
     private readonly TranslateTransform _nextTransform = new();
     private readonly TranslateTransform _videoTransform = new();
-    private readonly MediaPlayer _mediaPlayer = new();
+    private MediaPlayer _mediaPlayer;
     private MonitorProfile _profile;
     private string _currentImagePath = string.Empty;
     private MediaKind _currentKind = MediaKind.Image;
+    private int _mediaRequestVersion;
+    private bool _isClosed;
     private bool _videoPausedByCoverage;
     private bool _forceMuted;
 
@@ -36,22 +38,17 @@ public sealed partial class WallpaperWindow : Window
         CurrentImage.RenderTransform = _currentTransform;
         NextImage.RenderTransform = _nextTransform;
         VideoPlayer.RenderTransform = _videoTransform;
-        _mediaPlayer.IsMuted = true;
-        _mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
-        _mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
-        _mediaPlayer.MediaOpened += MediaPlayer_MediaOpened;
+        _mediaPlayer = CreateMediaPlayer(profile.VideoLoop);
         VideoPlayer.SetMediaPlayer(_mediaPlayer);
         ConfigureWindow();
         ApplyProfile(profile);
         Root.SizeChanged += (_, _) => ApplyProfile(_profile);
         Closed += (_, _) =>
         {
+            _isClosed = true;
             StopVideo();
             ClearImageSources();
-            _mediaPlayer.MediaEnded -= MediaPlayer_MediaEnded;
-            _mediaPlayer.MediaFailed -= MediaPlayer_MediaFailed;
-            _mediaPlayer.MediaOpened -= MediaPlayer_MediaOpened;
-            _mediaPlayer.Dispose();
+            DisposeMediaPlayer(_mediaPlayer);
         };
     }
 
@@ -63,7 +60,7 @@ public sealed partial class WallpaperWindow : Window
         CurrentImage.Stretch = Stretch.Fill;
         NextImage.Stretch = Stretch.Fill;
         VideoPlayer.Stretch = Stretch.Fill;
-        _mediaPlayer.IsLoopingEnabled = profile.VideoLoop;
+        _mediaPlayer.IsLoopingEnabled = VideoPlaybackPolicy.ShouldLoopVideo(profile);
         ApplyMute(profile);
         ApplyImageLayout(CurrentImage, _currentTransform, profile);
         ApplyImageLayout(NextImage, _nextTransform, profile);
@@ -140,27 +137,38 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
+        int requestVersion = BeginMediaRequest();
+        MediaPlayer player = ReplaceMediaPlayer(loop);
         ClearImageSources();
         HideError();
         _currentKind = MediaKind.Video;
         _currentImagePath = path;
-        VideoPlayer.Visibility = Visibility.Visible;
+        VideoPlayer.Visibility = Visibility.Collapsed;
         try
         {
-            _mediaPlayer.IsLoopingEnabled = loop;
             StorageFile file = await StorageFile.GetFileFromPathAsync(path);
-            _mediaPlayer.Source = MediaSource.CreateFromStorageFile(file);
+            if (!IsCurrentMediaRequest(requestVersion) || !ReferenceEquals(player, _mediaPlayer))
+            {
+                ResetMediaPlayerSource(player);
+                return;
+            }
+
+            player.Source = MediaSource.CreateFromStorageFile(file);
+            VideoPlayer.Visibility = Visibility.Visible;
             ApplyProfile(_profile);
-            _mediaPlayer.Play();
+            player.Play();
             if (_videoPausedByCoverage)
             {
-                _mediaPlayer.Pause();
+                player.Pause();
             }
         }
         catch (Exception exception)
         {
             AppLog.Write(exception);
-            ShowVideoError(path, exception.Message);
+            if (IsCurrentMediaRequest(requestVersion))
+            {
+                ShowVideoError(path, exception.Message);
+            }
         }
     }
 
@@ -312,59 +320,68 @@ public sealed partial class WallpaperWindow : Window
 
     private void StopVideo()
     {
-        try
-        {
-            if (VideoPlayer.Visibility == Visibility.Visible)
-            {
-                _mediaPlayer.Pause();
-            }
-
-            _mediaPlayer.Source = null;
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-        }
-
+        CancelMediaRequest();
+        ResetMediaPlayerSource(_mediaPlayer);
         VideoPlayer.Visibility = Visibility.Collapsed;
         _currentKind = MediaKind.Image;
     }
 
     private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
     {
-        NotifyVideoEnded();
+        if (!ReferenceEquals(sender, _mediaPlayer))
+        {
+            return;
+        }
+
+        int requestVersion = _mediaRequestVersion;
+        DispatcherQueue.TryEnqueue(() => NotifyVideoEnded(requestVersion));
     }
 
     private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
     {
+        if (!ReferenceEquals(sender, _mediaPlayer))
+        {
+            return;
+        }
+
+        int requestVersion = _mediaRequestVersion;
+        string path = _currentImagePath;
         string errorMessage = string.IsNullOrWhiteSpace(args.ErrorMessage)
             ? args.Error.ToString()
             : $"{args.Error}: {args.ErrorMessage}";
         AppLog.Write($"Media failed: {errorMessage}");
-        DispatcherQueue.TryEnqueue(() => ShowVideoError(_currentImagePath, errorMessage));
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (IsCurrentMediaRequest(requestVersion) && _currentKind == MediaKind.Video && _currentImagePath == path)
+            {
+                ShowVideoError(path, errorMessage);
+            }
+        });
     }
 
     private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
     {
+        if (!ReferenceEquals(sender, _mediaPlayer))
+        {
+            return;
+        }
+
+        int requestVersion = _mediaRequestVersion;
+        string path = _currentImagePath;
         DispatcherQueue.TryEnqueue(() =>
         {
-            HideError();
-            ApplyVideoLayout(_profile);
+            if (IsCurrentMediaRequest(requestVersion) && _currentKind == MediaKind.Video && _currentImagePath == path)
+            {
+                HideError();
+                ApplyVideoLayout(_profile);
+            }
         });
     }
 
     private void ShowVideoError(string path, string message)
     {
-        try
-        {
-            _mediaPlayer.Pause();
-            _mediaPlayer.Source = null;
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-        }
-
+        CancelMediaRequest();
+        ResetMediaPlayerSource(_mediaPlayer);
         VideoPlayer.Visibility = Visibility.Collapsed;
         ErrorTitleText.Text = LocalizedStrings.Get("VideoPlaybackErrorTitle");
         ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", Path.GetFileName(path), message);
@@ -378,14 +395,14 @@ public sealed partial class WallpaperWindow : Window
         ErrorDetailText.Text = string.Empty;
     }
 
-    private void NotifyVideoEnded()
+    private void NotifyVideoEnded(int requestVersion)
     {
-        if (_currentKind != MediaKind.Video || _profile.VideoLoop)
+        if (!IsCurrentMediaRequest(requestVersion) || _currentKind != MediaKind.Video || VideoPlaybackPolicy.ShouldLoopVideo(_profile))
         {
             return;
         }
 
-        DispatcherQueue.TryEnqueue(() => VideoEnded?.Invoke(this, EventArgs.Empty));
+        VideoEnded?.Invoke(this, EventArgs.Empty);
     }
 
     private static void ApplyImageProfile(Microsoft.UI.Xaml.Controls.Image image, TranslateTransform transform, MonitorProfile profile)
@@ -419,8 +436,18 @@ public sealed partial class WallpaperWindow : Window
 
     private void ApplyVideoLayout(MonitorProfile profile)
     {
+        if (_currentKind != MediaKind.Video || VideoPlayer.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
         double sourceWidth = _mediaPlayer.PlaybackSession.NaturalVideoWidth;
         double sourceHeight = _mediaPlayer.PlaybackSession.NaturalVideoHeight;
+        if (sourceWidth <= 0 || sourceHeight <= 0)
+        {
+            return;
+        }
+
         WallpaperElementLayout layout = WallpaperLayoutCalculator.Calculate(
             sourceWidth,
             sourceHeight,
@@ -435,6 +462,74 @@ public sealed partial class WallpaperWindow : Window
         Canvas.SetTop(VideoPlayer, layout.OffsetY);
         _videoTransform.X = 0;
         _videoTransform.Y = 0;
+    }
+
+    private int BeginMediaRequest()
+    {
+        return ++_mediaRequestVersion;
+    }
+
+    private void CancelMediaRequest()
+    {
+        _mediaRequestVersion++;
+    }
+
+    private bool IsCurrentMediaRequest(int requestVersion)
+    {
+        return !_isClosed && requestVersion == _mediaRequestVersion;
+    }
+
+    private MediaPlayer ReplaceMediaPlayer(bool loop)
+    {
+        MediaPlayer previousPlayer = _mediaPlayer;
+        DetachMediaPlayerEvents(previousPlayer);
+        ResetMediaPlayerSource(previousPlayer);
+
+        var nextPlayer = CreateMediaPlayer(loop);
+        _mediaPlayer = nextPlayer;
+        VideoPlayer.SetMediaPlayer(nextPlayer);
+        DisposeMediaPlayer(previousPlayer);
+        return nextPlayer;
+    }
+
+    private MediaPlayer CreateMediaPlayer(bool loop)
+    {
+        var player = new MediaPlayer
+        {
+            IsLoopingEnabled = loop,
+            IsMuted = _forceMuted || !_profile.VideoSoundEnabled,
+        };
+        player.MediaEnded += MediaPlayer_MediaEnded;
+        player.MediaFailed += MediaPlayer_MediaFailed;
+        player.MediaOpened += MediaPlayer_MediaOpened;
+        return player;
+    }
+
+    private void DetachMediaPlayerEvents(MediaPlayer player)
+    {
+        player.MediaEnded -= MediaPlayer_MediaEnded;
+        player.MediaFailed -= MediaPlayer_MediaFailed;
+        player.MediaOpened -= MediaPlayer_MediaOpened;
+    }
+
+    private static void ResetMediaPlayerSource(MediaPlayer player)
+    {
+        try
+        {
+            player.Pause();
+            player.Source = null;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private void DisposeMediaPlayer(MediaPlayer player)
+    {
+        DetachMediaPlayerEvents(player);
+        ResetMediaPlayerSource(player);
+        player.Dispose();
     }
 
     private DoubleAnimation CreateOpacityAnimation(UIElement target, double from, double to)
