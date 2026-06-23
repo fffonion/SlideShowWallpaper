@@ -68,6 +68,20 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
+    public void ShowVideoAsync_UsesSequentialPlaybackSourceInsteadOfStorageFileSource()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string showVideoAsync = source[
+            source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)..
+            source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)];
+
+        Assert.Contains("VideoPlaybackSource.Open(path)", showVideoAsync);
+        Assert.DoesNotContain("MediaSource.CreateFromStorageFile", showVideoAsync);
+        Assert.DoesNotContain("StorageFile.GetFileFromPathAsync", showVideoAsync);
+    }
+
+    [Fact]
     public void WallpaperWindow_IgnoresEventsFromReplacedMediaPlayers()
     {
         string root = FindProjectRoot();

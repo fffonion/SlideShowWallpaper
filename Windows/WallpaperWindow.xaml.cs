@@ -8,9 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
-using Windows.Media.Core;
 using Windows.Media.Playback;
-using Windows.Storage;
 using WinRT.Interop;
 
 namespace SlideShowWallpaper.Windows;
@@ -25,6 +23,7 @@ public sealed partial class WallpaperWindow : Window
     private string _currentImagePath = string.Empty;
     private MediaKind _currentKind = MediaKind.Image;
     private int _mediaRequestVersion;
+    private VideoPlaybackSource? _videoPlaybackSource;
     private bool _isClosed;
     private bool _videoPausedByCoverage;
     private bool _forceMuted;
@@ -139,21 +138,27 @@ public sealed partial class WallpaperWindow : Window
 
         int requestVersion = BeginMediaRequest();
         MediaPlayer player = ReplaceMediaPlayer(loop);
+        DisposeVideoPlaybackSource();
         ClearImageSources();
         HideError();
         _currentKind = MediaKind.Video;
         _currentImagePath = path;
         VideoPlayer.Visibility = Visibility.Collapsed;
+        VideoPlaybackSource? playbackSource = null;
         try
         {
-            StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+            await Task.Yield();
+            playbackSource = VideoPlaybackSource.Open(path);
             if (!IsCurrentMediaRequest(requestVersion) || !ReferenceEquals(player, _mediaPlayer))
             {
+                playbackSource.Dispose();
                 ResetMediaPlayerSource(player);
                 return;
             }
 
-            player.Source = MediaSource.CreateFromStorageFile(file);
+            player.Source = playbackSource.MediaSource;
+            _videoPlaybackSource = playbackSource;
+            playbackSource = null;
             VideoPlayer.Visibility = Visibility.Visible;
             ApplyProfile(_profile);
             player.Play();
@@ -164,6 +169,7 @@ public sealed partial class WallpaperWindow : Window
         }
         catch (Exception exception)
         {
+            playbackSource?.Dispose();
             AppLog.Write(exception);
             if (IsCurrentMediaRequest(requestVersion))
             {
@@ -322,6 +328,7 @@ public sealed partial class WallpaperWindow : Window
     {
         CancelMediaRequest();
         ResetMediaPlayerSource(_mediaPlayer);
+        DisposeVideoPlaybackSource();
         VideoPlayer.Visibility = Visibility.Collapsed;
         _currentKind = MediaKind.Image;
     }
@@ -382,6 +389,7 @@ public sealed partial class WallpaperWindow : Window
     {
         CancelMediaRequest();
         ResetMediaPlayerSource(_mediaPlayer);
+        DisposeVideoPlaybackSource();
         VideoPlayer.Visibility = Visibility.Collapsed;
         ErrorTitleText.Text = LocalizedStrings.Get("VideoPlaybackErrorTitle");
         ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", Path.GetFileName(path), message);
@@ -530,6 +538,27 @@ public sealed partial class WallpaperWindow : Window
         DetachMediaPlayerEvents(player);
         ResetMediaPlayerSource(player);
         player.Dispose();
+    }
+
+    private void DisposeVideoPlaybackSource()
+    {
+        if (_videoPlaybackSource is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _videoPlaybackSource.Dispose();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+        finally
+        {
+            _videoPlaybackSource = null;
+        }
     }
 
     private DoubleAnimation CreateOpacityAnimation(UIElement target, double from, double to)
