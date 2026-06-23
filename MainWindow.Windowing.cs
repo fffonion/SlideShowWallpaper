@@ -154,7 +154,7 @@ public sealed partial class MainWindow
         const int contentBottomPadding = 24;
         return titleBarHeight
             + contentTopPadding
-            + EstimateSettingsSectionHeight(true, 7)
+            + EstimateSettingsSectionHeight(true, 8)
             + contentBottomPadding;
     }
 

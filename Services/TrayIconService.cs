@@ -16,6 +16,7 @@ public sealed class TrayIconService : IDisposable
     private readonly Action<bool> _minimizedChanged;
     private readonly Func<IReadOnlyList<MonitorProfile>> _profiles;
     private readonly NativeMethods.WindowProc _windowProc;
+    private readonly DisplayPowerPauseService? _displayPowerPauseService;
     private IntPtr _previousWindowProc;
     private IntPtr _iconHandle;
     private bool _disposed;
@@ -28,7 +29,8 @@ public sealed class TrayIconService : IDisposable
         Action<string> next,
         Action<string> togglePause,
         Action<string> toggleStop,
-        Action<bool>? minimizedChanged = null)
+        Action<bool>? minimizedChanged = null,
+        Action<bool>? displayPowerPauseChanged = null)
     {
         _windowHandle = windowHandle;
         _profiles = profiles;
@@ -40,6 +42,11 @@ public sealed class TrayIconService : IDisposable
         _minimizedChanged = minimizedChanged ?? (_ => { });
         _windowProc = WndProc;
         _previousWindowProc = NativeMethods.SetWindowLongPtr(_windowHandle, NativeMethods.GWL_WNDPROC, _windowProc);
+        if (displayPowerPauseChanged is not null)
+        {
+            _displayPowerPauseService = new DisplayPowerPauseService(_windowHandle, displayPowerPauseChanged);
+        }
+
         AddIcon();
     }
 
@@ -58,6 +65,7 @@ public sealed class TrayIconService : IDisposable
             _iconHandle = IntPtr.Zero;
         }
 
+        _displayPowerPauseService?.Dispose();
         _disposed = true;
     }
 
@@ -90,6 +98,11 @@ public sealed class TrayIconService : IDisposable
             {
                 _minimizedChanged(false);
             }
+        }
+
+        if (msg == NativeMethods.WM_POWERBROADCAST)
+        {
+            _displayPowerPauseService?.HandlePowerBroadcast(wParam, lParam);
         }
 
         if (msg == NativeMethods.WM_DESTROY)

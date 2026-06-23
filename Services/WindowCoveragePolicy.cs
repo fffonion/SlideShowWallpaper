@@ -7,8 +7,18 @@ public static class WindowCoveragePolicy
     private const double FullscreenCoverageRatio = 0.95;
     private const double MaximizedCoverageRatio = 0.5;
 
-    public static bool ShouldPauseVideo(ForegroundWindowInfo? foregroundWindow, NativeMethods.RECT monitorRect, int currentProcessId)
+    public static bool ShouldPauseVideo(
+        ForegroundWindowInfo? foregroundWindow,
+        NativeMethods.RECT monitorRect,
+        int currentProcessId,
+        bool pauseWhenDisplayOffOrSleeping = false,
+        bool isDisplayOffOrSleeping = false)
     {
+        if (pauseWhenDisplayOffOrSleeping && isDisplayOffOrSleeping)
+        {
+            return true;
+        }
+
         if (foregroundWindow is null
             || foregroundWindow.Hwnd == IntPtr.Zero
             || foregroundWindow.ProcessId == currentProcessId

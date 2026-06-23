@@ -168,10 +168,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
 
         _videoCoverageTimer.Stop();
-        foreach (WallpaperWindow window in _windows.Values)
-        {
-            window.SetVideoPausedByCoverage(false);
-        }
+        ApplyVideoCoverageState();
     }
 
     private void ApplyVideoCoverageState()
@@ -185,10 +182,14 @@ public sealed partial class WallpaperPlaybackCoordinator
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
-                && profile.PauseVideoWhenOtherAppMaximized
                 && !profile.IsStopped
                 && _monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
-                && WindowCoveragePolicy.ShouldPauseVideo(foregroundWindow, monitorRect, Environment.ProcessId);
+                && WindowCoveragePolicy.ShouldPauseVideo(
+                    profile.PauseVideoWhenOtherAppMaximized ? foregroundWindow : null,
+                    monitorRect,
+                    Environment.ProcessId,
+                    _pauseVideoWhenDisplayOffOrSleeping,
+                    _isDisplayOffOrSleeping);
             window.SetVideoPausedByCoverage(shouldPause);
         }
     }

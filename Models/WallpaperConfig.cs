@@ -74,6 +74,8 @@ public sealed class WallpaperConfig
 
     public bool ThumbnailCacheEnabled { get; set; } = true;
 
+    public bool PauseVideoWhenDisplayOffOrSleeping { get; set; } = true;
+
     public int PreviewPopupDelaySeconds { get; set; } = DefaultPreviewPopupDelaySeconds;
 
     public List<MonitorProfile> Monitors { get; set; } = [];

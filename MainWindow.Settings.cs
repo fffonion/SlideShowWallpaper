@@ -39,6 +39,10 @@ public sealed partial class MainWindow
             new SettingsRow(LocalizedStrings.Get("AppSettingAutoTrackNewFiles"), CreateCheckBox(_viewModel.AutoTrackNewFiles, value => _viewModel.AutoTrackNewFiles = value, LocalizedStrings.Get("AppSettingAutoTrackNewFiles"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingGlobalMute"), CreateCheckBox(_viewModel.GlobalMute, value => _viewModel.GlobalMute = value, LocalizedStrings.Get("AppSettingGlobalMute"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingThumbnailCache"), CreateCheckBox(_viewModel.ThumbnailCacheEnabled, SetThumbnailCacheEnabled, LocalizedStrings.Get("AppSettingThumbnailCache"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingPauseVideoWhenDisplayOffOrSleeping"), CreateCheckBox(
+                _viewModel.PauseVideoWhenDisplayOffOrSleeping,
+                value => _viewModel.PauseVideoWhenDisplayOffOrSleeping = value,
+                LocalizedStrings.Get("AppSettingPauseVideoWhenDisplayOffOrSleeping"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingVideoPreviewDelay"), CreateNumberBox(
                 _viewModel.PreviewPopupDelaySeconds,
                 value =>

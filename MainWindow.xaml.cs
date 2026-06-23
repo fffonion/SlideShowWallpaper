@@ -179,7 +179,8 @@ public sealed partial class MainWindow : Window
             NextFromTray,
             TogglePauseFromTray,
             ToggleStopFromTray,
-            HandleWindowMinimizedChanged);
+            HandleWindowMinimizedChanged,
+            HandleDisplayPowerPauseChanged);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
         Root.Loaded += Root_Loaded;
@@ -196,6 +197,11 @@ public sealed partial class MainWindow : Window
         ApplySettings();
         _currentImageCheckpointTimer.Start();
         _playbackStatusTimer.Start();
+    }
+
+    private void HandleDisplayPowerPauseChanged(bool isPaused)
+    {
+        _coordinator.SetDisplayPowerVideoPause(isPaused);
     }
 
     private MonitorProfile? SelectedProfile => _viewModel.Profiles.FirstOrDefault(profile => string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase))
@@ -230,6 +236,7 @@ public sealed partial class MainWindow : Window
         _viewModel.AutoTrackNewFiles = config.AutoTrackNewFiles;
         _viewModel.GlobalMute = config.GlobalMute;
         _viewModel.ThumbnailCacheEnabled = config.ThumbnailCacheEnabled;
+        _viewModel.PauseVideoWhenDisplayOffOrSleeping = config.PauseVideoWhenDisplayOffOrSleeping;
         _viewModel.PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, config.PreviewPopupDelaySeconds);
         ApplyTheme(_viewModel.ThemeMode);
     }

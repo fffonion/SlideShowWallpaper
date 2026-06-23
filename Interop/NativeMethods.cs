@@ -33,8 +33,14 @@ public static partial class NativeMethods
     internal const int WM_DISPLAYCHANGE = 0x007E;
     internal const int WM_DESTROY = 0x0002;
     internal const int WM_LBUTTONUP = 0x0202;
+    internal const int WM_POWERBROADCAST = 0x0218;
     internal const int WM_RBUTTONUP = 0x0205;
     internal const int WM_SIZE = 0x0005;
+    internal const uint PBT_APMRESUMEAUTOMATIC = 0x0012;
+    internal const uint PBT_APMRESUMESUSPEND = 0x0007;
+    internal const uint PBT_APMSUSPEND = 0x0004;
+    internal const uint PBT_POWERSETTINGCHANGE = 0x8013;
+    internal const int DEVICE_NOTIFY_WINDOW_HANDLE = 0;
     internal const int SIZE_RESTORED = 0;
     internal const int SIZE_MINIMIZED = 1;
     internal const int SIZE_MAXIMIZED = 2;
@@ -140,6 +146,12 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr RegisterPowerSettingNotification(IntPtr hRecipient, ref Guid powerSettingGuid, int flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool UnregisterPowerSettingNotification(IntPtr handle);
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr CreatePopupMenu();
@@ -313,5 +325,12 @@ public static partial class NativeMethods
         public uint dwInfoFlags;
         public Guid guidItem;
         public IntPtr hBalloonIcon;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct POWERBROADCAST_SETTING
+    {
+        public Guid PowerSetting;
+        public uint DataLength;
     }
 }

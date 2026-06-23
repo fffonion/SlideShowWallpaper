@@ -25,7 +25,12 @@ public sealed partial class MainWindow
         _settingsApplyTimer.Stop();
         WallpaperConfig config = CreateConfig();
         _settingsStore.Save(config);
-        _coordinator.ApplyProfiles(config.Monitors, config.PlaybackEnabled, config.AutoTrackNewFiles, config.GlobalMute);
+        _coordinator.ApplyProfiles(
+            config.Monitors,
+            config.PlaybackEnabled,
+            config.AutoTrackNewFiles,
+            config.GlobalMute,
+            config.PauseVideoWhenDisplayOffOrSleeping);
         UpdatePreviewPopupMute();
     }
 
@@ -48,6 +53,7 @@ public sealed partial class MainWindow
             AutoTrackNewFiles = _viewModel.AutoTrackNewFiles,
             GlobalMute = _viewModel.GlobalMute,
             ThumbnailCacheEnabled = _viewModel.ThumbnailCacheEnabled,
+            PauseVideoWhenDisplayOffOrSleeping = _viewModel.PauseVideoWhenDisplayOffOrSleeping,
             PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, _viewModel.PreviewPopupDelaySeconds),
             Monitors = _viewModel.Profiles.ToList(),
         };

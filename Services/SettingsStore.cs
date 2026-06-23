@@ -41,6 +41,7 @@ public sealed class SettingsStore
                 AutoTrackNewFiles = GetBool(sections, "Settings", nameof(WallpaperConfig.AutoTrackNewFiles), true),
                 GlobalMute = GetBool(sections, "Settings", nameof(WallpaperConfig.GlobalMute), true),
                 ThumbnailCacheEnabled = GetBool(sections, "Settings", nameof(WallpaperConfig.ThumbnailCacheEnabled), true),
+                PauseVideoWhenDisplayOffOrSleeping = GetBool(sections, "Settings", nameof(WallpaperConfig.PauseVideoWhenDisplayOffOrSleeping), true),
                 PreviewPopupDelaySeconds = GetInt(sections, "Settings", nameof(WallpaperConfig.PreviewPopupDelaySeconds), WallpaperConfig.DefaultPreviewPopupDelaySeconds),
             };
 
@@ -104,6 +105,7 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(WallpaperConfig.AutoTrackNewFiles), config.AutoTrackNewFiles);
         AppendValue(builder, nameof(WallpaperConfig.GlobalMute), config.GlobalMute);
         AppendValue(builder, nameof(WallpaperConfig.ThumbnailCacheEnabled), config.ThumbnailCacheEnabled);
+        AppendValue(builder, nameof(WallpaperConfig.PauseVideoWhenDisplayOffOrSleeping), config.PauseVideoWhenDisplayOffOrSleeping);
         AppendValue(builder, nameof(WallpaperConfig.PreviewPopupDelaySeconds), Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, config.PreviewPopupDelaySeconds));
         AppendValue(builder, "MonitorCount", config.Monitors.Count);
 

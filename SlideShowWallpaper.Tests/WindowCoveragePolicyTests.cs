@@ -64,4 +64,34 @@ public sealed class WindowCoveragePolicyTests
 
         Assert.False(result);
     }
+
+    [Fact]
+    public void ShouldPauseVideo_WithDisplayPowerPauseEnabled_ReturnsTrue()
+    {
+        var monitor = new NativeMethods.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+
+        bool result = WindowCoveragePolicy.ShouldPauseVideo(
+            foregroundWindow: null,
+            monitor,
+            Environment.ProcessId,
+            pauseWhenDisplayOffOrSleeping: true,
+            isDisplayOffOrSleeping: true);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldPauseVideo_WithDisplayPowerPauseDisabled_ReturnsFalse()
+    {
+        var monitor = new NativeMethods.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+
+        bool result = WindowCoveragePolicy.ShouldPauseVideo(
+            foregroundWindow: null,
+            monitor,
+            Environment.ProcessId,
+            pauseWhenDisplayOffOrSleeping: false,
+            isDisplayOffOrSleeping: true);
+
+        Assert.False(result);
+    }
 }

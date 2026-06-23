@@ -23,6 +23,8 @@ public sealed class MainViewModel
 
     public bool ThumbnailCacheEnabled { get; set; } = true;
 
+    public bool PauseVideoWhenDisplayOffOrSleeping { get; set; } = true;
+
     public int PreviewPopupDelaySeconds { get; set; } = WallpaperConfig.DefaultPreviewPopupDelaySeconds;
 
     public IReadOnlyList<MonitorProfile> Profiles => Monitors.Select(monitor => monitor.Profile).ToArray();

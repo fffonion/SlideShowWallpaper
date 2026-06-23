@@ -23,6 +23,8 @@ public sealed partial class WallpaperPlaybackCoordinator
     private bool _playbackEnabled = true;
     private bool _autoTrackNewFiles = true;
     private bool _globalMute = true;
+    private bool _pauseVideoWhenDisplayOffOrSleeping = true;
+    private bool _isDisplayOffOrSleeping;
 
     public WallpaperPlaybackCoordinator(
         MonitorService monitorService,
@@ -51,12 +53,18 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     public event EventHandler<CurrentWallpaperChangedEventArgs>? CurrentWallpaperChanged;
 
-    public void ApplyProfiles(IReadOnlyList<MonitorProfile> profiles, bool playbackEnabled, bool autoTrackNewFiles = true, bool globalMute = true)
+    public void ApplyProfiles(
+        IReadOnlyList<MonitorProfile> profiles,
+        bool playbackEnabled,
+        bool autoTrackNewFiles = true,
+        bool globalMute = true,
+        bool pauseVideoWhenDisplayOffOrSleeping = true)
     {
         bool globalMuteChanged = _globalMute != globalMute;
         _playbackEnabled = playbackEnabled;
         _autoTrackNewFiles = autoTrackNewFiles;
         _globalMute = globalMute;
+        _pauseVideoWhenDisplayOffOrSleeping = pauseVideoWhenDisplayOffOrSleeping;
         if (!_playbackEnabled)
         {
             StopPlayback();
@@ -137,6 +145,17 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
 
         ConfigureVideoCoverageTimer();
+        ApplyVideoCoverageState();
+    }
+
+    public void SetDisplayPowerVideoPause(bool isPaused)
+    {
+        if (_isDisplayOffOrSleeping == isPaused)
+        {
+            return;
+        }
+
+        _isDisplayOffOrSleeping = isPaused;
         ApplyVideoCoverageState();
     }
 
