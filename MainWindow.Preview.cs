@@ -392,7 +392,9 @@ public sealed partial class MainWindow
             mediaWidth,
             mediaHeight,
             PreviewPopupWidth,
-            PreviewPopupHeight);
+            PreviewPopupHeight,
+            PreviewPopupPortraitWidth,
+            PreviewPopupPortraitHeight);
         _previewPopupCurrentWidth = layout.Width;
         _previewPopupCurrentHeight = layout.Height;
 

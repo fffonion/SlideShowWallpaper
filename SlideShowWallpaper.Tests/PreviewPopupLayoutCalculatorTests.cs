@@ -7,7 +7,7 @@ public sealed class PreviewPopupLayoutCalculatorTests
     [Fact]
     public void CalculateSurface_WithLandscapeMedia_UsesLandscapePopup()
     {
-        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(1920, 1080, 420, 260);
+        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(1920, 1080, 420, 260, 300, 420);
 
         Assert.Equal(420, layout.Width, 2);
         Assert.Equal(260, layout.Height, 2);
@@ -16,16 +16,16 @@ public sealed class PreviewPopupLayoutCalculatorTests
     [Fact]
     public void CalculateSurface_WithPortraitMedia_UsesPortraitPopup()
     {
-        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(1080, 1920, 420, 260);
+        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(1080, 1920, 420, 260, 300, 420);
 
-        Assert.Equal(260, layout.Width, 2);
+        Assert.Equal(300, layout.Width, 2);
         Assert.Equal(420, layout.Height, 2);
     }
 
     [Fact]
     public void CalculateSurface_WithUnknownMediaSize_UsesLandscapePopup()
     {
-        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(0, 0, 420, 260);
+        PreviewPopupSurfaceLayout layout = PreviewPopupLayoutCalculator.CalculateSurface(0, 0, 420, 260, 300, 420);
 
         Assert.Equal(420, layout.Width, 2);
         Assert.Equal(260, layout.Height, 2);

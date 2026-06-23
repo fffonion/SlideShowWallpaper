@@ -30,6 +30,8 @@ public sealed partial class MainWindow : Window
     private const double MaximumPreviewPaneWidth = 520;
     private const double PreviewPopupWidth = 420;
     private const double PreviewPopupHeight = 260;
+    private const double PreviewPopupPortraitWidth = 300;
+    private const double PreviewPopupPortraitHeight = 420;
     private const double PreviewPopupPadding = 8;
     private const double PreviewPopupBorderThickness = 1;
     private const double PreviewPopupGap = 8;

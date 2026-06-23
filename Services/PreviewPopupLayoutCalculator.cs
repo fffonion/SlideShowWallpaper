@@ -6,15 +6,22 @@ public static class PreviewPopupLayoutCalculator
         double sourceWidth,
         double sourceHeight,
         double landscapeWidth,
-        double landscapeHeight)
+        double landscapeHeight,
+        double portraitWidth,
+        double portraitHeight)
     {
-        if (sourceWidth <= 0 || sourceHeight <= 0 || landscapeWidth <= 0 || landscapeHeight <= 0)
+        if (sourceWidth <= 0
+            || sourceHeight <= 0
+            || landscapeWidth <= 0
+            || landscapeHeight <= 0
+            || portraitWidth <= 0
+            || portraitHeight <= 0)
         {
             return new PreviewPopupSurfaceLayout(Math.Max(1, landscapeWidth), Math.Max(1, landscapeHeight));
         }
 
         return sourceHeight > sourceWidth
-            ? new PreviewPopupSurfaceLayout(Math.Max(1, landscapeHeight), Math.Max(1, landscapeWidth))
+            ? new PreviewPopupSurfaceLayout(Math.Max(1, portraitWidth), Math.Max(1, portraitHeight))
             : new PreviewPopupSurfaceLayout(Math.Max(1, landscapeWidth), Math.Max(1, landscapeHeight));
     }
 
