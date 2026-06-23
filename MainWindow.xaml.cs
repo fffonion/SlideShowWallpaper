@@ -112,13 +112,14 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly DispatcherQueueTimer _previewPopupTimer;
-    private readonly DispatcherQueueTimer _backgroundMemoryTrimTimer;
+    private readonly object _backgroundMemoryTrimLock = new();
     private readonly IntPtr _hwnd;
     private readonly bool _disableCloseToTray;
     private TextBlock? _thumbnailCacheSizeText;
     private ProgressRing? _thumbnailCacheSizeProgress;
     private Button? _clearThumbnailCacheButton;
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
+    private CancellationTokenSource? _backgroundMemoryTrimCancellation;
     private Popup? _previewPopup;
     private Border? _previewPopupSurface;
     private Microsoft.UI.Xaml.Controls.Image? _previewPopupImage;
@@ -180,10 +181,6 @@ public sealed partial class MainWindow : Window
         _previewPopupTimer.Interval = PreviewPopupPolicy.GetHoverDelay(_viewModel.PreviewPopupDelaySeconds);
         _previewPopupTimer.IsRepeating = false;
         _previewPopupTimer.Tick += PreviewPopupTimer_Tick;
-        _backgroundMemoryTrimTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
-        _backgroundMemoryTrimTimer.Interval = BackgroundStartupTrimDelay;
-        _backgroundMemoryTrimTimer.IsRepeating = false;
-        _backgroundMemoryTrimTimer.Tick += (_, _) => RunPendingBackgroundStartupTrim();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);

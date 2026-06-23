@@ -260,7 +260,7 @@ public sealed partial class MainWindow
     private void EnsureSettingsUiLoaded()
     {
         _backgroundStartupTrimPending = false;
-        _backgroundMemoryTrimTimer.Stop();
+        CancelBackgroundMemoryTrim();
         if (!_settingsUiUnloadedForBackground && MonitorNavigationPanel.Children.Count > 0)
         {
             return;
@@ -277,19 +277,77 @@ public sealed partial class MainWindow
 
     private void ScheduleBackgroundMemoryTrim(TimeSpan delay)
     {
-        _backgroundMemoryTrimTimer.Stop();
-        _backgroundMemoryTrimTimer.Interval = delay;
-        _backgroundMemoryTrimTimer.Start();
+        CancellationTokenSource cancellation = new();
+        CancellationTokenSource? previousCancellation;
+        lock (_backgroundMemoryTrimLock)
+        {
+            previousCancellation = _backgroundMemoryTrimCancellation;
+            _backgroundMemoryTrimCancellation = cancellation;
+        }
+
+        previousCancellation?.Cancel();
+        previousCancellation?.Dispose();
+        AppLog.Write($"Background startup memory trim scheduled after {delay.TotalSeconds:0.###}s.");
+        _ = RunBackgroundMemoryTrimAfterDelayAsync(delay, cancellation);
+    }
+
+    private void CancelBackgroundMemoryTrim()
+    {
+        CancellationTokenSource? cancellation;
+        lock (_backgroundMemoryTrimLock)
+        {
+            cancellation = _backgroundMemoryTrimCancellation;
+            _backgroundMemoryTrimCancellation = null;
+        }
+
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        cancellation.Cancel();
+        cancellation.Dispose();
+    }
+
+    private async Task RunBackgroundMemoryTrimAfterDelayAsync(TimeSpan delay, CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(delay, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            return;
+        }
+
+        lock (_backgroundMemoryTrimLock)
+        {
+            if (!ReferenceEquals(_backgroundMemoryTrimCancellation, cancellation))
+            {
+                return;
+            }
+
+            _backgroundMemoryTrimCancellation = null;
+            cancellation.Dispose();
+        }
+
+        RunPendingBackgroundStartupTrim();
     }
 
     private void RunPendingBackgroundStartupTrim()
     {
-        if (!_backgroundStartupTrimPending || !_settingsUiUnloadedForBackground)
+        if (!_backgroundStartupTrimPending)
         {
             return;
         }
 
         _backgroundStartupTrimPending = false;
+        AppLog.Write("Background startup memory trim executed.");
         TrimBackgroundMemory();
     }
 }

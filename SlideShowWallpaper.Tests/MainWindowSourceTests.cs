@@ -56,7 +56,34 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private static void TrimBackgroundMemory", StringComparison.Ordinal)];
 
         Assert.Contains("_backgroundStartupTrimPending = false;", method);
-        Assert.Contains("_backgroundMemoryTrimTimer.Stop();", method);
+        Assert.Contains("CancelBackgroundMemoryTrim();", method);
+    }
+
+    [Fact]
+    public void ScheduleBackgroundMemoryTrim_UsesBackgroundDelayInsteadOfDispatcherTimer()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsState.cs"));
+        string method = source[
+            source.IndexOf("private void ScheduleBackgroundMemoryTrim", StringComparison.Ordinal)..
+            source.IndexOf("private void RunPendingBackgroundStartupTrim", StringComparison.Ordinal)];
+
+        Assert.Contains("RunBackgroundMemoryTrimAfterDelayAsync(delay, cancellation)", method);
+        Assert.Contains("Task.Delay(delay, cancellation.Token).ConfigureAwait(false)", method);
+        Assert.DoesNotContain("_backgroundMemoryTrimTimer", source);
+        Assert.DoesNotContain("DispatcherQueue.TryEnqueue", method);
+    }
+
+    [Fact]
+    public void RunPendingBackgroundStartupTrim_DoesNotDependOnWindowVisibilityFlag()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsState.cs"));
+        string method = source[
+            source.IndexOf("private void RunPendingBackgroundStartupTrim", StringComparison.Ordinal)..];
+
+        Assert.Contains("if (!_backgroundStartupTrimPending)", method);
+        Assert.DoesNotContain("_settingsUiUnloadedForBackground", method);
     }
 
     private static string FindProjectRoot()

@@ -68,7 +68,7 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void ShowVideoAsync_UsesSequentialPlaybackSourceInsteadOfStorageFileSource()
+    public void ShowVideoAsync_UsesSystemStorageFileSource()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
@@ -76,9 +76,11 @@ public sealed class WallpaperWindowSourceTests
             source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)..
             source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)];
 
-        Assert.Contains("VideoPlaybackSource.Open(path)", showVideoAsync);
-        Assert.DoesNotContain("MediaSource.CreateFromStorageFile", showVideoAsync);
-        Assert.DoesNotContain("StorageFile.GetFileFromPathAsync", showVideoAsync);
+        Assert.Contains("string playbackPath = FileLinkResolver.GetFinalPath(path);", showVideoAsync);
+        Assert.Contains("StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath);", showVideoAsync);
+        Assert.Contains("MediaSource.CreateFromStorageFile(file)", showVideoAsync);
+        Assert.DoesNotContain("VideoPlaybackSource.Open", source);
+        Assert.DoesNotContain("MediaSource.CreateFromStream", source);
     }
 
     [Fact]
