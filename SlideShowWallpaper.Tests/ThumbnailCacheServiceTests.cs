@@ -178,31 +178,18 @@ public sealed class ThumbnailCacheServiceTests
         }
     }
 
-    [Theory]
-    [InlineData(4, 3)]
-    [InlineData(3, 0)]
-    [InlineData(1, 0)]
-    public void GetVideoThumbnailTime_WithDuration_UsesThreeSecondOffsetOnlyWhenAvailable(int durationSeconds, int expectedSeconds)
-    {
-        TimeSpan thumbnailTime = ThumbnailCacheService.GetVideoThumbnailTime(TimeSpan.FromSeconds(durationSeconds));
-
-        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), thumbnailTime);
-    }
-
     [Fact]
-    public void VideoThumbnailGeneration_IsSerializedAndDoesNotRetryAfterOutOfMemory()
+    public void VideoThumbnailGeneration_UsesCachedSystemThumbnailWithoutMediaCompositionDecode()
     {
         string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Services", "ThumbnailCacheService.cs"));
 
         Assert.Contains("private static readonly SemaphoreSlim VideoThumbnailGate = new(1, 1);", source);
         Assert.Contains("await VideoThumbnailGate.WaitAsync(cancellationToken);", source);
         Assert.Contains("VideoThumbnailGate.Release();", source);
-        Assert.Contains("catch (OutOfMemoryException)", source);
-
-        int outOfMemoryCatch = source.IndexOf("catch (OutOfMemoryException)", StringComparison.Ordinal);
-        int fallbackCatch = source.IndexOf("catch (Exception) when (!cancellationToken.IsCancellationRequested)", StringComparison.Ordinal);
-        Assert.True(outOfMemoryCatch >= 0);
-        Assert.True(fallbackCatch > outOfMemoryCatch);
+        Assert.Contains("ThumbnailOptions.ReturnOnlyIfCached | ThumbnailOptions.UseCurrentScale", source);
+        Assert.DoesNotContain("MediaComposition", source);
+        Assert.DoesNotContain("MediaClip", source);
+        Assert.DoesNotContain("VideoFramePrecision", source);
     }
 
     private static string FindProjectRoot()
