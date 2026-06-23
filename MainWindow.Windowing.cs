@@ -174,6 +174,7 @@ public sealed partial class MainWindow
         _settingsApplyTimer.Stop();
         if (_exitRequested || !_viewModel.CloseToTray)
         {
+            _backgroundMemoryTrimTimer.Stop();
             _currentImageCheckpointTimer.Stop();
             _playbackStatusTimer.Stop();
             UnloadPreviewState();

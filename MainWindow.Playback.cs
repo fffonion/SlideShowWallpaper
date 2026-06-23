@@ -38,6 +38,10 @@ public sealed partial class MainWindow
         profile.TotalMediaCount = args.TotalCount;
         profile.CurrentMediaStartedAt = DateTimeOffset.Now;
         UpdatePlaybackStatusText(profile);
+        if (_backgroundStartupTrimPending && _settingsUiUnloadedForBackground)
+        {
+            ScheduleBackgroundMemoryTrim(BackgroundWallpaperReadyTrimDelay);
+        }
     }
 
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)

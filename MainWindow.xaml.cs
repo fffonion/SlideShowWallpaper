@@ -37,6 +37,8 @@ public sealed partial class MainWindow : Window
     private const double PreviewPopupGap = 8;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan BackgroundStartupTrimDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan BackgroundWallpaperReadyTrimDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
 
     private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
@@ -110,6 +112,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
     private readonly DispatcherQueueTimer _previewPopupTimer;
+    private readonly DispatcherQueueTimer _backgroundMemoryTrimTimer;
     private readonly IntPtr _hwnd;
     private readonly bool _disableCloseToTray;
     private TextBlock? _thumbnailCacheSizeText;
@@ -132,6 +135,7 @@ public sealed partial class MainWindow : Window
     private bool _suppressPreviewSelection;
     private bool _isSettingsSelected;
     private bool _settingsUiUnloadedForBackground;
+    private bool _backgroundStartupTrimPending;
     private bool _contentHeightAdjusted;
     private double _previewPopupCurrentWidth = PreviewPopupWidth;
     private double _previewPopupCurrentHeight = PreviewPopupHeight;
@@ -176,6 +180,10 @@ public sealed partial class MainWindow : Window
         _previewPopupTimer.Interval = PreviewPopupPolicy.GetHoverDelay(_viewModel.PreviewPopupDelaySeconds);
         _previewPopupTimer.IsRepeating = false;
         _previewPopupTimer.Tick += PreviewPopupTimer_Tick;
+        _backgroundMemoryTrimTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _backgroundMemoryTrimTimer.Interval = BackgroundStartupTrimDelay;
+        _backgroundMemoryTrimTimer.IsRepeating = false;
+        _backgroundMemoryTrimTimer.Tick += (_, _) => RunPendingBackgroundStartupTrim();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -212,7 +220,8 @@ public sealed partial class MainWindow : Window
         _playbackStatusTimer.Start();
         if (startInTray)
         {
-            TrimBackgroundMemory();
+            _backgroundStartupTrimPending = true;
+            ScheduleBackgroundMemoryTrim(BackgroundStartupTrimDelay);
         }
     }
 

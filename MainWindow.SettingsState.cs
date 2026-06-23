@@ -259,6 +259,8 @@ public sealed partial class MainWindow
 
     private void EnsureSettingsUiLoaded()
     {
+        _backgroundStartupTrimPending = false;
+        _backgroundMemoryTrimTimer.Stop();
         if (!_settingsUiUnloadedForBackground && MonitorNavigationPanel.Children.Count > 0)
         {
             return;
@@ -271,5 +273,23 @@ public sealed partial class MainWindow
     private static void TrimBackgroundMemory()
     {
         ProcessMemoryTrimmer.TrimCurrentProcess();
+    }
+
+    private void ScheduleBackgroundMemoryTrim(TimeSpan delay)
+    {
+        _backgroundMemoryTrimTimer.Stop();
+        _backgroundMemoryTrimTimer.Interval = delay;
+        _backgroundMemoryTrimTimer.Start();
+    }
+
+    private void RunPendingBackgroundStartupTrim()
+    {
+        if (!_backgroundStartupTrimPending || !_settingsUiUnloadedForBackground)
+        {
+            return;
+        }
+
+        _backgroundStartupTrimPending = false;
+        TrimBackgroundMemory();
     }
 }
