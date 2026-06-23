@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <WindowsAppSdkSelfContained>true</WindowsAppSdkSelfContained>
+    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+    <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+    <WindowsAppSdkUndockedRegFreeWinRTInitialize>false</WindowsAppSdkUndockedRegFreeWinRTInitialize>
   </PropertyGroup>
 
   <ItemGroup>
