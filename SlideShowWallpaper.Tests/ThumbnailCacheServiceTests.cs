@@ -188,4 +188,31 @@ public sealed class ThumbnailCacheServiceTests
 
         Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), thumbnailTime);
     }
+
+    [Fact]
+    public void VideoThumbnailGeneration_IsSerializedAndDoesNotRetryAfterOutOfMemory()
+    {
+        string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Services", "ThumbnailCacheService.cs"));
+
+        Assert.Contains("private static readonly SemaphoreSlim VideoThumbnailGate = new(1, 1);", source);
+        Assert.Contains("await VideoThumbnailGate.WaitAsync(cancellationToken);", source);
+        Assert.Contains("VideoThumbnailGate.Release();", source);
+        Assert.Contains("catch (OutOfMemoryException)", source);
+
+        int outOfMemoryCatch = source.IndexOf("catch (OutOfMemoryException)", StringComparison.Ordinal);
+        int fallbackCatch = source.IndexOf("catch (Exception) when (!cancellationToken.IsCancellationRequested)", StringComparison.Ordinal);
+        Assert.True(outOfMemoryCatch >= 0);
+        Assert.True(fallbackCatch > outOfMemoryCatch);
+    }
+
+    private static string FindProjectRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SlideShowWallpaper.csproj")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Project root not found.");
+    }
 }

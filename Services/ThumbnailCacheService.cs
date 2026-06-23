@@ -13,6 +13,7 @@ public sealed class ThumbnailCacheService
     private const uint DefaultMaxPixelSize = 320;
     private const string ThumbnailExtension = ".jpg";
     private static readonly TimeSpan PreferredVideoThumbnailTime = TimeSpan.FromSeconds(3);
+    private static readonly SemaphoreSlim VideoThumbnailGate = new(1, 1);
     private readonly string _cacheRoot;
     private readonly Func<ImageMetadata, string, uint, CancellationToken, Task> _thumbnailWriter;
 
@@ -121,6 +122,19 @@ public sealed class ThumbnailCacheService
 
     private static async Task CreateVideoThumbnailAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
     {
+        await VideoThumbnailGate.WaitAsync(cancellationToken);
+        try
+        {
+            await CreateVideoThumbnailCoreAsync(sourcePath, thumbnailPath, maxPixelSize, cancellationToken);
+        }
+        finally
+        {
+            VideoThumbnailGate.Release();
+        }
+    }
+
+    private static async Task CreateVideoThumbnailCoreAsync(string sourcePath, string thumbnailPath, uint maxPixelSize, CancellationToken cancellationToken)
+    {
         string? temporaryMediaPath = null;
         bool deleteTemporaryMedia = ShouldDeleteThumbnailMedia(sourcePath);
         try
@@ -152,6 +166,11 @@ public sealed class ThumbnailCacheService
         try
         {
             return await composition.GetThumbnailAsync(thumbnailTime, (int)width, (int)height, VideoFramePrecision.NearestKeyFrame).AsTask(cancellationToken);
+        }
+        catch (OutOfMemoryException)
+        {
+            ProcessMemoryTrimmer.TrimCurrentProcess();
+            throw;
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
