@@ -15,7 +15,10 @@ public sealed class HardwareMonitorService : IDisposable
     internal HardwareMonitorService(HardwareMonitorBrokerClient brokerClient)
     {
         _brokerClient = brokerClient;
+        _brokerClient.BrokerProcessStarted += BrokerClient_BrokerProcessStarted;
     }
+
+    public event EventHandler? BrokerProcessStarted;
 
     public HardwareMonitorSnapshot GetSnapshot()
     {
@@ -24,7 +27,13 @@ public sealed class HardwareMonitorService : IDisposable
 
     public void Dispose()
     {
+        _brokerClient.BrokerProcessStarted -= BrokerClient_BrokerProcessStarted;
         _brokerClient.Dispose();
+    }
+
+    private void BrokerClient_BrokerProcessStarted(object? sender, EventArgs args)
+    {
+        BrokerProcessStarted?.Invoke(this, args);
     }
 }
 

@@ -292,7 +292,7 @@ public sealed partial class MainWindow
         previousCancellation?.Cancel();
         previousCancellation?.Dispose();
         AppLog.Write($"Background startup memory trim scheduled after {delay.TotalSeconds:0.###}s.");
-        _ = RunBackgroundMemoryTrimAfterDelayAsync(delay, cancellation);
+        _ = Task.Run(() => RunBackgroundMemoryTrimAfterDelayAsync(delay, cancellation));
     }
 
     private void CancelBackgroundMemoryTrim()
@@ -317,10 +317,12 @@ public sealed partial class MainWindow
     {
         try
         {
+            AppLog.Write($"Background startup memory trim timer armed for {delay.TotalSeconds:0.###}s.");
             await Task.Delay(delay, cancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
+            AppLog.Write("Background startup memory trim timer canceled.");
             return;
         }
         catch (Exception exception)
@@ -329,10 +331,12 @@ public sealed partial class MainWindow
             return;
         }
 
+        AppLog.Write("Background startup memory trim timer fired.");
         lock (_backgroundMemoryTrimLock)
         {
             if (!ReferenceEquals(_backgroundMemoryTrimCancellation, cancellation))
             {
+                AppLog.Write("Background startup memory trim skipped because a newer timer replaced it.");
                 return;
             }
 
@@ -347,6 +351,7 @@ public sealed partial class MainWindow
     {
         if (!_backgroundStartupTrimPending)
         {
+            AppLog.Write("Background startup memory trim skipped because startup trim is no longer pending.");
             return;
         }
 

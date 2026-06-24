@@ -237,6 +237,12 @@ public sealed partial class MainWindow
         }
         else
         {
+            if (_settingsUiUnloadedForBackground)
+            {
+                AppLog.Write("Background startup memory trim kept after hidden restore message.");
+                return;
+            }
+
             EnsureSettingsUiLoaded();
         }
     }
@@ -253,6 +259,7 @@ public sealed partial class MainWindow
         _coordinator.OrderedImagesChanged -= Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged -= Coordinator_CurrentWallpaperChanged;
         _coordinator.HardwareOverlayMoved -= Coordinator_HardwareOverlayMoved;
+        _hardwareMonitorService.BrokerProcessStarted -= HardwareMonitorService_BrokerProcessStarted;
         _trayIconService.Dispose();
         _coordinator.Shutdown();
         _hardwareMonitorService.Dispose();

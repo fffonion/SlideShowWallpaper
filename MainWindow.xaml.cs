@@ -46,8 +46,9 @@ public sealed partial class MainWindow : Window
     private const double HardwareEditorSnapThreshold = 6;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
-    private static readonly TimeSpan BackgroundStartupTrimDelay = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan BackgroundWallpaperReadyTrimDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan BackgroundStartupTrimDelay = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan BackgroundWallpaperReadyTrimDelay = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan BackgroundBrokerReadyTrimDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan SettingsApplyDelay = TimeSpan.FromMilliseconds(200);
 
     private static IReadOnlyList<Choice<PlaybackOrder>> PlaybackOrderChoices =>
@@ -224,6 +225,7 @@ public sealed partial class MainWindow : Window
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
         _coordinator.HardwareOverlayMoved += Coordinator_HardwareOverlayMoved;
+        _hardwareMonitorService.BrokerProcessStarted += HardwareMonitorService_BrokerProcessStarted;
         Root.Loaded += Root_Loaded;
         if (startInTray)
         {
@@ -242,6 +244,15 @@ public sealed partial class MainWindow : Window
         {
             _backgroundStartupTrimPending = true;
             ScheduleBackgroundMemoryTrim(BackgroundStartupTrimDelay);
+        }
+    }
+
+    private void HardwareMonitorService_BrokerProcessStarted(object? sender, EventArgs args)
+    {
+        if (_backgroundStartupTrimPending && _settingsUiUnloadedForBackground)
+        {
+            AppLog.Write("Background startup memory trim rescheduled after hardware broker startup.");
+            ScheduleBackgroundMemoryTrim(BackgroundBrokerReadyTrimDelay);
         }
     }
 

@@ -21,6 +21,46 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void BackgroundStartupTrimDelays_AllowWallpaperAndBrokerStartupToSettle()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+
+        Assert.Contains("BackgroundStartupTrimDelay = TimeSpan.FromSeconds(30)", source);
+        Assert.Contains("BackgroundWallpaperReadyTrimDelay = TimeSpan.FromSeconds(30)", source);
+        Assert.Contains("BackgroundBrokerReadyTrimDelay = TimeSpan.FromSeconds(30)", source);
+    }
+
+    [Fact]
+    public void Constructor_SubscribesHardwareBrokerStartupForBackgroundMemoryTrim()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string constructor = source[
+            source.IndexOf("public MainWindow(", StringComparison.Ordinal)..
+            source.IndexOf("private void HardwareMonitorService_BrokerProcessStarted", StringComparison.Ordinal)];
+        string windowingSource = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string shutdownMethod = windowingSource[
+            windowingSource.IndexOf("private void ShutdownApplication", StringComparison.Ordinal)..];
+
+        Assert.Contains("_hardwareMonitorService.BrokerProcessStarted += HardwareMonitorService_BrokerProcessStarted;", constructor);
+        Assert.Contains("_hardwareMonitorService.BrokerProcessStarted -= HardwareMonitorService_BrokerProcessStarted;", shutdownMethod);
+    }
+
+    [Fact]
+    public void HardwareMonitorServiceBrokerProcessStarted_ReschedulesPendingBackgroundTrim()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string method = source[
+            source.IndexOf("private void HardwareMonitorService_BrokerProcessStarted", StringComparison.Ordinal)..
+            source.IndexOf("private void HandleDisplayPowerPauseChanged", StringComparison.Ordinal)];
+
+        Assert.Contains("_backgroundStartupTrimPending && _settingsUiUnloadedForBackground", method);
+        Assert.Contains("ScheduleBackgroundMemoryTrim(BackgroundBrokerReadyTrimDelay);", method);
+    }
+
+    [Fact]
     public void ProgramMain_RunsHardwareBrokerBeforeStartingWinUi()
     {
         string root = FindProjectRoot();
@@ -173,6 +213,22 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("if (!_backgroundStartupTrimPending)", method);
         Assert.DoesNotContain("_settingsUiUnloadedForBackground", method);
+    }
+
+    [Fact]
+    public void HandleWindowMinimizedChanged_IgnoresRestoreMessagesWhileSettingsUiIsUnloaded()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string method = source[
+            source.IndexOf("private void HandleWindowMinimizedChanged", StringComparison.Ordinal)..
+            source.IndexOf("private void ExitApplication", StringComparison.Ordinal)];
+        int unloadedCheckIndex = method.IndexOf("if (_settingsUiUnloadedForBackground)", StringComparison.Ordinal);
+        int ensureIndex = method.IndexOf("EnsureSettingsUiLoaded();", StringComparison.Ordinal);
+
+        Assert.True(unloadedCheckIndex >= 0);
+        Assert.True(ensureIndex > unloadedCheckIndex);
+        Assert.Contains("return;", method[unloadedCheckIndex..ensureIndex]);
     }
 
     [Fact]

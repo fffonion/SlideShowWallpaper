@@ -14,6 +14,8 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private Process? _brokerProcess;
     private bool _disposed;
 
+    public event EventHandler? BrokerProcessStarted;
+
     public HardwareMonitorSnapshot GetSnapshot()
     {
         lock (_syncRoot)
@@ -101,7 +103,13 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         }
 
         _brokerProcess = Process.Start(startInfo);
-        return _brokerProcess is not null;
+        if (_brokerProcess is null)
+        {
+            return false;
+        }
+
+        BrokerProcessStarted?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     private static string BuildBrokerArguments(string pipeName)

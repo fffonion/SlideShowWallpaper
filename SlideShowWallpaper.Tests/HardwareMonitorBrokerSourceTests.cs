@@ -40,6 +40,32 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
+    public void BrokerClient_RaisesBrokerProcessStartedAfterProcessStart()
+    {
+        string root = FindProjectRoot();
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
+
+        int processStartIndex = clientSource.IndexOf("_brokerProcess = Process.Start(startInfo);", StringComparison.Ordinal);
+        int eventIndex = clientSource.IndexOf("BrokerProcessStarted?.Invoke", processStartIndex, StringComparison.Ordinal);
+
+        Assert.Contains("public event EventHandler? BrokerProcessStarted;", clientSource);
+        Assert.True(processStartIndex >= 0);
+        Assert.True(eventIndex > processStartIndex);
+    }
+
+    [Fact]
+    public void HardwareMonitorService_ForwardsBrokerProcessStarted()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
+
+        Assert.Contains("public event EventHandler? BrokerProcessStarted;", source);
+        Assert.Contains("_brokerClient.BrokerProcessStarted += BrokerClient_BrokerProcessStarted;", source);
+        Assert.Contains("BrokerProcessStarted?.Invoke(this, args);", source);
+        Assert.Contains("_brokerClient.BrokerProcessStarted -= BrokerClient_BrokerProcessStarted;", source);
+    }
+
+    [Fact]
     public void BrokerExecutableResolver_ExtractsEmbeddedBrokerWithoutCopying()
     {
         string root = FindProjectRoot();
