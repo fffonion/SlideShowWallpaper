@@ -89,6 +89,7 @@ public sealed class HardwareOverlayTextRendererTests
         HardwareOverlayElementState element = Assert.Single(elements);
         Assert.Equal("element1", element.Id);
         Assert.Equal(HardwareOverlayElementKind.Sensor, element.Kind);
+        Assert.Equal(HardwareOverlayIconKind.Gpu, element.IconKind);
         Assert.Equal("182.5 W", element.Text);
         Assert.Equal(20, element.X);
         Assert.Equal(30, element.Y);

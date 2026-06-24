@@ -274,18 +274,23 @@ public static class HardwareOverlayTextRenderer
         HardwareOverlayElement element,
         IReadOnlyDictionary<string, HardwareSensorReading> readings)
     {
+        readings.TryGetValue(element.SensorId, out HardwareSensorReading? sensorReading);
         string text = element.Kind switch
         {
-            HardwareOverlayElementKind.Sensor when readings.TryGetValue(element.SensorId, out HardwareSensorReading? reading) => FormatReading(reading),
+            HardwareOverlayElementKind.Sensor when sensorReading is not null => FormatReading(sensorReading),
             HardwareOverlayElementKind.Sensor => string.IsNullOrWhiteSpace(element.Text) ? element.SensorId : element.Text,
             HardwareOverlayElementKind.Text => element.Text,
             _ => string.Empty,
         };
+        HardwareOverlayIconKind iconKind = sensorReading is null
+            ? HardwareOverlayIconKind.Generic
+            : GetIconKind(sensorReading);
         return new HardwareOverlayElementState(
             element.Id,
             element.Kind,
             text,
             element.ImagePath,
+            iconKind,
             Math.Max(0, element.X),
             Math.Max(0, element.Y),
             Math.Max(20, element.Width),

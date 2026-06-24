@@ -145,6 +145,7 @@ public sealed record HardwareOverlayElementState(
     HardwareOverlayElementKind Kind,
     string Text,
     string ImagePath,
+    HardwareOverlayIconKind IconKind,
     double X,
     double Y,
     double Width,

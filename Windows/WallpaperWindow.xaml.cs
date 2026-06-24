@@ -251,6 +251,11 @@ public sealed partial class WallpaperWindow : Window
             };
         }
 
+        if (element.Kind == HardwareOverlayElementKind.Sensor)
+        {
+            return CreateHardwareOverlaySensorElement(element, fallbackFontSize);
+        }
+
         return new TextBlock
         {
             Text = element.Text,
@@ -263,6 +268,33 @@ public sealed partial class WallpaperWindow : Window
             TextTrimming = TextTrimming.CharacterEllipsis,
             Opacity = element.Opacity,
         };
+    }
+
+    private static UIElement CreateHardwareOverlaySensorElement(HardwareOverlayElementState element, double fallbackFontSize)
+    {
+        double fontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize);
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Width = element.Width,
+            Height = element.Height,
+            Opacity = element.Opacity,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Brush brush = CreateElementBrush(element.Foreground);
+        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, Math.Max(17, fontSize + 2), brush));
+        row.Children.Add(new TextBlock
+        {
+            Text = element.Text,
+            FontFamily = new FontFamily(element.FontFamily),
+            FontSize = fontSize,
+            Foreground = brush,
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        return row;
     }
 
     private static bool TryCreateBitmapImage(string path, out BitmapImage? bitmap)

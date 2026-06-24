@@ -706,7 +706,7 @@ public sealed partial class MainWindow
         foreach (HardwareOverlayElement element in config.Elements)
         {
             HardwareOverlayElementState state = elements.FirstOrDefault(item => string.Equals(item.Id, element.Id, StringComparison.OrdinalIgnoreCase))
-                ?? new HardwareOverlayElementState(element.Id, element.Kind, element.Text, element.ImagePath, element.X, element.Y, element.Width, element.Height, element.FontFamily, element.FontSize, element.Foreground, element.Opacity);
+                ?? new HardwareOverlayElementState(element.Id, element.Kind, element.Text, element.ImagePath, HardwareOverlayIconKind.Generic, element.X, element.Y, element.Width, element.Height, element.FontFamily, element.FontSize, element.Foreground, element.Opacity);
             FrameworkElement visual = CreateHardwareEditorElementVisual(state, string.Equals(config.SelectedElementId, element.Id, StringComparison.OrdinalIgnoreCase));
             AttachHardwareEditorDrag(canvas, visual, element, config);
             Canvas.SetLeft(visual, Math.Clamp(element.X, 0, canvas.Width - Math.Min(element.Width, canvas.Width)));
@@ -750,7 +750,7 @@ public sealed partial class MainWindow
         };
         stack.Children.Add(header);
 
-        if (element.Kind != HardwareOverlayElementKind.Image)
+        if (element.Kind == HardwareOverlayElementKind.Text)
         {
             var textBox = new TextBox
             {
@@ -764,6 +764,10 @@ public sealed partial class MainWindow
                 ScheduleApplySettings();
             };
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementText"), textBox));
+        }
+
+        if (element.Kind != HardwareOverlayElementKind.Image)
+        {
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareTextBox(element.FontFamily, value => element.FontFamily = value, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontSize"), CreateNumberBox(element.FontSize, value => element.FontSize = Math.Max(8, value), LocalizedStrings.Get("HardwareMonitorElementFontSize"))));
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareTextBox(element.Foreground, value => element.Foreground = value, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
@@ -920,17 +924,33 @@ public sealed partial class MainWindow
 
     private static HardwareOverlayElement CreateDefaultHardwareElement(HardwareOverlayElementKind kind, int index)
     {
+        (double x, double y) = GetDefaultHardwareElementPosition(kind, index);
         return new HardwareOverlayElement
         {
             Kind = kind,
-            X = 16,
-            Y = 16 + (index * 44),
-            Width = kind == HardwareOverlayElementKind.Image ? 48 : 160,
-            Height = kind == HardwareOverlayElementKind.Image ? 48 : 36,
+            X = x,
+            Y = y,
+            Width = kind == HardwareOverlayElementKind.Image ? 48 : 176,
+            Height = kind == HardwareOverlayElementKind.Image ? 48 : 28,
             FontSize = 16,
             Foreground = "#FFFFFFFF",
             Opacity = 1,
         };
+    }
+
+    private static (double X, double Y) GetDefaultHardwareElementPosition(HardwareOverlayElementKind kind, int index)
+    {
+        if (kind != HardwareOverlayElementKind.Sensor)
+        {
+            return (16, 16 + (index * 40));
+        }
+
+        const int rowsPerColumn = 6;
+        const double left = 16;
+        const double top = 18;
+        const double columnWidth = 188;
+        const double rowHeight = 31;
+        return (left + ((index / rowsPerColumn) * columnWidth), top + ((index % rowsPerColumn) * rowHeight));
     }
 
     private FrameworkElement CreateHardwareEditorElementVisual(HardwareOverlayElementState element, bool isSelected)
@@ -943,6 +963,10 @@ public sealed partial class MainWindow
                 Source = bitmap,
                 Stretch = Stretch.UniformToFill,
             };
+        }
+        else if (element.Kind == HardwareOverlayElementKind.Sensor)
+        {
+            child = CreateHardwareEditorSensorVisual(element);
         }
         else
         {
@@ -963,16 +987,40 @@ public sealed partial class MainWindow
             Width = element.Width,
             Height = element.Height,
             Opacity = element.Opacity,
-            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(36, 255, 255, 255)),
+            Background = isSelected
+                ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(36, 255, 255, 255))
+                : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderBrush = isSelected
                 ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 96, 205, 255))
-                : new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(96, 255, 255, 255)),
-            BorderThickness = new Thickness(isSelected ? 2 : 1),
-            Padding = element.Kind == HardwareOverlayElementKind.Image ? new Thickness(0) : new Thickness(6, 2, 6, 2),
+                : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            BorderThickness = new Thickness(isSelected ? 2 : 0),
+            Padding = element.Kind == HardwareOverlayElementKind.Image ? new Thickness(0) : new Thickness(4, 1, 4, 1),
             Child = child,
         };
         AutomationProperties.SetName(host, element.Text);
         return host;
+    }
+
+    private static FrameworkElement CreateHardwareEditorSensorVisual(HardwareOverlayElementState element)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, Math.Max(18, element.FontSize + 2), CreateSettingsColorBrush(element.Foreground)));
+        row.Children.Add(new TextBlock
+        {
+            Text = element.Text,
+            FontFamily = new FontFamily(element.FontFamily),
+            FontSize = Math.Max(8, element.FontSize),
+            Foreground = CreateSettingsColorBrush(element.Foreground),
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        return row;
     }
 
     private void AttachHardwareEditorDrag(Canvas canvas, FrameworkElement visual, HardwareOverlayElement element, HardwareMonitorConfig config)
