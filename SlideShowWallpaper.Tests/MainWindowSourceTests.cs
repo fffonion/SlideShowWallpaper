@@ -156,6 +156,37 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HardwareEditorPreviewSurface_AddsDragGuides()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSurface", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareElementSettingsSection", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateHardwareEditorGuideLine(isVertical: true", method);
+        Assert.Contains("CreateHardwareEditorGuideLine(isVertical: false", method);
+        Assert.Contains("AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide)", method);
+        Assert.Contains("canvas.Children.Add(verticalGuide);", method);
+        Assert.Contains("canvas.Children.Add(horizontalGuide);", method);
+    }
+
+    [Fact]
+    public void HardwareEditorDrag_UsesSnapGuides()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)..
+            source.IndexOf("private static bool TryCreateSettingsBitmapImage", StringComparison.Ordinal)];
+
+        Assert.Contains("ApplyHardwareEditorSnap", method);
+        Assert.Contains("UpdateHardwareEditorGuides", method);
+        Assert.Contains("HideHardwareEditorGuides", method);
+        Assert.Contains("HardwareEditorSnapThreshold", source);
+    }
+
+    [Fact]
     public void CreateHardwareMonitorSettingsSection_ContainsRefreshIntervalRow()
     {
         string root = FindProjectRoot();

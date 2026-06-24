@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Shapes;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using SlideShowWallpaper.Windows;
@@ -12,6 +13,8 @@ namespace SlideShowWallpaper;
 
 public sealed partial class MainWindow
 {
+    private readonly record struct HardwareEditorSnapResult(double Left, double Top, double? VerticalGuide, double? HorizontalGuide);
+
     private UIElement BuildAppSettingsPage()
     {
         var root = new Grid
@@ -626,16 +629,21 @@ public sealed partial class MainWindow
 
         HardwareMonitorSnapshot snapshot = _hardwareMonitorSnapshot ?? new HardwareMonitorSnapshot([], DateTimeOffset.Now);
         IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(config, snapshot);
+        Line verticalGuide = CreateHardwareEditorGuideLine(isVertical: true, canvas.Width, canvas.Height);
+        Line horizontalGuide = CreateHardwareEditorGuideLine(isVertical: false, canvas.Width, canvas.Height);
         foreach (HardwareOverlayElement element in config.Elements)
         {
             HardwareOverlayElementState state = elements.FirstOrDefault(item => string.Equals(item.Id, element.Id, StringComparison.OrdinalIgnoreCase))
                 ?? new HardwareOverlayElementState(element.Id, element.Kind, element.Text, element.ImagePath, HardwareOverlayIconKind.Generic, element.X, element.Y, element.Width, element.Height, element.FontFamily, element.FontSize, element.Foreground, element.Opacity);
             FrameworkElement visual = CreateHardwareEditorElementVisual(state, string.Equals(config.SelectedElementId, element.Id, StringComparison.OrdinalIgnoreCase));
-            AttachHardwareEditorDrag(canvas, visual, element, config);
+            AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide);
             Canvas.SetLeft(visual, Math.Clamp(element.X, 0, canvas.Width - Math.Min(element.Width, canvas.Width)));
             Canvas.SetTop(visual, Math.Clamp(element.Y, 0, canvas.Height - Math.Min(element.Height, canvas.Height)));
             canvas.Children.Add(visual);
         }
+
+        canvas.Children.Add(verticalGuide);
+        canvas.Children.Add(horizontalGuide);
 
         return new Border
         {
@@ -975,7 +983,37 @@ public sealed partial class MainWindow
         return row;
     }
 
-    private void AttachHardwareEditorDrag(Canvas canvas, FrameworkElement visual, HardwareOverlayElement element, HardwareMonitorConfig config)
+    private static Line CreateHardwareEditorGuideLine(bool isVertical, double canvasWidth, double canvasHeight)
+    {
+        var line = new Line
+        {
+            Stroke = GetThemeBrush("AccentFillColorDefaultBrush"),
+            StrokeThickness = 1,
+            StrokeDashArray = new DoubleCollection { 4, 3 },
+            Visibility = Visibility.Collapsed,
+            IsHitTestVisible = false,
+        };
+        if (isVertical)
+        {
+            line.Y1 = 0;
+            line.Y2 = canvasHeight;
+        }
+        else
+        {
+            line.X1 = 0;
+            line.X2 = canvasWidth;
+        }
+
+        return line;
+    }
+
+    private void AttachHardwareEditorDrag(
+        Canvas canvas,
+        FrameworkElement visual,
+        HardwareOverlayElement element,
+        HardwareMonitorConfig config,
+        Line verticalGuide,
+        Line horizontalGuide)
     {
         bool isDragging = false;
         double dragStartX = 0;
@@ -997,6 +1035,7 @@ public sealed partial class MainWindow
             startLeft = Canvas.GetLeft(visual);
             startTop = Canvas.GetTop(visual);
             visual.CapturePointer(args.Pointer);
+            HideHardwareEditorGuides(verticalGuide, horizontalGuide);
             args.Handled = true;
         };
         visual.PointerMoved += (_, args) =>
@@ -1009,10 +1048,14 @@ public sealed partial class MainWindow
             global::Windows.Foundation.Point point = args.GetCurrentPoint(canvas).Position;
             double left = Math.Clamp(startLeft + point.X - dragStartX, 0, Math.Max(0, canvas.Width - visual.Width));
             double top = Math.Clamp(startTop + point.Y - dragStartY, 0, Math.Max(0, canvas.Height - visual.Height));
+            HardwareEditorSnapResult snap = ApplyHardwareEditorSnap(config.Elements, element, left, top, visual.Width, visual.Height, canvas.Width, canvas.Height);
+            left = snap.Left;
+            top = snap.Top;
             Canvas.SetLeft(visual, left);
             Canvas.SetTop(visual, top);
             element.X = left;
             element.Y = top;
+            UpdateHardwareEditorGuides(verticalGuide, horizontalGuide, snap.VerticalGuide, snap.HorizontalGuide, canvas.Width, canvas.Height);
             ScheduleApplySettings();
             args.Handled = true;
         };
@@ -1020,14 +1063,138 @@ public sealed partial class MainWindow
         {
             isDragging = false;
             visual.ReleasePointerCapture(args.Pointer);
+            HideHardwareEditorGuides(verticalGuide, horizontalGuide);
             args.Handled = true;
         };
         visual.PointerCanceled += (_, args) =>
         {
             isDragging = false;
             visual.ReleasePointerCapture(args.Pointer);
+            HideHardwareEditorGuides(verticalGuide, horizontalGuide);
         };
-        visual.PointerCaptureLost += (_, _) => isDragging = false;
+        visual.PointerCaptureLost += (_, _) =>
+        {
+            isDragging = false;
+            HideHardwareEditorGuides(verticalGuide, horizontalGuide);
+        };
+    }
+
+    private static HardwareEditorSnapResult ApplyHardwareEditorSnap(
+        IReadOnlyList<HardwareOverlayElement> elements,
+        HardwareOverlayElement activeElement,
+        double left,
+        double top,
+        double width,
+        double height,
+        double canvasWidth,
+        double canvasHeight)
+    {
+        double maxLeft = Math.Max(0, canvasWidth - width);
+        double maxTop = Math.Max(0, canvasHeight - height);
+        double snappedLeft = SnapHardwareEditorAxis(
+            left,
+            width,
+            maxLeft,
+            elements.Where(element => !ReferenceEquals(element, activeElement)).Select(element => (element.X, element.Width)),
+            out double? verticalGuide);
+        double snappedTop = SnapHardwareEditorAxis(
+            top,
+            height,
+            maxTop,
+            elements.Where(element => !ReferenceEquals(element, activeElement)).Select(element => (element.Y, element.Height)),
+            out double? horizontalGuide);
+        return new HardwareEditorSnapResult(snappedLeft, snappedTop, verticalGuide, horizontalGuide);
+    }
+
+    private static double SnapHardwareEditorAxis(
+        double position,
+        double size,
+        double maxPosition,
+        IEnumerable<(double Position, double Size)> targets,
+        out double? guidePosition)
+    {
+        double snappedPosition = Math.Clamp(position, 0, maxPosition);
+        double bestDistance = HardwareEditorSnapThreshold + 1;
+        guidePosition = null;
+        foreach ((double targetPosition, double targetSize) in targets)
+        {
+            foreach (double targetGuide in GetHardwareEditorAxisGuides(targetPosition, targetSize))
+            {
+                foreach (double offset in GetHardwareEditorAxisOffsets(size))
+                {
+                    double candidatePosition = targetGuide - offset;
+                    if (candidatePosition < 0 || candidatePosition > maxPosition)
+                    {
+                        continue;
+                    }
+
+                    double distance = Math.Abs(candidatePosition - position);
+                    if (distance <= HardwareEditorSnapThreshold && distance < bestDistance)
+                    {
+                        snappedPosition = candidatePosition;
+                        guidePosition = targetGuide;
+                        bestDistance = distance;
+                    }
+                }
+            }
+        }
+
+        return snappedPosition;
+    }
+
+    private static IEnumerable<double> GetHardwareEditorAxisGuides(double position, double size)
+    {
+        yield return position;
+        yield return position + (size / 2);
+        yield return position + size;
+    }
+
+    private static IEnumerable<double> GetHardwareEditorAxisOffsets(double size)
+    {
+        yield return 0;
+        yield return size / 2;
+        yield return size;
+    }
+
+    private static void UpdateHardwareEditorGuides(
+        Line verticalGuide,
+        Line horizontalGuide,
+        double? verticalPosition,
+        double? horizontalPosition,
+        double canvasWidth,
+        double canvasHeight)
+    {
+        if (verticalPosition.HasValue)
+        {
+            verticalGuide.X1 = verticalPosition.Value;
+            verticalGuide.X2 = verticalPosition.Value;
+            verticalGuide.Y1 = 0;
+            verticalGuide.Y2 = canvasHeight;
+            verticalGuide.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            verticalGuide.Visibility = Visibility.Collapsed;
+        }
+
+        if (horizontalPosition.HasValue)
+        {
+            horizontalGuide.X1 = 0;
+            horizontalGuide.X2 = canvasWidth;
+            horizontalGuide.Y1 = horizontalPosition.Value;
+            horizontalGuide.Y2 = horizontalPosition.Value;
+            horizontalGuide.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            horizontalGuide.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private static void HideHardwareEditorGuides(Line verticalGuide, Line horizontalGuide)
+    {
+        verticalGuide.Visibility = Visibility.Collapsed;
+        horizontalGuide.Visibility = Visibility.Collapsed;
     }
 
     private static bool TryCreateSettingsBitmapImage(string path, out BitmapImage? bitmap)

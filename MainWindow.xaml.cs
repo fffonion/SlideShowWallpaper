@@ -37,6 +37,7 @@ public sealed partial class MainWindow : Window
     private const double PreviewPopupPadding = 8;
     private const double PreviewPopupBorderThickness = 1;
     private const double PreviewPopupGap = 8;
+    private const double HardwareEditorSnapThreshold = 6;
     private static readonly TimeSpan CurrentImageCheckpointInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan PlaybackStatusRefreshInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan BackgroundStartupTrimDelay = TimeSpan.FromSeconds(10);
