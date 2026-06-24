@@ -160,6 +160,51 @@ public sealed class SettingsStoreTests
     }
 
     [Fact]
+    public void Save_WithFractionalHardwareLayout_WritesWholePixelLayoutValues()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, "SlideShowWallpaper.ini");
+        var store = new SettingsStore(path);
+        var config = new WallpaperConfig
+        {
+            HardwareMonitor = new HardwareMonitorConfig
+            {
+                X = 12.4,
+                Y = 34.5,
+                OverlayWidth = 511.5,
+                OverlayHeight = 287.4,
+                Elements =
+                [
+                    new HardwareOverlayElement
+                    {
+                        Id = "element1",
+                        X = 1.4,
+                        Y = 2.5,
+                        Width = 160.5,
+                        Height = 40.4,
+                    },
+                ],
+            },
+        };
+
+        store.Save(config);
+
+        string text = File.ReadAllText(path);
+        Assert.Contains("X=12", text);
+        Assert.Contains("Y=35", text);
+        Assert.Contains("OverlayWidth=512", text);
+        Assert.Contains("OverlayHeight=287", text);
+        Assert.Contains("Element0.X=1", text);
+        Assert.Contains("Element0.Y=3", text);
+        Assert.Contains("Element0.Width=161", text);
+        Assert.Contains("Element0.Height=40", text);
+        Assert.DoesNotContain("12.4", text);
+        Assert.DoesNotContain("34.5", text);
+        Assert.DoesNotContain("511.5", text);
+        Assert.DoesNotContain("160.5", text);
+    }
+
+    [Fact]
     public void Load_WithMissingScaleMode_UsesCover()
     {
         string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));

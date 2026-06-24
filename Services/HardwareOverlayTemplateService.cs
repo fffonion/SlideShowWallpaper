@@ -16,10 +16,10 @@ public static class HardwareOverlayTemplateService
         {
             TemplateText = config.TemplateText,
             RefreshIntervalSeconds = config.RefreshIntervalSeconds,
-            X = config.X,
-            Y = config.Y,
-            OverlayWidth = config.OverlayWidth,
-            OverlayHeight = config.OverlayHeight,
+            X = HardwareEditorLayoutService.QuantizeCoordinate(config.X, double.MaxValue),
+            Y = HardwareEditorLayoutService.QuantizeCoordinate(config.Y, double.MaxValue),
+            OverlayWidth = QuantizeLayoutLength(config.OverlayWidth, HardwareMonitorConfig.DefaultOverlayWidth, 1),
+            OverlayHeight = QuantizeLayoutLength(config.OverlayHeight, HardwareMonitorConfig.DefaultOverlayHeight, 1),
             FontFamily = config.FontFamily,
             FontSize = config.FontSize,
             Opacity = config.Opacity,
@@ -36,10 +36,10 @@ public static class HardwareOverlayTemplateService
             ? HardwareMonitorConfig.DefaultTemplate
             : template.TemplateText;
         config.RefreshIntervalSeconds = Math.Max(1, template.RefreshIntervalSeconds);
-        config.X = template.X;
-        config.Y = template.Y;
-        config.OverlayWidth = template.OverlayWidth > 0 ? template.OverlayWidth : HardwareMonitorConfig.DefaultOverlayWidth;
-        config.OverlayHeight = template.OverlayHeight > 0 ? template.OverlayHeight : HardwareMonitorConfig.DefaultOverlayHeight;
+        config.X = HardwareEditorLayoutService.QuantizeCoordinate(template.X, double.MaxValue);
+        config.Y = HardwareEditorLayoutService.QuantizeCoordinate(template.Y, double.MaxValue);
+        config.OverlayWidth = QuantizeLayoutLength(template.OverlayWidth, HardwareMonitorConfig.DefaultOverlayWidth, 1);
+        config.OverlayHeight = QuantizeLayoutLength(template.OverlayHeight, HardwareMonitorConfig.DefaultOverlayHeight, 1);
         config.FontFamily = string.IsNullOrWhiteSpace(template.FontFamily) ? "Segoe UI" : template.FontFamily;
         config.FontSize = template.FontSize;
         config.Opacity = Math.Clamp(template.Opacity, 0.1, 1);
@@ -73,10 +73,10 @@ public static class HardwareOverlayTemplateService
                 SensorId = element.SensorId,
                 Text = element.Text,
                 ImagePath = element.ImagePath,
-                X = element.X,
-                Y = element.Y,
-                Width = element.Width,
-                Height = element.Height,
+                X = HardwareEditorLayoutService.QuantizeCoordinate(element.X, double.MaxValue),
+                Y = HardwareEditorLayoutService.QuantizeCoordinate(element.Y, double.MaxValue),
+                Width = QuantizeLayoutLength(element.Width, 20, 20),
+                Height = QuantizeLayoutLength(element.Height, 20, 20),
                 FontFamily = element.FontFamily,
                 FontSize = element.FontSize,
                 Foreground = element.Foreground,
@@ -84,5 +84,11 @@ public static class HardwareOverlayTemplateService
                 DecimalPlaces = element.DecimalPlaces,
             })
             .ToList();
+    }
+
+    private static double QuantizeLayoutLength(double value, double defaultValue, double minimumValue)
+    {
+        double source = value > 0 ? value : defaultValue;
+        return Math.Max(minimumValue, HardwareEditorLayoutService.QuantizeCoordinate(source, double.MaxValue));
     }
 }

@@ -80,8 +80,8 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void Coordinator_HardwareOverlayMoved", StringComparison.Ordinal)..
             source.IndexOf("private async void PreviewList_SelectionChanged", StringComparison.Ordinal)];
 
-        Assert.Contains("_viewModel.HardwareMonitor.X = Math.Max(0, args.X);", method);
-        Assert.Contains("_viewModel.HardwareMonitor.Y = Math.Max(0, args.Y);", method);
+        Assert.Contains("_viewModel.HardwareMonitor.X = HardwareEditorLayoutService.QuantizeCoordinate(args.X, double.MaxValue);", method);
+        Assert.Contains("_viewModel.HardwareMonitor.Y = HardwareEditorLayoutService.QuantizeCoordinate(args.Y, double.MaxValue);", method);
         Assert.Contains("_settingsStore.Save(CreateConfig());", method);
     }
 

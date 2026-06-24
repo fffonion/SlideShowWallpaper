@@ -469,8 +469,8 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     private void Window_HardwareOverlayMoved(object? sender, HardwareOverlayMovedEventArgs args)
     {
-        _hardwareMonitorConfig.X = Math.Max(0, args.X);
-        _hardwareMonitorConfig.Y = Math.Max(0, args.Y);
+        _hardwareMonitorConfig.X = HardwareEditorLayoutService.QuantizeCoordinate(args.X, double.MaxValue);
+        _hardwareMonitorConfig.Y = HardwareEditorLayoutService.QuantizeCoordinate(args.Y, double.MaxValue);
         HardwareOverlayMoved?.Invoke(this, new HardwareOverlayMovedEventArgs(_hardwareMonitorConfig.X, _hardwareMonitorConfig.Y));
     }
 }

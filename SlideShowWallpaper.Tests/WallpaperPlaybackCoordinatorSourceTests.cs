@@ -62,8 +62,8 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
         string method = source[source.IndexOf("private void Window_HardwareOverlayMoved", StringComparison.Ordinal)..];
 
-        Assert.Contains("_hardwareMonitorConfig.X = Math.Max(0, args.X);", method);
-        Assert.Contains("_hardwareMonitorConfig.Y = Math.Max(0, args.Y);", method);
+        Assert.Contains("_hardwareMonitorConfig.X = HardwareEditorLayoutService.QuantizeCoordinate(args.X, double.MaxValue);", method);
+        Assert.Contains("_hardwareMonitorConfig.Y = HardwareEditorLayoutService.QuantizeCoordinate(args.Y, double.MaxValue);", method);
         Assert.Contains("HardwareOverlayMoved?.Invoke", method);
     }
 

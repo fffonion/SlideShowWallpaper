@@ -46,8 +46,8 @@ public sealed partial class MainWindow
 
     private void Coordinator_HardwareOverlayMoved(object? sender, HardwareOverlayMovedEventArgs args)
     {
-        _viewModel.HardwareMonitor.X = Math.Max(0, args.X);
-        _viewModel.HardwareMonitor.Y = Math.Max(0, args.Y);
+        _viewModel.HardwareMonitor.X = HardwareEditorLayoutService.QuantizeCoordinate(args.X, double.MaxValue);
+        _viewModel.HardwareMonitor.Y = HardwareEditorLayoutService.QuantizeCoordinate(args.Y, double.MaxValue);
         _settingsStore.Save(CreateConfig());
     }
 
