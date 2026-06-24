@@ -19,7 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SlideShowWallpaper.csproj" />
+    <ProjectReference
+      Include="..\SlideShowWallpaper.csproj"
+      AdditionalProperties="WindowsAppSdkBootstrapInitialize=false;WindowsAppSdkDeploymentManagerInitialize=false;WindowsAppSdkUndockedRegFreeWinRTInitialize=false" />
   </ItemGroup>
 
   <ItemGroup>
