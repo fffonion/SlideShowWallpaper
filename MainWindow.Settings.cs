@@ -52,11 +52,34 @@ public sealed partial class MainWindow
                     UpdatePreviewPopupDelay();
                 },
                 LocalizedStrings.Get("AppSettingVideoPreviewDelay")))));
+        Grid.SetRow(form, 0);
+        root.Children.Add(form);
+        StartThumbnailCacheSizeLoad();
+        return new ScrollViewer
+        {
+            Content = root,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+    }
+
+    private UIElement BuildHardwareMonitorSettingsPage()
+    {
+        var root = new Grid
+        {
+            RowSpacing = 12,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var form = new StackPanel
+        {
+            Spacing = 14,
+        };
         form.Children.Add(CreateHardwareMonitorSettingsSection());
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
-        StartThumbnailCacheSizeLoad();
         return new ScrollViewer
         {
             Content = root,

@@ -93,11 +93,64 @@ public sealed class MainWindowSourceTests
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
             source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
-            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
+            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)];
 
         Assert.Contains("new ScrollViewer", method);
         Assert.Contains("VerticalScrollBarVisibility = ScrollBarVisibility.Auto", method);
         Assert.Contains("HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled", method);
+    }
+
+    [Fact]
+    public void BuildAppSettingsPage_DoesNotContainHardwareMonitorSection()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
+            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)];
+
+        Assert.DoesNotContain("CreateHardwareMonitorSettingsSection()", method);
+    }
+
+    [Fact]
+    public void BuildHardwareMonitorSettingsPage_ContainsHardwareMonitorSection()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateHardwareMonitorSettingsSection()", method);
+        Assert.Contains("new ScrollViewer", method);
+    }
+
+    [Fact]
+    public void RenderTabs_AddsHardwareMonitorNavigationAboveSettings()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Navigation.cs"));
+        string method = source[
+            source.IndexOf("private void RenderTabs", StringComparison.Ordinal)..
+            source.IndexOf("private Button CreateMonitorNavigationItem", StringComparison.Ordinal)];
+        int hardwareIndex = method.IndexOf("SettingsNavigationPanel.Children.Add(CreateHardwareMonitorNavigationItem());", StringComparison.Ordinal);
+        int settingsIndex = method.IndexOf("SettingsNavigationPanel.Children.Add(CreateSettingsNavigationItem());", StringComparison.Ordinal);
+
+        Assert.True(hardwareIndex >= 0);
+        Assert.True(settingsIndex > hardwareIndex);
+    }
+
+    [Fact]
+    public void ShowSelectedMonitorPage_WhenHardwareMonitorSelected_RendersHardwarePage()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Navigation.cs"));
+        string method = source[
+            source.IndexOf("private void ShowSelectedMonitorPage", StringComparison.Ordinal)..
+            source.IndexOf("private void MonitorNavigationItem_Click", StringComparison.Ordinal)];
+
+        Assert.Contains("if (_isHardwareMonitorSelected)", method);
+        Assert.Contains("BuildHardwareMonitorSettingsPage()", method);
     }
 
     private static string FindProjectRoot()

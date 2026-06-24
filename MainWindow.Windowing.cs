@@ -27,9 +27,11 @@ public sealed partial class MainWindow
     {
         const int minimumHeight = 720;
         double scale = GetWindowScale();
-        int measuredHeight = _isSettingsSelected
-            ? EstimateWindowHeightForSettingsPage()
-            : EstimateWindowHeightForMonitorPage(targetWidth);
+        int measuredHeight = _isHardwareMonitorSelected
+            ? EstimateWindowHeightForHardwareMonitorPage()
+            : _isSettingsSelected
+                ? EstimateWindowHeightForSettingsPage()
+                : EstimateWindowHeightForMonitorPage(targetWidth);
 
         int physicalHeight = (int)Math.Ceiling(measuredHeight * scale);
         return Math.Clamp(physicalHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);
@@ -155,9 +157,19 @@ public sealed partial class MainWindow
         return titleBarHeight
             + contentTopPadding
             + EstimateSettingsSectionHeight(true, 9)
-            + 14
+            + contentBottomPadding;
+    }
+
+    private static int EstimateWindowHeightForHardwareMonitorPage()
+    {
+        const int titleBarHeight = 48;
+        const int contentTopPadding = 12;
+        const int contentBottomPadding = 24;
+        const int previewEditorHeight = 210;
+        return titleBarHeight
+            + contentTopPadding
             + EstimateSettingsSectionHeight(true, 8)
-            + 210
+            + previewEditorHeight
             + contentBottomPadding;
     }
 
