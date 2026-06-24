@@ -200,6 +200,33 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareMonitorSettingsSection_UsesFullWidthSensorRow()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)..
+            source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateHardwareSensorSelectionList(config)", method);
+        Assert.Contains("IsFullWidth: true", method);
+    }
+
+    [Fact]
+    public void CreateSettingsRow_SupportsFullWidthRows()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsControls.cs"));
+        string method = source[
+            source.IndexOf("private static Border CreateSettingsRow", StringComparison.Ordinal)..
+            source.IndexOf("private static Border CreateSettingsDivider", StringComparison.Ordinal)];
+
+        Assert.Contains("row.IsFullWidth", method);
+        Assert.Contains("AddSettingsRowControl(content, row.Control, column: 0)", method);
+        Assert.Contains("AutomationProperties.SetName(text, row.Label);", method);
+    }
+
+    [Fact]
     public void CreateHardwareSensorSelectionList_ShowsLimitedAccessNotice()
     {
         string root = FindProjectRoot();

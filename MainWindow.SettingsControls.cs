@@ -175,6 +175,18 @@ public sealed partial class MainWindow
             MinHeight = 50,
             Padding = new Thickness(16, 6, 16, 6),
         };
+
+        if (row.IsFullWidth)
+        {
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            AddSettingsRowControl(content, row.Control, column: 0);
+
+            return new Border
+            {
+                Child = content,
+            };
+        }
+
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -189,15 +201,20 @@ public sealed partial class MainWindow
         Grid.SetColumn(text, 0);
         content.Children.Add(text);
 
-        row.Control.VerticalAlignment = VerticalAlignment.Center;
-        row.Control.HorizontalAlignment = HorizontalAlignment.Stretch;
-        Grid.SetColumn(row.Control, 1);
-        content.Children.Add(row.Control);
+        AddSettingsRowControl(content, row.Control, column: 1);
 
         return new Border
         {
             Child = content,
         };
+    }
+
+    private static void AddSettingsRowControl(Grid content, FrameworkElement control, int column)
+    {
+        control.VerticalAlignment = VerticalAlignment.Center;
+        control.HorizontalAlignment = HorizontalAlignment.Stretch;
+        Grid.SetColumn(control, column);
+        content.Children.Add(control);
     }
 
     private static Border CreateSettingsDivider()

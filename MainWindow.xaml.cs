@@ -279,7 +279,7 @@ public sealed partial class MainWindow : Window
         ApplyTheme(_viewModel.ThemeMode);
     }
 
-    private readonly record struct SettingsRow(string Label, FrameworkElement Control);
+    private readonly record struct SettingsRow(string Label, FrameworkElement Control, bool IsFullWidth = false);
 
     private sealed record Choice<T>(T Value, string Label)
     {
