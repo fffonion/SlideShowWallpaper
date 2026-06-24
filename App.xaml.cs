@@ -11,7 +11,6 @@ public partial class App : Application
     private readonly SettingsStore _settingsStore = new();
     private readonly AutostartService _autostartService = new();
     private readonly AdministratorRestartService _administratorRestartService = new();
-    private readonly UnelevatedRestartService _unelevatedRestartService = new();
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ImageOrderService _imageOrderService = new();
     private readonly FolderChangeWatcherService _folderChangeWatcherService = new();
@@ -43,14 +42,6 @@ public partial class App : Application
         {
             string[] commandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
             LaunchOptions launchOptions = LaunchOptions.FromArguments(commandLineArguments);
-            if (!launchOptions.SkipElevationDemotion
-                && _unelevatedRestartService.TryRestartIfCurrentProcessIsElevated(commandLineArguments))
-            {
-                Exit();
-                Environment.Exit(0);
-                return;
-            }
-
             AppLog.Write("Launch start");
             AppTempPaths.Cleanup();
             if (!launchOptions.AllowMultipleInstances)

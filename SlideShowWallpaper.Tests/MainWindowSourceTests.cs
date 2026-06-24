@@ -21,26 +21,51 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void AppLaunch_DemotesElevatedProcessBeforeFileWrites()
+    public void ProgramMain_RunsHardwareBrokerBeforeStartingWinUi()
     {
         string root = FindProjectRoot();
-        string source = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string source = File.ReadAllText(Path.Combine(root, "Program.cs"));
         string method = source[
-            source.IndexOf("protected override void OnLaunched", StringComparison.Ordinal)..
-            source.IndexOf("private void ShowExistingInstanceWindow", StringComparison.Ordinal)];
+            source.IndexOf("public static int Main", StringComparison.Ordinal)..
+            source.LastIndexOf('}')];
 
+        int brokerIndex = method.IndexOf("HardwareMonitorBrokerHost.IsBrokerMode(args)", StringComparison.Ordinal);
+        int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
+
+        Assert.True(brokerIndex >= 0);
+        Assert.True(startIndex > brokerIndex);
+        Assert.Contains("return HardwareMonitorBrokerHost.Run(args);", method);
+        Assert.DoesNotContain("Microsoft.UI", source);
+    }
+
+    [Fact]
+    public void Project_DisablesGeneratedXamlMain()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "SlideShowWallpaper.csproj"));
+
+        Assert.Contains("DISABLE_XAML_GENERATED_MAIN", source);
+    }
+
+    [Fact]
+    public void ProgramMain_DemotesElevatedProcessBeforeStartingWinUi()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Program.cs"));
+        string method = source[
+            source.IndexOf("public static int Main", StringComparison.Ordinal)..
+            source.LastIndexOf('}')];
+
+        int brokerIndex = method.IndexOf("HardwareMonitorBrokerHost.IsBrokerMode(args)", StringComparison.Ordinal);
         int skipCheckIndex = method.IndexOf("!launchOptions.SkipElevationDemotion", StringComparison.Ordinal);
         int demoteIndex = method.IndexOf("TryRestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
-        int logIndex = method.IndexOf("AppLog.Write(\"Launch start\")", StringComparison.Ordinal);
-        int tempCleanupIndex = method.IndexOf("AppTempPaths.Cleanup();", StringComparison.Ordinal);
+        int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
 
-        Assert.True(skipCheckIndex >= 0);
+        Assert.True(brokerIndex >= 0);
+        Assert.True(skipCheckIndex > brokerIndex);
         Assert.True(demoteIndex > skipCheckIndex);
-        Assert.True(logIndex > demoteIndex);
-        Assert.True(tempCleanupIndex > demoteIndex);
-        Assert.Contains("Environment.Exit(0);", method);
-        Assert.DoesNotContain("ElevatedHardwareMonitorClient", method);
-        Assert.DoesNotContain("HardwareMonitorHelper", method);
+        Assert.True(startIndex > demoteIndex);
+        Assert.Contains("return 0;", method);
     }
 
     [Fact]
@@ -926,10 +951,10 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorService_EnablesControllerAndPsuCollectors()
+    public void HardwareMonitorReader_EnablesControllerAndPsuCollectors()
     {
         string root = FindProjectRoot();
-        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
+        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
         string method = source[
             source.IndexOf("private Computer EnsureComputer", StringComparison.Ordinal)..
             source.IndexOf("private static void CollectHardware", StringComparison.Ordinal)];
@@ -939,16 +964,17 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorService_ReadsHardwareInCurrentProcess()
+    public void HardwareMonitorService_ReadsHardwareThroughElevatedBroker()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
+        string appSource = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
 
-        Assert.Contains("Computer computer = EnsureComputer();", source);
-        Assert.Contains("CurrentProcessPrivilege.IsAdministrator()", source);
-        Assert.DoesNotContain("ElevatedHardwareMonitorClient", source);
-        Assert.DoesNotContain("TryStartElevatedReader", source);
-        Assert.DoesNotContain("NamedPipe", source);
+        Assert.Contains("HardwareMonitorBrokerClient", source);
+        Assert.Contains("_brokerClient.GetSnapshot()", source);
+        Assert.DoesNotContain("LibreHardwareMonitor", source);
+        Assert.DoesNotContain("new Computer", source);
+        Assert.DoesNotContain("new HardwareMonitorReader", appSource);
     }
 
     [Fact]
