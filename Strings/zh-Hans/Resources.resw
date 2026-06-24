@@ -105,6 +105,7 @@
   <data name="TransitionSlide" xml:space="preserve"><value>滑动</value></data>
   <data name="PreviewResizeHandle" xml:space="preserve"><value>调整预览区域宽度</value></data>
   <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>硬件监控</value></data>
+  <data name="HardwareMonitorTitle" xml:space="preserve"><value>硬件监控</value></data>
   <data name="HardwareMonitorEnabled" xml:space="preserve"><value>启用</value></data>
   <data name="HardwareMonitorRefreshInterval" xml:space="preserve"><value>刷新间隔（秒）</value></data>
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>屏幕</value></data>

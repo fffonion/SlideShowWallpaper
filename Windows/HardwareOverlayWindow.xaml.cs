@@ -8,7 +8,6 @@ using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
 using Windows.Foundation;
-using Windows.Graphics;
 using WinRT.Interop;
 
 namespace SlideShowWallpaper.Windows;
@@ -22,13 +21,15 @@ public sealed partial class HardwareOverlayWindow : Window
     private double _currentY;
     private double _dragStartX;
     private double _dragStartY;
+    private int _desktopHostOriginX;
+    private int _desktopHostOriginY;
     private bool _isDragging;
     private bool _isClosed;
 
     public HardwareOverlayWindow()
     {
         InitializeComponent();
-        Title = LocalizedStrings.Get("HardwareMonitorTitle");
+        Title = LocalizedStrings.Get("HardwareMonitorSettingsGroup");
         _hwnd = WindowNative.GetWindowHandle(this);
         ConfigureWindow();
         ConfigureDrag();
@@ -36,6 +37,12 @@ public sealed partial class HardwareOverlayWindow : Window
     }
 
     public event EventHandler<HardwareOverlayMovedEventArgs>? HardwareOverlayMoved;
+
+    public void SetDesktopHostOrigin(int left, int top)
+    {
+        _desktopHostOriginX = left;
+        _desktopHostOriginY = top;
+    }
 
     public void SetHardwareOverlay(HardwareOverlayState state, NativeMethods.RECT monitorRect)
     {
@@ -266,9 +273,14 @@ public sealed partial class HardwareOverlayWindow : Window
     {
         (double width, double height) = MeasureOverlay();
         double scale = GetWindowScale();
-        AppWindow.Resize(new SizeInt32(
+        NativeMethods.SetWindowPos(
+            _hwnd,
+            IntPtr.Zero,
+            0,
+            0,
             Math.Max(1, (int)Math.Ceiling(width * scale)),
-            Math.Max(1, (int)Math.Ceiling(height * scale))));
+            Math.Max(1, (int)Math.Ceiling(height * scale)),
+            (uint)(NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE));
     }
 
     private (double Width, double Height) MeasureOverlay()
@@ -297,7 +309,16 @@ public sealed partial class HardwareOverlayWindow : Window
         double monitorHeight = Math.Max(1, _monitorRect.Height / scale);
         _currentX = Math.Clamp(x, 0, Math.Max(0, monitorWidth - width));
         _currentY = Math.Clamp(y, 0, Math.Max(0, monitorHeight - height));
-        AppWindow.Move(new PointInt32(_monitorRect.Left + (int)Math.Round(_currentX * scale), _monitorRect.Top + (int)Math.Round(_currentY * scale)));
+        int screenX = _monitorRect.Left + (int)Math.Round(_currentX * scale);
+        int screenY = _monitorRect.Top + (int)Math.Round(_currentY * scale);
+        NativeMethods.SetWindowPos(
+            _hwnd,
+            IntPtr.Zero,
+            screenX - _desktopHostOriginX,
+            screenY - _desktopHostOriginY,
+            0,
+            0,
+            (uint)(NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE));
     }
 
     private double GetWindowScale()

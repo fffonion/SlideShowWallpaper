@@ -9,8 +9,15 @@ public static class LocalizedStrings
 
     public static string Get(string key)
     {
-        string value = _loader.GetString(key);
-        return string.IsNullOrEmpty(value) ? key : value;
+        try
+        {
+            string value = _loader.GetString(key);
+            return string.IsNullOrEmpty(value) ? key : value;
+        }
+        catch
+        {
+            return key;
+        }
     }
 
     public static string Format(string key, params object[] args)

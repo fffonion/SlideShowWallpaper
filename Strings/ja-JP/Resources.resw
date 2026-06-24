@@ -105,6 +105,7 @@
   <data name="TransitionSlide" xml:space="preserve"><value>スライド</value></data>
   <data name="PreviewResizeHandle" xml:space="preserve"><value>プレビュー領域のサイズ変更</value></data>
   <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>ハードウェア監視</value></data>
+  <data name="HardwareMonitorTitle" xml:space="preserve"><value>ハードウェア監視</value></data>
   <data name="HardwareMonitorEnabled" xml:space="preserve"><value>有効</value></data>
   <data name="HardwareMonitorRefreshInterval" xml:space="preserve"><value>更新間隔（秒）</value></data>
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>ディスプレイ</value></data>

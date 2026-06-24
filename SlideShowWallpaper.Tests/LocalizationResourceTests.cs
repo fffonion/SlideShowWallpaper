@@ -21,6 +21,26 @@ public sealed class LocalizationResourceTests
         }
     }
 
+    [Fact]
+    public void Resources_IncludeHardwareMonitorWindowTitle()
+    {
+        string root = FindRepositoryRoot();
+        string[] keys = ReadKeys(Path.Combine(root, "Strings", "en-US", "Resources.resw"));
+
+        Assert.Contains("HardwareMonitorTitle", keys);
+    }
+
+    [Fact]
+    public void LocalizedStrings_GetFallsBackToKeyWhenResourceLoaderThrows()
+    {
+        string root = FindRepositoryRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "LocalizedStrings.cs"));
+        string method = source[source.IndexOf("public static string Get", StringComparison.Ordinal)..source.IndexOf("public static string Format", StringComparison.Ordinal)];
+
+        Assert.Contains("catch", method);
+        Assert.Contains("return key;", method);
+    }
+
     private static string[] ReadKeys(string path)
     {
         XDocument document = XDocument.Load(path);

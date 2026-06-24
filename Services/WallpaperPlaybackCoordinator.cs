@@ -405,6 +405,8 @@ public sealed partial class WallpaperPlaybackCoordinator
             Elements = elements,
         };
         HardwareOverlayWindow overlayWindow = EnsureHardwareOverlayWindow();
+        DesktopHostOffset hostOffset = _desktopHostService.HostOverlayOnDesktop(overlayWindow);
+        overlayWindow.SetDesktopHostOrigin(hostOffset.Left, hostOffset.Top);
         overlayWindow.SetHardwareOverlay(state, monitorRect);
     }
 

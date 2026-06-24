@@ -8,6 +8,7 @@ public sealed class HardwareOverlayWindowSourceTests
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml.cs"));
 
+        Assert.Contains("Title = LocalizedStrings.Get(\"HardwareMonitorSettingsGroup\");", source);
         Assert.Contains("presenter.SetBorderAndTitleBar(false, false);", source);
         Assert.Contains("Root.PointerPressed += Root_PointerPressed;", source);
         Assert.Contains("Root.PointerMoved += Root_PointerMoved;", source);
@@ -15,6 +16,7 @@ public sealed class HardwareOverlayWindowSourceTests
         Assert.Contains("NativeMethods.GetCursorPos(out _dragStartCursor)", source);
         Assert.Contains("SetOverlayPosition(_dragStartX + ((cursor.X - _dragStartCursor.X) / scale)", source);
         Assert.Contains("HardwareOverlayMoved?.Invoke(this, new HardwareOverlayMovedEventArgs(_currentX, _currentY));", source);
+        Assert.Contains("public void SetDesktopHostOrigin(int left, int top)", source);
     }
 
     [Fact]
@@ -26,7 +28,9 @@ public sealed class HardwareOverlayWindowSourceTests
         Assert.Contains("public void SetHardwareOverlay(HardwareOverlayState state, NativeMethods.RECT monitorRect)", source);
         Assert.Contains("_monitorRect = monitorRect;", source);
         Assert.Contains("Root.XamlRoot?.RasterizationScale", source);
-        Assert.Contains("new PointInt32(_monitorRect.Left +", source);
+        Assert.Contains("NativeMethods.SetWindowPos(", source);
+        Assert.Contains("screenX - _desktopHostOriginX", source);
+        Assert.Contains("screenY - _desktopHostOriginY", source);
         Assert.Contains("NativeMethods.SW_SHOWNA", source);
     }
 
