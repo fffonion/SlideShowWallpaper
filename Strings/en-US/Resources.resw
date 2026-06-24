@@ -153,8 +153,8 @@
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>Font</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>Opacity</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>Refresh hardware sensors</value></data>
-  <data name="ImportHardwareTemplate" xml:space="preserve"><value>Import hardware template</value></data>
-  <data name="ExportHardwareTemplate" xml:space="preserve"><value>Export hardware template</value></data>
+  <data name="ImportHardwareTemplate" xml:space="preserve"><value>Import layout</value></data>
+  <data name="ExportHardwareTemplate" xml:space="preserve"><value>Export layout</value></data>
   <data name="HardwareMetricGroupCpu" xml:space="preserve"><value>CPU</value></data>
   <data name="HardwareMetricGroupGpu" xml:space="preserve"><value>GPU</value></data>
   <data name="HardwareMetricGroupStorage" xml:space="preserve"><value>Storage</value></data>

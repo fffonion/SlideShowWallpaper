@@ -31,6 +31,16 @@ public sealed class LocalizationResourceTests
     }
 
     [Fact]
+    public void HardwareTemplateResources_UseLayoutWording()
+    {
+        string root = FindRepositoryRoot();
+        Dictionary<string, string> values = ReadValues(Path.Combine(root, "Strings", "zh-Hans", "Resources.resw"));
+
+        Assert.Equal("导入布局", values["ImportHardwareTemplate"]);
+        Assert.Equal("导出布局", values["ExportHardwareTemplate"]);
+    }
+
+    [Fact]
     public void LocalizedStrings_GetFallsBackToKeyWhenResourceLoaderThrows()
     {
         string root = FindRepositoryRoot();
@@ -51,6 +61,17 @@ public sealed class LocalizationResourceTests
             .Cast<string>()
             .Order(StringComparer.Ordinal)
             .ToArray() ?? [];
+    }
+
+    private static Dictionary<string, string> ReadValues(string path)
+    {
+        XDocument document = XDocument.Load(path);
+        return document.Root?
+            .Elements("data")
+            .ToDictionary(
+                element => element.Attribute("name")?.Value ?? string.Empty,
+                element => element.Element("value")?.Value ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase) ?? [];
     }
 
     private static string FindRepositoryRoot()

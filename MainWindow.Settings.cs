@@ -762,24 +762,25 @@ public sealed partial class MainWindow
         canvas.Children.Add(horizontalGuide);
         canvas.Children.Add(selectionRectangle);
 
-        var viewbox = new Viewbox
-        {
-            MaxWidth = HardwareEditorPreviewMaxWidth,
-            MaxHeight = HardwareEditorPreviewMaxHeight,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Child = canvas,
-        };
-        viewbox.MaxWidth = _hardwareEditorPreviewWidth;
-        viewbox.MaxHeight = _hardwareEditorPreviewHeight;
-        AutomationProperties.SetName(viewbox, LocalizedStrings.Get("HardwareMonitorPreview"));
-
         var surfaceGrid = new Grid
         {
+            Width = _hardwareEditorPreviewWidth,
+            Height = _hardwareEditorPreviewHeight,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
-        surfaceGrid.Children.Add(viewbox);
-        FrameworkElement resizeHandle = CreateHardwareEditorPreviewResizeHandle(viewbox);
+        var previewViewport = new ScrollViewer
+        {
+            Content = canvas,
+            Width = _hardwareEditorPreviewWidth,
+            Height = _hardwareEditorPreviewHeight,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        AutomationProperties.SetName(previewViewport, LocalizedStrings.Get("HardwareMonitorPreview"));
+        surfaceGrid.Children.Add(previewViewport);
+        FrameworkElement resizeHandle = CreateHardwareEditorPreviewResizeHandle(surfaceGrid, previewViewport);
         surfaceGrid.Children.Add(resizeHandle);
 
         return new Border
@@ -794,7 +795,7 @@ public sealed partial class MainWindow
         };
     }
 
-    private FrameworkElement CreateHardwareEditorPreviewResizeHandle(Viewbox viewbox)
+    private FrameworkElement CreateHardwareEditorPreviewResizeHandle(Grid surfaceGrid, FrameworkElement previewViewport)
     {
         bool isResizing = false;
         double startX = 0;
@@ -833,7 +834,7 @@ public sealed partial class MainWindow
         handle.PointerPressed += (_, args) =>
         {
             isResizing = true;
-            global::Windows.Foundation.Point position = args.GetCurrentPoint(viewbox).Position;
+            global::Windows.Foundation.Point position = args.GetCurrentPoint(surfaceGrid).Position;
             startX = position.X;
             startY = position.Y;
             startWidth = _hardwareEditorPreviewWidth;
@@ -848,12 +849,14 @@ public sealed partial class MainWindow
                 return;
             }
 
-            global::Windows.Foundation.Point position = args.GetCurrentPoint(viewbox).Position;
+            global::Windows.Foundation.Point position = args.GetCurrentPoint(surfaceGrid).Position;
             global::Windows.Foundation.Point delta = new(position.X - startX, position.Y - startY);
             _hardwareEditorPreviewWidth = Math.Clamp(startWidth + delta.X, HardwareEditorPreviewResizeMinWidth, HardwareEditorPreviewResizeMaxWidth);
             _hardwareEditorPreviewHeight = Math.Clamp(startHeight + delta.Y, HardwareEditorPreviewResizeMinHeight, HardwareEditorPreviewResizeMaxHeight);
-            viewbox.MaxWidth = _hardwareEditorPreviewWidth;
-            viewbox.MaxHeight = _hardwareEditorPreviewHeight;
+            surfaceGrid.Width = _hardwareEditorPreviewWidth;
+            surfaceGrid.Height = _hardwareEditorPreviewHeight;
+            previewViewport.Width = _hardwareEditorPreviewWidth;
+            previewViewport.Height = _hardwareEditorPreviewHeight;
             args.Handled = true;
         };
         handle.PointerReleased += (_, args) =>

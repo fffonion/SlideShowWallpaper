@@ -317,16 +317,16 @@ public sealed class MainWindowSourceTests
         Assert.Contains("stack.Children.Add(_hardwareEditorPreviewHost);", sectionMethod);
         Assert.Contains("Padding = new Thickness(0)", surfaceMethod);
         Assert.Contains("new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight)", surfaceMethod);
-        Assert.Contains("new Viewbox", surfaceMethod);
-        Assert.Contains("MaxWidth = HardwareEditorPreviewMaxWidth", surfaceMethod);
-        Assert.Contains("MaxHeight = HardwareEditorPreviewMaxHeight", surfaceMethod);
-        Assert.Contains("Stretch = Stretch.Uniform", surfaceMethod);
-        Assert.Contains("viewbox.MaxWidth = _hardwareEditorPreviewWidth;", surfaceMethod);
-        Assert.Contains("viewbox.MaxHeight = _hardwareEditorPreviewHeight;", surfaceMethod);
-        Assert.Contains("CreateHardwareEditorPreviewResizeHandle(viewbox)", surfaceMethod);
-        Assert.Contains("surfaceGrid.Children.Add(viewbox);", surfaceMethod);
+        Assert.Contains("new ScrollViewer", surfaceMethod);
+        Assert.Contains("Content = canvas", surfaceMethod);
+        Assert.Contains("Width = _hardwareEditorPreviewWidth", surfaceMethod);
+        Assert.Contains("Height = _hardwareEditorPreviewHeight", surfaceMethod);
+        Assert.Contains("CreateHardwareEditorPreviewResizeHandle(surfaceGrid, previewViewport)", surfaceMethod);
+        Assert.Contains("surfaceGrid.Children.Add(previewViewport);", surfaceMethod);
         Assert.Contains("surfaceGrid.Children.Add(resizeHandle);", surfaceMethod);
         Assert.Contains("Child = surfaceGrid", surfaceMethod);
+        Assert.DoesNotContain("new Viewbox", surfaceMethod);
+        Assert.DoesNotContain("Stretch = Stretch.Uniform,", surfaceMethod);
         Assert.DoesNotContain("new HardwareOverlayLayout(720, 420)", surfaceMethod);
         Assert.DoesNotContain("Padding = new Thickness(8)", sectionMethod);
         Assert.DoesNotContain("Padding = new Thickness(16)", sectionMethod);
@@ -346,10 +346,14 @@ public sealed class MainWindowSourceTests
         Assert.Contains("Width = HardwareEditorPreviewResizeHandleSize", method);
         Assert.Contains("Height = HardwareEditorPreviewResizeHandleSize", method);
         Assert.Contains("handle.CapturePointer(args.Pointer);", method);
-        Assert.Contains("viewbox.MaxWidth = _hardwareEditorPreviewWidth;", method);
-        Assert.Contains("viewbox.MaxHeight = _hardwareEditorPreviewHeight;", method);
+        Assert.Contains("surfaceGrid.Width = _hardwareEditorPreviewWidth;", method);
+        Assert.Contains("surfaceGrid.Height = _hardwareEditorPreviewHeight;", method);
+        Assert.Contains("previewViewport.Width = _hardwareEditorPreviewWidth;", method);
+        Assert.Contains("previewViewport.Height = _hardwareEditorPreviewHeight;", method);
         Assert.Contains("Math.Clamp(startWidth + delta.X", method);
         Assert.Contains("Math.Clamp(startHeight + delta.Y", method);
+        Assert.DoesNotContain("MaxWidth = _hardwareEditorPreviewWidth", method);
+        Assert.DoesNotContain("MaxHeight = _hardwareEditorPreviewHeight", method);
     }
 
     [Fact]

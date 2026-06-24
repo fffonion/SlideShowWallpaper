@@ -154,8 +154,8 @@
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>字級</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>重新整理硬體感測器</value></data>
-  <data name="ImportHardwareTemplate" xml:space="preserve"><value>匯入硬體範本</value></data>
-  <data name="ExportHardwareTemplate" xml:space="preserve"><value>匯出硬體範本</value></data>
+  <data name="ImportHardwareTemplate" xml:space="preserve"><value>匯入版面配置</value></data>
+  <data name="ExportHardwareTemplate" xml:space="preserve"><value>匯出版面配置</value></data>
   <data name="HardwareMetricGroupCpu" xml:space="preserve"><value>CPU</value></data>
   <data name="HardwareMetricGroupGpu" xml:space="preserve"><value>GPU</value></data>
   <data name="HardwareMetricGroupStorage" xml:space="preserve"><value>硬碟</value></data>

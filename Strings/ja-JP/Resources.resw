@@ -154,8 +154,8 @@
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>フォント</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>不透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>ハードウェア センサーを更新</value></data>
-  <data name="ImportHardwareTemplate" xml:space="preserve"><value>ハードウェア テンプレートをインポート</value></data>
-  <data name="ExportHardwareTemplate" xml:space="preserve"><value>ハードウェア テンプレートをエクスポート</value></data>
+  <data name="ImportHardwareTemplate" xml:space="preserve"><value>レイアウトをインポート</value></data>
+  <data name="ExportHardwareTemplate" xml:space="preserve"><value>レイアウトをエクスポート</value></data>
   <data name="HardwareMetricGroupCpu" xml:space="preserve"><value>CPU</value></data>
   <data name="HardwareMetricGroupGpu" xml:space="preserve"><value>GPU</value></data>
   <data name="HardwareMetricGroupStorage" xml:space="preserve"><value>ストレージ</value></data>
