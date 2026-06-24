@@ -1048,6 +1048,20 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void AppLaunch_WithQuietStart_ActivatesThenHidesWindow()
+    {
+        string root = FindProjectRoot();
+        string appSource = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string windowingSource = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+
+        Assert.Contains("launchOptions.StartInTray && _window is MainWindow mainWindow", appSource);
+        Assert.Contains("mainWindow.ActivateHiddenTrayStartupWindow();", appSource);
+        Assert.Contains("public void ActivateHiddenTrayStartupWindow()", windowingSource);
+        Assert.Contains("Activate();", windowingSource);
+        Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);", windowingSource);
+    }
+
+    [Fact]
     public void HardwareMonitorBroker_IsSingleFileEmbeddedWithSeparateTitle()
     {
         string root = FindProjectRoot();

@@ -36,4 +36,28 @@ public sealed class SingleInstanceServiceTests
     {
         Assert.DoesNotContain(AppContext.BaseDirectory, SingleInstanceService.DefaultInstanceKey, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void NotifyPrimaryAsync_TreatsPipeAccessDeniedAsNotificationFailure()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "SingleInstanceService.cs"));
+        string method = source[
+            source.IndexOf("public async Task<bool> NotifyPrimaryAsync", StringComparison.Ordinal)..
+            source.IndexOf("public void Dispose", StringComparison.Ordinal)];
+
+        Assert.Contains("UnauthorizedAccessException", method);
+        Assert.Contains("return false;", method);
+    }
+
+    private static string FindProjectRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SlideShowWallpaper.csproj")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Project root not found.");
+    }
 }

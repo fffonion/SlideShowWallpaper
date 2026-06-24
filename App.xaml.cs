@@ -70,7 +70,11 @@ public partial class App : Application
                 _hardwareMonitorService,
                 launchOptions.DisableCloseToTray,
                 launchOptions.StartInTray);
-            if (!launchOptions.StartInTray)
+            if (launchOptions.StartInTray && _window is MainWindow mainWindow)
+            {
+                mainWindow.ActivateHiddenTrayStartupWindow();
+            }
+            else
             {
                 _window.Activate();
             }

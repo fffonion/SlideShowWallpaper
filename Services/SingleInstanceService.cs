@@ -72,7 +72,7 @@ public sealed class SingleInstanceService : IDisposable
             await client.FlushAsync(timeoutCancellation.Token).ConfigureAwait(false);
             return true;
         }
-        catch (Exception exception) when (exception is IOException or OperationCanceledException or TimeoutException)
+        catch (Exception exception) when (exception is IOException or OperationCanceledException or TimeoutException or UnauthorizedAccessException)
         {
             AppLog.Write(exception);
             return false;

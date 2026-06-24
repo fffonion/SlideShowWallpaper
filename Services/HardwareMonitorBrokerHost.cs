@@ -77,7 +77,6 @@ public static class HardwareMonitorBrokerHost
         if (string.Equals(request?.Command, HardwareMonitorBrokerProtocol.ShutdownCommand, StringComparison.OrdinalIgnoreCase))
         {
             WriteResponse(output, new HardwareMonitorBrokerResponse { IsElevated = CurrentProcessPrivilege.IsAdministrator() });
-            TrimBrokerWorkingSet();
             return true;
         }
 
@@ -89,24 +88,12 @@ public static class HardwareMonitorBrokerHost
             CapturedAt = snapshot.CapturedAt,
             IsElevated = snapshot.IsElevated,
         });
-        TrimBrokerWorkingSet();
         return false;
     }
 
     private static void WriteResponse(TextWriter output, HardwareMonitorBrokerResponse response)
     {
         output.WriteLine(JsonSerializer.Serialize(response, JsonOptions));
-    }
-
-    private static void TrimBrokerWorkingSet()
-    {
-        try
-        {
-            WorkingSetTrimmer.TrimCurrentProcess();
-        }
-        catch (Exception)
-        {
-        }
     }
 
     private static CancellationTokenSource CreateParentProcessCancellation(IReadOnlyList<string> arguments)

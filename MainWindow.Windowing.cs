@@ -272,6 +272,12 @@ public sealed partial class MainWindow
         NativeMethods.SetForegroundWindow(_hwnd);
     }
 
+    public void ActivateHiddenTrayStartupWindow()
+    {
+        Activate();
+        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
+    }
+
     private void HandleWindowMinimizedChanged(bool isMinimized)
     {
         if (_exitRequested)

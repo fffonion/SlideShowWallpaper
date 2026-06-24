@@ -27,6 +27,5 @@
     <Compile Include="..\Services\HardwareMonitorBrokerHost.cs" Link="Services\HardwareMonitorBrokerHost.cs" />
     <Compile Include="..\Services\HardwareMonitorBrokerProtocol.cs" Link="Services\HardwareMonitorBrokerProtocol.cs" />
     <Compile Include="..\Services\HardwareMonitorReader.cs" Link="Services\HardwareMonitorReader.cs" />
-    <Compile Include="..\Services\WorkingSetTrimmer.cs" Link="Services\WorkingSetTrimmer.cs" />
   </ItemGroup>
 </Project>

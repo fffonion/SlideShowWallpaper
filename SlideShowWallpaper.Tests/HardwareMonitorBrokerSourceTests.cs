@@ -106,13 +106,13 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void BrokerHost_TrimsWorkingSetAfterResponding()
+    public void BrokerHost_DoesNotTrimWorkingSetAfterEachRequest()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
 
-        Assert.Contains("TrimBrokerWorkingSet();", source);
-        Assert.Contains("WorkingSetTrimmer.TrimCurrentProcess();", source);
+        Assert.DoesNotContain("TrimBrokerWorkingSet", source);
+        Assert.DoesNotContain("WorkingSetTrimmer", source);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("<Product>SlideShowWallpaper Broker</Product>", source);
         Assert.Contains("<ServerGarbageCollection>false</ServerGarbageCollection>", source);
         Assert.Contains("LibreHardwareMonitorLib", source);
-        Assert.Contains("WorkingSetTrimmer.cs", source);
+        Assert.DoesNotContain("WorkingSetTrimmer.cs", source);
         Assert.DoesNotContain("<OutputType>WinExe</OutputType>", source);
         Assert.DoesNotContain("UseWinUI>true", source);
         Assert.DoesNotContain("Microsoft.WindowsAppSDK", source);
