@@ -93,4 +93,17 @@ public sealed class HardwareEditorLayoutServiceTests
         Assert.Equal(10, elements[2].X);
         Assert.Equal(45, elements[3].X);
     }
+
+    [Fact]
+    public void QuantizePosition_RoundsToWholePixelsAndClampsToBounds()
+    {
+        (double x, double y) = HardwareEditorLayoutService.QuantizePosition(
+            x: 12.6,
+            y: 3.2,
+            maxX: 12.4,
+            maxY: 8.7);
+
+        Assert.Equal(12, x);
+        Assert.Equal(3, y);
+    }
 }

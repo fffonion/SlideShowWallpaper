@@ -458,6 +458,26 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HardwareEditorMovement_QuantizesElementCoordinates()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string moveMethod = source[
+            source.IndexOf("private bool MoveHardwareEditorSelection", StringComparison.Ordinal)..
+            source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)];
+        string dragMethod = source[
+            source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)..
+            source.IndexOf("private List<HardwareOverlayElement> GetHardwareEditorDragElements", StringComparison.Ordinal)];
+        string positionMethod = source[
+            source.IndexOf("private FrameworkElement CreateHardwareElementPositionControls", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareElementSizeControls", StringComparison.Ordinal)];
+
+        Assert.Contains("HardwareEditorLayoutService.QuantizePosition", moveMethod);
+        Assert.Contains("HardwareEditorLayoutService.QuantizePosition", dragMethod);
+        Assert.Contains("HardwareEditorLayoutService.QuantizeCoordinate", positionMethod);
+    }
+
+    [Fact]
     public void HardwareEditorActions_AddsArrangeGridButton()
     {
         string root = FindProjectRoot();

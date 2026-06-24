@@ -53,8 +53,11 @@ public static class HardwareEditorLayoutService
             int column = 0;
             foreach (HardwareOverlayElement element in row.OrderBy(element => element.X).ThenBy(element => element.Y))
             {
-                element.X = columnPositions[Math.Min(column, columnPositions.Length - 1)];
-                element.Y = y;
+                (element.X, element.Y) = QuantizePosition(
+                    columnPositions[Math.Min(column, columnPositions.Length - 1)],
+                    y,
+                    double.MaxValue,
+                    double.MaxValue);
                 rowHeight = Math.Max(rowHeight, Math.Max(0, element.Height));
                 column++;
             }
@@ -63,6 +66,17 @@ public static class HardwareEditorLayoutService
         }
 
         return true;
+    }
+
+    public static double QuantizeCoordinate(double value, double maxValue)
+    {
+        double maxWholePixel = double.IsFinite(maxValue) ? Math.Floor(Math.Max(0, maxValue)) : double.MaxValue;
+        return Math.Clamp(Math.Round(value, MidpointRounding.AwayFromZero), 0, maxWholePixel);
+    }
+
+    public static (double X, double Y) QuantizePosition(double x, double y, double maxX, double maxY)
+    {
+        return (QuantizeCoordinate(x, maxX), QuantizeCoordinate(y, maxY));
     }
 
     private static List<List<HardwareOverlayElement>> GroupRows(IEnumerable<HardwareOverlayElement> elements)

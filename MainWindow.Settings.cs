@@ -1285,14 +1285,14 @@ public sealed partial class MainWindow
         };
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        FrameworkElement xControl = CreateLabeledNumberBox("X", element.X, value =>
+        FrameworkElement xControl = CreateLabeledNumberBox("X", HardwareEditorLayoutService.QuantizeCoordinate(element.X, double.MaxValue), value =>
         {
-            element.X = Math.Max(0, value);
+            element.X = HardwareEditorLayoutService.QuantizeCoordinate(value, Math.Max(0, config.OverlayWidth - Math.Max(1, element.Width)));
             RefreshHardwareEditorPreview(config);
         });
-        FrameworkElement yControl = CreateLabeledNumberBox("Y", element.Y, value =>
+        FrameworkElement yControl = CreateLabeledNumberBox("Y", HardwareEditorLayoutService.QuantizeCoordinate(element.Y, double.MaxValue), value =>
         {
-            element.Y = Math.Max(0, value);
+            element.Y = HardwareEditorLayoutService.QuantizeCoordinate(value, Math.Max(0, config.OverlayHeight - Math.Max(1, element.Height)));
             RefreshHardwareEditorPreview(config);
         });
         Grid.SetColumn(xControl, 0);
@@ -1680,8 +1680,11 @@ public sealed partial class MainWindow
         {
             double maxLeft = Math.Max(0, canvasWidth - Math.Max(1, element.Width));
             double maxTop = Math.Max(0, canvasHeight - Math.Max(1, element.Height));
-            element.X = Math.Clamp(element.X + deltaX, 0, maxLeft);
-            element.Y = Math.Clamp(element.Y + deltaY, 0, maxTop);
+            (element.X, element.Y) = HardwareEditorLayoutService.QuantizePosition(
+                element.X + deltaX,
+                element.Y + deltaY,
+                maxLeft,
+                maxTop);
             if (visualsById.TryGetValue(element.Id, out FrameworkElement? visual))
             {
                 Canvas.SetLeft(visual, element.X);
@@ -1789,8 +1792,11 @@ public sealed partial class MainWindow
 
                 double maxLeft = Math.Max(0, canvas.Width - Math.Max(1, dragElement.Width));
                 double maxTop = Math.Max(0, canvas.Height - Math.Max(1, dragElement.Height));
-                dragElement.X = Math.Clamp(startPosition.X + deltaX, 0, maxLeft);
-                dragElement.Y = Math.Clamp(startPosition.Y + deltaY, 0, maxTop);
+                (dragElement.X, dragElement.Y) = HardwareEditorLayoutService.QuantizePosition(
+                    startPosition.X + deltaX,
+                    startPosition.Y + deltaY,
+                    maxLeft,
+                    maxTop);
                 if (visualsById.TryGetValue(dragElement.Id, out FrameworkElement? dragVisual))
                 {
                     Canvas.SetLeft(dragVisual, dragElement.X);
