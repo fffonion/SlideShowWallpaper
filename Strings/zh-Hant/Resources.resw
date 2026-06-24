@@ -121,7 +121,7 @@
   <data name="HardwareMonitorBackgroundColor" xml:space="preserve"><value>背景色彩</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>範本</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>預覽</value></data>
-  <data name="HardwareMonitorEditor" xml:space="preserve"><value>編輯器</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>浮窗佈局編輯器</value></data>
   <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>搜尋感測器</value></data>
   <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>全選</value></data>
   <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>反選</value></data>

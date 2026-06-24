@@ -121,7 +121,7 @@
   <data name="HardwareMonitorBackgroundColor" xml:space="preserve"><value>背景色</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>テンプレート</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>プレビュー</value></data>
-  <data name="HardwareMonitorEditor" xml:space="preserve"><value>エディター</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>フローティングウィンドウ レイアウトエディター</value></data>
   <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>センサーを検索</value></data>
   <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>すべて選択</value></data>
   <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>反転</value></data>

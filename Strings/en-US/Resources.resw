@@ -120,7 +120,7 @@
   <data name="HardwareMonitorBackgroundColor" xml:space="preserve"><value>Background color</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>Template</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>Preview</value></data>
-  <data name="HardwareMonitorEditor" xml:space="preserve"><value>Editor</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>Overlay Layout Editor</value></data>
   <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>Search sensors</value></data>
   <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>Select all</value></data>
   <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>Invert</value></data>
