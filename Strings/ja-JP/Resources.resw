@@ -115,6 +115,7 @@
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>テンプレート操作</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>すべてのディスプレイ</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>センサーが見つかりません。一部のセンサーには管理者権限が必要です。</value></data>
+  <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>管理者権限なしで実行中です。CPU、マザーボードファン、ストレージ温度センサーは利用できない場合があります。</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>フォント</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>不透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>ハードウェア センサーを更新</value></data>

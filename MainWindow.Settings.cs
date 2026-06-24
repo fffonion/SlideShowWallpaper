@@ -147,7 +147,13 @@ public sealed partial class MainWindow
         {
             Spacing = 4,
         };
-        IReadOnlyList<HardwareSensorReading> sensors = _hardwareMonitorSnapshot?.Sensors ?? [];
+        HardwareMonitorSnapshot? snapshot = _hardwareMonitorSnapshot;
+        IReadOnlyList<HardwareSensorReading> sensors = snapshot?.Sensors ?? [];
+        if (snapshot is { IsElevated: false })
+        {
+            stack.Children.Add(CreateHardwareSensorNotice());
+        }
+
         if (sensors.Count == 0)
         {
             stack.Children.Add(new TextBlock
@@ -193,6 +199,17 @@ public sealed partial class MainWindow
             MaxHeight = 260,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        };
+    }
+
+    private static TextBlock CreateHardwareSensorNotice()
+    {
+        return new TextBlock
+        {
+            Text = LocalizedStrings.Get("HardwareMonitorLimitedAccess"),
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = GetThemeBrush("TextFillColorSecondaryBrush"),
+            Margin = new Thickness(0, 0, 0, 6),
         };
     }
 
@@ -389,8 +406,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        config.SelectedSensorIds = snapshot.Sensors
-            .Where(sensor => sensor.Kind is HardwareMetricKind.Temperature or HardwareMetricKind.FanRpm or HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable or HardwareMetricKind.Power)
+        config.SelectedSensorIds = HardwareOverlayTextRenderer.SelectDefaultSensors(snapshot)
             .Take(8)
             .Select(sensor => sensor.Id)
             .ToList();

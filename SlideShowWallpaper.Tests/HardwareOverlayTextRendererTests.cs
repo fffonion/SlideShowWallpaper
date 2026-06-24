@@ -73,7 +73,7 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
-    public void SelectSensors_WithNoSelection_UsesFirstEightSensors()
+    public void SelectSensors_WithNoSelection_UsesFirstEightDefaultSensors()
     {
         var config = new HardwareMonitorConfig();
         var snapshot = new HardwareMonitorSnapshot(
@@ -92,8 +92,9 @@ public sealed class HardwareOverlayTextRendererTests
         IReadOnlyList<HardwareSensorReading> selected = HardwareOverlayTextRenderer.SelectSensors(config, snapshot);
 
         Assert.Equal(8, selected.Count);
-        Assert.Equal("sensor-0", selected[0].Id);
-        Assert.Equal("sensor-7", selected[^1].Id);
+        Assert.Equal(
+            HardwareOverlayTextRenderer.SelectDefaultSensors(snapshot).Take(8).Select(sensor => sensor.Id),
+            selected.Select(sensor => sensor.Id));
     }
 
     [Fact]
@@ -114,5 +115,28 @@ public sealed class HardwareOverlayTextRendererTests
 
         HardwareSensorReading reading = Assert.Single(selected);
         Assert.Equal("physical-memory", reading.Id);
+    }
+
+    [Fact]
+    public void SelectDefaultSensors_WithMixedSensors_PrioritizesTemperatureFanMemoryAndPower()
+    {
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("gpu-power", "GPU", "GPU Package", HardwareMetricKind.Power, HardwareMetricGroup.Gpu, 180, "W"),
+                new HardwareSensorReading("memory", "Memory", "Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 32, "GB"),
+                new HardwareSensorReading("storage-temp", "NVMe", "Temperature", HardwareMetricKind.Temperature, HardwareMetricGroup.Storage, 45, "C"),
+                new HardwareSensorReading("gpu-temp", "GPU", "GPU Core", HardwareMetricKind.Temperature, HardwareMetricGroup.Gpu, 60, "C"),
+                new HardwareSensorReading("fan", "Mainboard", "Fan #1", HardwareMetricKind.FanRpm, HardwareMetricGroup.Motherboard, 1100, "RPM"),
+                new HardwareSensorReading("cpu-temp", "CPU", "CPU Package", HardwareMetricKind.Temperature, HardwareMetricGroup.Cpu, 55, "C"),
+                new HardwareSensorReading("vram", "GPU", "GPU Memory Free", HardwareMetricKind.VramAvailable, HardwareMetricGroup.Gpu, 12000, "MB"),
+                new HardwareSensorReading("cpu-power", "CPU", "CPU Package", HardwareMetricKind.Power, HardwareMetricGroup.Cpu, 95, "W"),
+            ],
+            DateTimeOffset.Now);
+
+        IReadOnlyList<HardwareSensorReading> selected = HardwareOverlayTextRenderer.SelectDefaultSensors(snapshot);
+
+        Assert.Equal(
+            ["cpu-temp", "gpu-temp", "storage-temp", "fan", "memory", "vram", "cpu-power", "gpu-power"],
+            selected.Select(sensor => sensor.Id).ToArray());
     }
 }

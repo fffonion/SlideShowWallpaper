@@ -115,6 +115,7 @@
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>模板操作</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>全部屏幕</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>未发现传感器。部分传感器可能需要管理员权限。</value></data>
+  <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>当前不是管理员权限。CPU、主板风扇和硬盘温度可能不可用。</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>字号</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>刷新硬件传感器</value></data>

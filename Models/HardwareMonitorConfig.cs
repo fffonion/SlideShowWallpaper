@@ -92,7 +92,7 @@ public sealed record HardwareSensorReading(
         : $"{HardwareName} / {SensorName}";
 }
 
-public sealed record HardwareMonitorSnapshot(IReadOnlyList<HardwareSensorReading> Sensors, DateTimeOffset CapturedAt);
+public sealed record HardwareMonitorSnapshot(IReadOnlyList<HardwareSensorReading> Sensors, DateTimeOffset CapturedAt, bool IsElevated = false);
 
 public sealed record HardwareOverlayMetric(HardwareOverlayIconKind IconKind, string ValueText);
 

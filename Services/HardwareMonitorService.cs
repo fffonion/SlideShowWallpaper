@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Principal;
 using LibreHardwareMonitor.Hardware;
 using SlideShowWallpaper.Models;
 
@@ -16,7 +17,7 @@ public sealed class HardwareMonitorService : IDisposable
         {
             if (_disposed)
             {
-                return new HardwareMonitorSnapshot([], DateTimeOffset.Now);
+                return new HardwareMonitorSnapshot([], DateTimeOffset.Now, IsProcessElevated());
             }
 
             Computer computer = EnsureComputer();
@@ -27,7 +28,7 @@ public sealed class HardwareMonitorService : IDisposable
                 CollectHardware(readings, hardware, updated);
             }
 
-            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now);
+            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, IsProcessElevated());
         }
     }
 
@@ -59,6 +60,8 @@ public sealed class HardwareMonitorService : IDisposable
             IsGpuEnabled = true,
             IsMemoryEnabled = true,
             IsMotherboardEnabled = true,
+            IsControllerEnabled = true,
+            IsPsuEnabled = true,
             IsStorageEnabled = true,
         };
         _computer.Open();
@@ -163,6 +166,13 @@ public sealed class HardwareMonitorService : IDisposable
             _ => HardwareMetricGroup.Other,
         };
     }
+
+    private static bool IsProcessElevated()
+    {
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        var principal = new WindowsPrincipal(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
 }
 
 public static class HardwareOverlayTextRenderer
@@ -201,11 +211,20 @@ public static class HardwareOverlayTextRenderer
         IEnumerable<HardwareSensorReading> visibleSensors = snapshot.Sensors.Where(IsVisibleReading);
         if (config.SelectedSensorIds.Count == 0)
         {
-            return visibleSensors.Take(8).ToArray();
+            return SelectDefaultSensors(snapshot).Take(8).ToArray();
         }
 
         HashSet<string> selectedIds = config.SelectedSensorIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         return visibleSensors.Where(sensor => selectedIds.Contains(sensor.Id)).ToArray();
+    }
+
+    public static IReadOnlyList<HardwareSensorReading> SelectDefaultSensors(HardwareMonitorSnapshot snapshot)
+    {
+        return snapshot.Sensors
+            .Where(IsVisibleReading)
+            .OrderBy(GetDefaultSensorPriority)
+            .ThenBy(sensor => sensor.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
     }
 
     public static string FormatReading(HardwareSensorReading reading)
@@ -245,6 +264,22 @@ public static class HardwareOverlayTextRenderer
     private static bool IsVisibleReading(HardwareSensorReading reading)
     {
         return !string.Equals(reading.SensorName, "Virtual Memory Available", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int GetDefaultSensorPriority(HardwareSensorReading reading)
+    {
+        return (reading.Group, reading.Kind) switch
+        {
+            (HardwareMetricGroup.Cpu, HardwareMetricKind.Temperature) => 0,
+            (HardwareMetricGroup.Gpu, HardwareMetricKind.Temperature) => 1,
+            (HardwareMetricGroup.Storage, HardwareMetricKind.Temperature) => 2,
+            (_, HardwareMetricKind.FanRpm) => 3,
+            (HardwareMetricGroup.Memory, HardwareMetricKind.MemoryAvailable) => 4,
+            (HardwareMetricGroup.Gpu, HardwareMetricKind.VramAvailable) => 5,
+            (HardwareMetricGroup.Cpu, HardwareMetricKind.Power) => 6,
+            (HardwareMetricGroup.Gpu, HardwareMetricKind.Power) => 7,
+            _ => 100,
+        };
     }
 
     private static (double Value, string Unit) NormalizeDisplayUnit(HardwareSensorReading reading)

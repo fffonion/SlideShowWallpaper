@@ -114,6 +114,7 @@
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>Template actions</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>All displays</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>No sensors detected. Some sensors may require administrator access.</value></data>
+  <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>Running without administrator access. CPU, motherboard fan, and storage temperature sensors may be unavailable.</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>Font</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>Opacity</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>Refresh hardware sensors</value></data>

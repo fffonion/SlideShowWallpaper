@@ -139,6 +139,32 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareSensorSelectionList_ShowsLimitedAccessNotice()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareSensorSelectionList", StringComparison.Ordinal)..
+            source.IndexOf("private static TextBlock CreateHardwareSensorNotice", StringComparison.Ordinal)];
+
+        Assert.Contains("IsElevated: false", method);
+        Assert.Contains("CreateHardwareSensorNotice()", method);
+    }
+
+    [Fact]
+    public void HardwareMonitorService_EnablesControllerAndPsuCollectors()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
+        string method = source[
+            source.IndexOf("private Computer EnsureComputer", StringComparison.Ordinal)..
+            source.IndexOf("private static void CollectHardware", StringComparison.Ordinal)];
+
+        Assert.Contains("IsControllerEnabled = true", method);
+        Assert.Contains("IsPsuEnabled = true", method);
+    }
+
+    [Fact]
     public void RenderTabs_AddsHardwareMonitorNavigationAboveSettings()
     {
         string root = FindProjectRoot();
