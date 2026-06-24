@@ -111,6 +111,25 @@
   <data name="HardwareMonitorStyle" xml:space="preserve"><value>Style</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>Template</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>Preview</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>Editor</value></data>
+  <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>Search sensors</value></data>
+  <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>Invert</value></data>
+  <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>Add sensors</value></data>
+  <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>Add text</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>Import icon image</value></data>
+  <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>Import background</value></data>
+  <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>Clear background</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>Element</value></data>
+  <data name="HardwareMonitorElementText" xml:space="preserve"><value>Text</value></data>
+  <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>Label</value></data>
+  <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>Font</value></data>
+  <data name="HardwareMonitorElementFontSize" xml:space="preserve"><value>Size</value></data>
+  <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>Color</value></data>
+  <data name="HardwareMonitorElementSize" xml:space="preserve"><value>Bounds</value></data>
+  <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>Opacity</value></data>
+  <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>Delete element</value></data>
+  <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>Select an element on the preview canvas.</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>Template actions</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>All displays</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>No sensors detected. Some sensors may require administrator access.</value></data>

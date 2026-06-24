@@ -373,18 +373,27 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         string text = HardwareOverlayTextRenderer.RenderStaticText(_hardwareMonitorConfig, snapshot);
         IReadOnlyList<HardwareOverlayMetric> metrics = HardwareOverlayTextRenderer.CreateMetrics(_hardwareMonitorConfig, snapshot);
+        IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(_hardwareMonitorConfig, snapshot);
+        bool hasVisualOverlay = !string.IsNullOrWhiteSpace(text)
+            || metrics.Count > 0
+            || elements.Count > 0
+            || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundImagePath);
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool isTarget = string.IsNullOrWhiteSpace(_hardwareMonitorConfig.TargetMonitorId)
                 || string.Equals(_hardwareMonitorConfig.TargetMonitorId, monitorId, StringComparison.OrdinalIgnoreCase);
             var state = new HardwareOverlayState(
-                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && (!string.IsNullOrWhiteSpace(text) || metrics.Count > 0),
+                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && hasVisualOverlay,
                 text,
                 metrics,
                 _hardwareMonitorConfig.X,
                 _hardwareMonitorConfig.Y,
                 _hardwareMonitorConfig.FontSize,
-                _hardwareMonitorConfig.Opacity);
+                _hardwareMonitorConfig.Opacity)
+            {
+                BackgroundImagePath = _hardwareMonitorConfig.BackgroundImagePath,
+                Elements = elements,
+            };
             window.SetHardwareOverlay(state);
         }
     }

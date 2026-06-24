@@ -206,6 +206,22 @@ public static class HardwareOverlayTextRenderer
             .ToArray();
     }
 
+    public static IReadOnlyList<HardwareOverlayElementState> CreateElementStates(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
+    {
+        if (config.Elements.Count == 0)
+        {
+            return [];
+        }
+
+        Dictionary<string, HardwareSensorReading> readings = snapshot.Sensors
+            .Where(IsVisibleReading)
+            .GroupBy(sensor => sensor.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        return config.Elements
+            .Select(element => CreateElementState(element, readings))
+            .ToArray();
+    }
+
     public static IReadOnlyList<HardwareSensorReading> SelectSensors(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
     {
         IEnumerable<HardwareSensorReading> visibleSensors = snapshot.Sensors.Where(IsVisibleReading);
@@ -259,6 +275,32 @@ public static class HardwareOverlayTextRenderer
                 : HardwareOverlayIconKind.CpuPower,
             _ => HardwareOverlayIconKind.Generic,
         };
+    }
+
+    private static HardwareOverlayElementState CreateElementState(
+        HardwareOverlayElement element,
+        IReadOnlyDictionary<string, HardwareSensorReading> readings)
+    {
+        string text = element.Kind switch
+        {
+            HardwareOverlayElementKind.Sensor when readings.TryGetValue(element.SensorId, out HardwareSensorReading? reading) => FormatReading(reading),
+            HardwareOverlayElementKind.Sensor => string.IsNullOrWhiteSpace(element.Text) ? element.SensorId : element.Text,
+            HardwareOverlayElementKind.Text => element.Text,
+            _ => string.Empty,
+        };
+        return new HardwareOverlayElementState(
+            element.Id,
+            element.Kind,
+            text,
+            element.ImagePath,
+            Math.Max(0, element.X),
+            Math.Max(0, element.Y),
+            Math.Max(20, element.Width),
+            Math.Max(20, element.Height),
+            string.IsNullOrWhiteSpace(element.FontFamily) ? "Segoe UI" : element.FontFamily,
+            Math.Max(8, element.FontSize),
+            string.IsNullOrWhiteSpace(element.Foreground) ? "#FFFFFFFF" : element.Foreground,
+            Math.Clamp(element.Opacity, 0.05, 1));
     }
 
     private static bool IsVisibleReading(HardwareSensorReading reading)

@@ -112,6 +112,25 @@
   <data name="HardwareMonitorStyle" xml:space="preserve"><value>樣式</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>範本</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>預覽</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>編輯器</value></data>
+  <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>搜尋感測器</value></data>
+  <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>全選</value></data>
+  <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>反選</value></data>
+  <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>加入感測器</value></data>
+  <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>加入文字</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>匯入圖示圖片</value></data>
+  <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>匯入背景</value></data>
+  <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>清除背景</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>元素</value></data>
+  <data name="HardwareMonitorElementText" xml:space="preserve"><value>文字</value></data>
+  <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>標籤</value></data>
+  <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>字型</value></data>
+  <data name="HardwareMonitorElementFontSize" xml:space="preserve"><value>字號</value></data>
+  <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>顏色</value></data>
+  <data name="HardwareMonitorElementSize" xml:space="preserve"><value>邊界</value></data>
+  <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>透明度</value></data>
+  <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>刪除元素</value></data>
+  <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>在預覽畫布上選擇一個元素。</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>範本操作</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>全部螢幕</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>未發現感測器。部分感測器可能需要系統管理員權限。</value></data>

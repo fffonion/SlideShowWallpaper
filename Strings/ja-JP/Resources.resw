@@ -112,6 +112,25 @@
   <data name="HardwareMonitorStyle" xml:space="preserve"><value>スタイル</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>テンプレート</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>プレビュー</value></data>
+  <data name="HardwareMonitorEditor" xml:space="preserve"><value>エディター</value></data>
+  <data name="HardwareMonitorSearchSensors" xml:space="preserve"><value>センサーを検索</value></data>
+  <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>すべて選択</value></data>
+  <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>反転</value></data>
+  <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>センサー追加</value></data>
+  <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>テキスト追加</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>アイコン画像を読み込み</value></data>
+  <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>背景を読み込み</value></data>
+  <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>背景をクリア</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>要素</value></data>
+  <data name="HardwareMonitorElementText" xml:space="preserve"><value>テキスト</value></data>
+  <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>ラベル</value></data>
+  <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>フォント</value></data>
+  <data name="HardwareMonitorElementFontSize" xml:space="preserve"><value>サイズ</value></data>
+  <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>色</value></data>
+  <data name="HardwareMonitorElementSize" xml:space="preserve"><value>境界</value></data>
+  <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>不透明度</value></data>
+  <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>要素を削除</value></data>
+  <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>プレビューキャンバスで要素を選択してください。</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>テンプレート操作</value></data>
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>すべてのディスプレイ</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>センサーが見つかりません。一部のセンサーには管理者権限が必要です。</value></data>

@@ -56,6 +56,49 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
+    public void CreateElementStates_WithSensorElement_UsesCurrentSensorValue()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Id = "element1",
+                    Kind = HardwareOverlayElementKind.Sensor,
+                    SensorId = "gpu-power",
+                    X = 20,
+                    Y = 30,
+                    Width = 120,
+                    Height = 32,
+                    FontFamily = "Segoe UI",
+                    FontSize = 18,
+                    Foreground = "#FFFFFFFF",
+                    Opacity = 0.9,
+                },
+            ],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("gpu-power", "GPU", "Board Power", HardwareMetricKind.Power, HardwareMetricGroup.Gpu, 182.5, "W"),
+            ],
+            DateTimeOffset.Now);
+
+        IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(config, snapshot);
+
+        HardwareOverlayElementState element = Assert.Single(elements);
+        Assert.Equal("element1", element.Id);
+        Assert.Equal(HardwareOverlayElementKind.Sensor, element.Kind);
+        Assert.Equal("182.5 W", element.Text);
+        Assert.Equal(20, element.X);
+        Assert.Equal(30, element.Y);
+        Assert.Equal(120, element.Width);
+        Assert.Equal(32, element.Height);
+        Assert.Equal(18, element.FontSize);
+        Assert.Equal(0.9, element.Opacity);
+    }
+
+    [Fact]
     public void FormatReading_WithVramAvailableInMegabytes_DisplaysGigabytes()
     {
         var reading = new HardwareSensorReading(

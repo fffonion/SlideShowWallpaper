@@ -46,6 +46,27 @@ public sealed class SettingsStoreTests
                 FontSize = 18,
                 Opacity = 0.72,
                 SelectedSensorIds = ["cpu-temp", "gpu-power"],
+                BackgroundImagePath = @"C:\Wallpapers\panel.png",
+                SelectedElementId = "element1",
+                Elements =
+                [
+                    new HardwareOverlayElement
+                    {
+                        Id = "element1",
+                        Kind = HardwareOverlayElementKind.Sensor,
+                        SensorId = "cpu-temp",
+                        Text = "CPU",
+                        ImagePath = @"C:\Wallpapers\cpu.png",
+                        X = 12,
+                        Y = 34,
+                        Width = 144,
+                        Height = 36,
+                        FontFamily = "Segoe UI Variable",
+                        FontSize = 17,
+                        Foreground = "#FF00FFFF",
+                        Opacity = 0.8,
+                    },
+                ],
             },
             Monitors =
             [
@@ -98,6 +119,21 @@ public sealed class SettingsStoreTests
         Assert.Equal(18, loaded.HardwareMonitor.FontSize);
         Assert.Equal(0.72, loaded.HardwareMonitor.Opacity);
         Assert.Equal(["cpu-temp", "gpu-power"], loaded.HardwareMonitor.SelectedSensorIds);
+        Assert.Equal(@"C:\Wallpapers\panel.png", loaded.HardwareMonitor.BackgroundImagePath);
+        Assert.Equal("element1", loaded.HardwareMonitor.SelectedElementId);
+        HardwareOverlayElement element = Assert.Single(loaded.HardwareMonitor.Elements);
+        Assert.Equal(HardwareOverlayElementKind.Sensor, element.Kind);
+        Assert.Equal("cpu-temp", element.SensorId);
+        Assert.Equal("CPU", element.Text);
+        Assert.Equal(@"C:\Wallpapers\cpu.png", element.ImagePath);
+        Assert.Equal(12, element.X);
+        Assert.Equal(34, element.Y);
+        Assert.Equal(144, element.Width);
+        Assert.Equal(36, element.Height);
+        Assert.Equal("Segoe UI Variable", element.FontFamily);
+        Assert.Equal(17, element.FontSize);
+        Assert.Equal("#FF00FFFF", element.Foreground);
+        Assert.Equal(0.8, element.Opacity);
         Assert.Equal("display1", monitor.Id);
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);

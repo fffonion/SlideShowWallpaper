@@ -108,11 +108,29 @@ public sealed partial class WallpaperWindow : Window
         if (!state.IsVisible)
         {
             HardwareOverlay.Visibility = Visibility.Collapsed;
+            HardwareOverlayBackground.Source = null;
+            HardwareOverlayBackground.Visibility = Visibility.Collapsed;
+            HardwareOverlayCanvas.Children.Clear();
+            HardwareOverlayCanvas.Visibility = Visibility.Collapsed;
             HardwareOverlayContent.Children.Clear();
             return;
         }
 
         double fontSize = Math.Max(10, state.FontSize);
+        if (state.Elements.Count > 0 || !string.IsNullOrWhiteSpace(state.BackgroundImagePath))
+        {
+            RenderHardwareOverlayCanvas(state, fontSize);
+            return;
+        }
+
+        HardwareOverlay.Padding = new Thickness(10, 8, 10, 8);
+        HardwareOverlay.Width = double.NaN;
+        HardwareOverlay.Height = double.NaN;
+        HardwareOverlayCanvas.Children.Clear();
+        HardwareOverlayCanvas.Visibility = Visibility.Collapsed;
+        HardwareOverlayBackground.Source = null;
+        HardwareOverlayBackground.Visibility = Visibility.Collapsed;
+        HardwareOverlayContent.Visibility = Visibility.Visible;
         HardwareOverlayContent.Children.Clear();
         if (!string.IsNullOrWhiteSpace(state.Text))
         {
@@ -122,6 +140,71 @@ public sealed partial class WallpaperWindow : Window
         foreach (HardwareOverlayMetric metric in state.Metrics)
         {
             HardwareOverlayContent.Children.Add(CreateHardwareMetricRow(metric, fontSize));
+        }
+
+        HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
+        HardwareOverlay.Margin = new Thickness(Math.Max(0, state.X), Math.Max(0, state.Y), 0, 0);
+        HardwareOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void RenderHardwareOverlayCanvas(HardwareOverlayState state, double fontSize)
+    {
+        HardwareOverlay.Padding = new Thickness(0);
+        HardwareOverlayContent.Children.Clear();
+        HardwareOverlayContent.Visibility = Visibility.Collapsed;
+        HardwareOverlayCanvas.Children.Clear();
+
+        double width = Math.Max(300, state.Elements.Count == 0 ? 300 : state.Elements.Max(element => element.X + element.Width) + 16);
+        double height = Math.Max(160, state.Elements.Count == 0 ? 160 : state.Elements.Max(element => element.Y + element.Height) + 16);
+        HardwareOverlay.Width = width;
+        HardwareOverlay.Height = height;
+        HardwareOverlayRoot.Width = width;
+        HardwareOverlayRoot.Height = height;
+        HardwareOverlayCanvas.Width = width;
+        HardwareOverlayCanvas.Height = height;
+        HardwareOverlayCanvas.Visibility = Visibility.Visible;
+
+        if (TryCreateBitmapImage(state.BackgroundImagePath, out BitmapImage? background))
+        {
+            HardwareOverlayBackground.Source = background;
+            HardwareOverlayBackground.Width = width;
+            HardwareOverlayBackground.Height = height;
+            HardwareOverlayBackground.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            HardwareOverlayBackground.Source = null;
+            HardwareOverlayBackground.Visibility = Visibility.Collapsed;
+        }
+
+        if (state.Elements.Count == 0 && (!string.IsNullOrWhiteSpace(state.Text) || state.Metrics.Count > 0))
+        {
+            var legacyContent = new StackPanel
+            {
+                Spacing = 5,
+                Padding = new Thickness(10, 8, 10, 8),
+            };
+            if (!string.IsNullOrWhiteSpace(state.Text))
+            {
+                legacyContent.Children.Add(CreateHardwareOverlayText(state.Text, fontSize));
+            }
+
+            foreach (HardwareOverlayMetric metric in state.Metrics)
+            {
+                legacyContent.Children.Add(CreateHardwareMetricRow(metric, fontSize));
+            }
+
+            Canvas.SetLeft(legacyContent, 0);
+            Canvas.SetTop(legacyContent, 0);
+            HardwareOverlayCanvas.Children.Add(legacyContent);
+        }
+
+        foreach (HardwareOverlayElementState element in state.Elements)
+        {
+            UIElement visual = CreateHardwareOverlayElement(element, fontSize);
+            Canvas.SetLeft(visual, element.X);
+            Canvas.SetTop(visual, element.Y);
+            HardwareOverlayCanvas.Children.Add(visual);
         }
 
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
@@ -152,6 +235,87 @@ public sealed partial class WallpaperWindow : Window
         row.Children.Add(HardwareOverlayIconFactory.CreateIcon(metric.IconKind, Math.Max(17, fontSize + 2)));
         row.Children.Add(CreateHardwareOverlayText(metric.ValueText, fontSize));
         return row;
+    }
+
+    private static UIElement CreateHardwareOverlayElement(HardwareOverlayElementState element, double fallbackFontSize)
+    {
+        if (element.Kind == HardwareOverlayElementKind.Image && TryCreateBitmapImage(element.ImagePath, out BitmapImage? bitmap))
+        {
+            return new Microsoft.UI.Xaml.Controls.Image
+            {
+                Source = bitmap,
+                Width = element.Width,
+                Height = element.Height,
+                Stretch = Stretch.UniformToFill,
+                Opacity = element.Opacity,
+            };
+        }
+
+        return new TextBlock
+        {
+            Text = element.Text,
+            FontFamily = new FontFamily(element.FontFamily),
+            FontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize),
+            Foreground = CreateElementBrush(element.Foreground),
+            Width = element.Width,
+            Height = element.Height,
+            TextWrapping = TextWrapping.WrapWholeWords,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Opacity = element.Opacity,
+        };
+    }
+
+    private static bool TryCreateBitmapImage(string path, out BitmapImage? bitmap)
+    {
+        bitmap = null;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            bitmap = new BitmapImage(new Uri(path));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            bitmap = null;
+            return false;
+        }
+    }
+
+    private static SolidColorBrush CreateElementBrush(string value)
+    {
+        if (TryParseColor(value, out global::Windows.UI.Color color))
+        {
+            return new SolidColorBrush(color);
+        }
+
+        return new SolidColorBrush(Microsoft.UI.Colors.White);
+    }
+
+    private static bool TryParseColor(string value, out global::Windows.UI.Color color)
+    {
+        color = Microsoft.UI.Colors.White;
+        string hex = value.Trim().TrimStart('#');
+        if (hex.Length == 6)
+        {
+            hex = "FF" + hex;
+        }
+
+        if (hex.Length != 8 || !uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out uint argb))
+        {
+            return false;
+        }
+
+        color = Microsoft.UI.ColorHelper.FromArgb(
+            (byte)((argb >> 24) & 0xFF),
+            (byte)((argb >> 16) & 0xFF),
+            (byte)((argb >> 8) & 0xFF),
+            (byte)(argb & 0xFF));
+        return true;
     }
 
     public async Task ShowImageAsync(string path)

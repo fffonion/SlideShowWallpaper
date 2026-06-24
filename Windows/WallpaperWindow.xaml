@@ -33,9 +33,18 @@
             CornerRadius="6"
             Padding="10,8"
             Visibility="Collapsed">
-            <StackPanel
-                x:Name="HardwareOverlayContent"
-                Spacing="5" />
+            <Grid x:Name="HardwareOverlayRoot">
+                <Image
+                    x:Name="HardwareOverlayBackground"
+                    Stretch="UniformToFill"
+                    Visibility="Collapsed" />
+                <Canvas
+                    x:Name="HardwareOverlayCanvas"
+                    Visibility="Collapsed" />
+                <StackPanel
+                    x:Name="HardwareOverlayContent"
+                    Spacing="5" />
+            </Grid>
         </Border>
         <Border
             x:Name="ErrorOverlay"

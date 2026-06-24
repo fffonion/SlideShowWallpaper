@@ -21,6 +21,8 @@ public static class HardwareOverlayTemplateService
             FontSize = config.FontSize,
             Opacity = config.Opacity,
             SelectedSensorIds = config.SelectedSensorIds.ToList(),
+            BackgroundImagePath = config.BackgroundImagePath,
+            Elements = CloneElements(config.Elements),
         };
     }
 
@@ -35,6 +37,9 @@ public static class HardwareOverlayTemplateService
         config.FontSize = template.FontSize;
         config.Opacity = Math.Clamp(template.Opacity, 0.1, 1);
         config.SelectedSensorIds = template.SelectedSensorIds.ToList();
+        config.BackgroundImagePath = template.BackgroundImagePath;
+        config.Elements = CloneElements(template.Elements);
+        config.SelectedElementId = config.Elements.FirstOrDefault()?.Id ?? string.Empty;
     }
 
     public static async Task ExportAsync(HardwareOverlayTemplate template, string path)
@@ -48,5 +53,27 @@ public static class HardwareOverlayTemplateService
         string json = await File.ReadAllTextAsync(path);
         return JsonSerializer.Deserialize<HardwareOverlayTemplate>(json, SerializerOptions)
             ?? new HardwareOverlayTemplate();
+    }
+
+    private static List<HardwareOverlayElement> CloneElements(IEnumerable<HardwareOverlayElement> elements)
+    {
+        return elements
+            .Select(element => new HardwareOverlayElement
+            {
+                Id = string.IsNullOrWhiteSpace(element.Id) ? Guid.NewGuid().ToString("N") : element.Id,
+                Kind = element.Kind,
+                SensorId = element.SensorId,
+                Text = element.Text,
+                ImagePath = element.ImagePath,
+                X = element.X,
+                Y = element.Y,
+                Width = element.Width,
+                Height = element.Height,
+                FontFamily = element.FontFamily,
+                FontSize = element.FontSize,
+                Foreground = element.Foreground,
+                Opacity = element.Opacity,
+            })
+            .ToList();
     }
 }

@@ -19,11 +19,20 @@ public sealed class FolderPickerService
 
     public async Task<string?> PickOpenFileAsync(IntPtr ownerHwnd, string fileType)
     {
+        return await PickOpenFileAsync(ownerHwnd, [fileType]);
+    }
+
+    public async Task<string?> PickOpenFileAsync(IntPtr ownerHwnd, IReadOnlyList<string> fileTypes)
+    {
         var picker = new FileOpenPicker
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
         };
-        picker.FileTypeFilter.Add(fileType);
+        foreach (string fileType in fileTypes)
+        {
+            picker.FileTypeFilter.Add(fileType);
+        }
+
         InitializeWithWindow.Initialize(picker, ownerHwnd);
         global::Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
         return file?.Path;

@@ -155,6 +155,8 @@ public sealed class SettingsStore
             Y = GetDouble(sections, section, nameof(HardwareMonitorConfig.Y), 24),
             FontSize = GetDouble(sections, section, nameof(HardwareMonitorConfig.FontSize), 16),
             Opacity = GetDouble(sections, section, nameof(HardwareMonitorConfig.Opacity), 0.88),
+            BackgroundImagePath = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundImagePath)), string.Empty),
+            SelectedElementId = GetString(sections, section, nameof(HardwareMonitorConfig.SelectedElementId)),
         };
 
         for (int index = 0; index < selectedSensorCount; index++)
@@ -164,6 +166,22 @@ public sealed class SettingsStore
             {
                 config.SelectedSensorIds.Add(sensorId);
             }
+        }
+
+        int elementCount = GetInt(sections, section, "ElementCount", 0);
+        for (int index = 0; index < elementCount; index++)
+        {
+            HardwareOverlayElement? element = LoadHardwareOverlayElement(sections, section, index);
+            if (element is not null)
+            {
+                config.Elements.Add(element);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.SelectedElementId)
+            && !config.Elements.Any(element => string.Equals(element.Id, config.SelectedElementId, StringComparison.OrdinalIgnoreCase)))
+        {
+            config.SelectedElementId = string.Empty;
         }
 
         return config;
@@ -181,11 +199,67 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(HardwareMonitorConfig.Y), config.Y);
         AppendValue(builder, nameof(HardwareMonitorConfig.FontSize), config.FontSize);
         AppendValue(builder, nameof(HardwareMonitorConfig.Opacity), config.Opacity);
+        AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundImagePath), EncodeString(config.BackgroundImagePath));
+        AppendValue(builder, nameof(HardwareMonitorConfig.SelectedElementId), config.SelectedElementId);
         AppendValue(builder, "SelectedSensorCount", config.SelectedSensorIds.Count);
         for (int index = 0; index < config.SelectedSensorIds.Count; index++)
         {
             AppendValue(builder, $"SelectedSensor{index}", EncodeString(config.SelectedSensorIds[index]));
         }
+
+        AppendValue(builder, "ElementCount", config.Elements.Count);
+        for (int index = 0; index < config.Elements.Count; index++)
+        {
+            AppendHardwareOverlayElement(builder, config.Elements[index], index);
+        }
+    }
+
+    private static HardwareOverlayElement? LoadHardwareOverlayElement(
+        Dictionary<string, Dictionary<string, string>> sections,
+        string section,
+        int index)
+    {
+        string prefix = $"Element{index}";
+        string id = GetString(sections, section, $"{prefix}.Id");
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            id = Guid.NewGuid().ToString("N");
+        }
+
+        return new HardwareOverlayElement
+        {
+            Id = id,
+            Kind = GetEnum(sections, section, $"{prefix}.Kind", HardwareOverlayElementKind.Sensor),
+            SensorId = DecodeString(GetString(sections, section, $"{prefix}.SensorId"), string.Empty),
+            Text = DecodeString(GetString(sections, section, $"{prefix}.Text"), string.Empty),
+            ImagePath = DecodeString(GetString(sections, section, $"{prefix}.ImagePath"), string.Empty),
+            X = GetDouble(sections, section, $"{prefix}.X", 24),
+            Y = GetDouble(sections, section, $"{prefix}.Y", 24),
+            Width = Math.Max(20, GetDouble(sections, section, $"{prefix}.Width", 160)),
+            Height = Math.Max(20, GetDouble(sections, section, $"{prefix}.Height", 40)),
+            FontFamily = DecodeString(GetString(sections, section, $"{prefix}.FontFamily"), "Segoe UI"),
+            FontSize = Math.Max(8, GetDouble(sections, section, $"{prefix}.FontSize", 16)),
+            Foreground = DecodeString(GetString(sections, section, $"{prefix}.Foreground"), "#FFFFFFFF"),
+            Opacity = Math.Clamp(GetDouble(sections, section, $"{prefix}.Opacity", 1), 0.05, 1),
+        };
+    }
+
+    private static void AppendHardwareOverlayElement(StringBuilder builder, HardwareOverlayElement element, int index)
+    {
+        string prefix = $"Element{index}";
+        AppendValue(builder, $"{prefix}.Id", element.Id);
+        AppendValue(builder, $"{prefix}.Kind", element.Kind);
+        AppendValue(builder, $"{prefix}.SensorId", EncodeString(element.SensorId));
+        AppendValue(builder, $"{prefix}.Text", EncodeString(element.Text));
+        AppendValue(builder, $"{prefix}.ImagePath", EncodeString(element.ImagePath));
+        AppendValue(builder, $"{prefix}.X", element.X);
+        AppendValue(builder, $"{prefix}.Y", element.Y);
+        AppendValue(builder, $"{prefix}.Width", Math.Max(20, element.Width));
+        AppendValue(builder, $"{prefix}.Height", Math.Max(20, element.Height));
+        AppendValue(builder, $"{prefix}.FontFamily", EncodeString(element.FontFamily));
+        AppendValue(builder, $"{prefix}.FontSize", Math.Max(8, element.FontSize));
+        AppendValue(builder, $"{prefix}.Foreground", EncodeString(element.Foreground));
+        AppendValue(builder, $"{prefix}.Opacity", Math.Clamp(element.Opacity, 0.05, 1));
     }
 
     private static Dictionary<string, Dictionary<string, string>> Parse(IEnumerable<string> lines)
