@@ -332,6 +332,11 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareBackgroundControls(config)", method);
         Assert.Contains("CreateOpacitySlider(config.Opacity", method);
         Assert.DoesNotContain("CreateNumberBox(config.Opacity", method);
+        Assert.DoesNotContain("HardwareMonitorTemplate", method);
+        Assert.DoesNotContain("HardwareMonitorTemplateActions", method);
+        Assert.DoesNotContain("CreateHardwareTemplate", source);
+        Assert.DoesNotContain("ImportHardwareTemplateAsync", source);
+        Assert.DoesNotContain("ExportHardwareTemplateAsync", source);
         Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
     }
 
@@ -379,8 +384,41 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("CreateHardwareFontCombo", method);
         Assert.Contains("CreateHardwareColorPicker", method);
+        Assert.Contains("CreateHardwareSensorIconControls(config, element)", method);
         Assert.Contains("CreateReplaceHardwareElementImageButton(config, element)", method);
+        Assert.Contains("CreateOpacitySlider(element.Opacity", method);
+        Assert.DoesNotContain("CreateNumberBox(element.Opacity", method);
         Assert.DoesNotContain("CreateHardwareTextBox(element.Foreground", method);
+    }
+
+    [Fact]
+    public void CreateHardwareSensorIconControls_ClearsCustomImagePath()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareSensorIconControls", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateReplaceHardwareElementImageButton", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateReplaceHardwareElementImageButton(config, element)", method);
+        Assert.Contains("HardwareMonitorResetIconImage", method);
+        Assert.Contains("element.ImagePath = string.Empty;", method);
+        Assert.Contains("config.SelectedElementId = element.Id;", method);
+    }
+
+    [Fact]
+    public void HardwareOverlayVisualFactory_SensorElementUsesCustomIconBeforeDefaultIcon()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayVisualFactory.cs"));
+        string method = source[
+            source.IndexOf("private static FrameworkElement CreateSensorElement", StringComparison.Ordinal)..
+            source.IndexOf("public static bool TryCreateBitmapImage", StringComparison.Ordinal)];
+
+        Assert.Contains("TryCreateBitmapImage(element.ImagePath", method);
+        Assert.Contains("new Image", method);
+        Assert.Contains("Stretch = Stretch.Uniform", method);
+        Assert.Contains("HardwareOverlayIconFactory.CreateIcon(element.IconKind, iconSize, brush)", method);
     }
 
     [Fact]

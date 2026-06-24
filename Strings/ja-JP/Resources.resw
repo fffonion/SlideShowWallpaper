@@ -123,6 +123,7 @@
   <data name="DialogClose" xml:space="preserve"><value>閉じる</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>テキスト追加</value></data>
   <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>アイコンを置換</value></data>
+  <data name="HardwareMonitorResetIconImage" xml:space="preserve"><value>アイコンを既定に戻す</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>背景を読み込み</value></data>
   <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>背景をクリア</value></data>
   <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>スタイル</value></data>

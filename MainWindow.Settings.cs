@@ -186,8 +186,6 @@ public sealed partial class MainWindow
 
     private Border CreateHardwareOverlayFormatSection(HardwareMonitorConfig config)
     {
-        TextBox templateBox = CreateHardwareTemplateTextBox(config);
-        FrameworkElement buttonRow = CreateHardwareTemplateButtons(config);
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorStyle"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
@@ -202,9 +200,7 @@ public sealed partial class MainWindow
                 RenderTabs(_selectedMonitorId);
             }, LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateOpacitySlider(config.Opacity, value => config.Opacity = value, LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplateActions"), buttonRow));
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)));
     }
 
     private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices()
@@ -215,25 +211,6 @@ public sealed partial class MainWindow
         };
         choices.AddRange(_viewModel.Profiles.Select(profile => new Choice<string>(profile.Id, profile.DisplayName)));
         return choices;
-    }
-
-    private TextBox CreateHardwareTemplateTextBox(HardwareMonitorConfig config)
-    {
-        var textBox = new TextBox
-        {
-            Text = config.TemplateText,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            MinHeight = 96,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
-        AutomationProperties.SetName(textBox, LocalizedStrings.Get("HardwareMonitorTemplate"));
-        textBox.TextChanged += (_, _) =>
-        {
-            config.TemplateText = textBox.Text;
-            ScheduleApplySettings();
-        };
-        return textBox;
     }
 
     private FrameworkElement CreateHardwareBackgroundControls(HardwareMonitorConfig config)
@@ -757,6 +734,9 @@ public sealed partial class MainWindow
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     VerticalAlignment = VerticalAlignment.Center,
                 }));
+            stack.Children.Add(CreateCompactEditorRow(
+                LocalizedStrings.Get("HardwareMonitorImportIconImage"),
+                CreateHardwareSensorIconControls(config, element)));
         }
 
         if (element.Kind == HardwareOverlayElementKind.Text)
@@ -788,7 +768,7 @@ public sealed partial class MainWindow
 
         stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwareElementPositionControls(element)));
         stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementSize"), CreateHardwareElementSizeControls(element)));
-        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementOpacity"), CreateNumberBox(element.Opacity, value => element.Opacity = Math.Clamp(value, 0.05, 1), LocalizedStrings.Get("HardwareMonitorElementOpacity"))));
+        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementOpacity"), CreateOpacitySlider(element.Opacity, value => element.Opacity = Math.Clamp(value, 0.05, 1), LocalizedStrings.Get("HardwareMonitorElementOpacity"))));
 
         var deleteButton = new Button
         {
@@ -1067,6 +1047,36 @@ public sealed partial class MainWindow
         Grid.SetColumn(heightControl, 1);
         panel.Children.Add(widthControl);
         panel.Children.Add(heightControl);
+        return panel;
+    }
+
+    private FrameworkElement CreateHardwareSensorIconControls(HardwareMonitorConfig config, HardwareOverlayElement element)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        panel.Children.Add(CreateReplaceHardwareElementImageButton(config, element));
+
+        var resetButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Undo),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(resetButton, LocalizedStrings.Get("HardwareMonitorResetIconImage"));
+        ToolTipService.SetToolTip(resetButton, LocalizedStrings.Get("HardwareMonitorResetIconImage"));
+        resetButton.Click += (_, _) =>
+        {
+            element.ImagePath = string.Empty;
+            config.SelectedElementId = element.Id;
+            ScheduleApplySettings();
+            RenderTabs(_selectedMonitorId);
+        };
+        panel.Children.Add(resetButton);
         return panel;
     }
 
@@ -1455,57 +1465,6 @@ public sealed partial class MainWindow
         return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
-    private FrameworkElement CreateHardwareTemplateButtons(HardwareMonitorConfig config)
-    {
-        var panel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        var refreshButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.Refresh),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(refreshButton, LocalizedStrings.Get("RefreshHardwareSensors"));
-        ToolTipService.SetToolTip(refreshButton, LocalizedStrings.Get("RefreshHardwareSensors"));
-        refreshButton.Click += (_, _) =>
-        {
-            RefreshHardwareSnapshot();
-            RenderTabs(_selectedMonitorId);
-        };
-
-        var importButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.OpenFile),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(importButton, LocalizedStrings.Get("ImportHardwareTemplate"));
-        ToolTipService.SetToolTip(importButton, LocalizedStrings.Get("ImportHardwareTemplate"));
-        importButton.Click += async (_, _) => await ImportHardwareTemplateAsync(config);
-
-        var exportButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.Save),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(exportButton, LocalizedStrings.Get("ExportHardwareTemplate"));
-        ToolTipService.SetToolTip(exportButton, LocalizedStrings.Get("ExportHardwareTemplate"));
-        exportButton.Click += async (_, _) => await ExportHardwareTemplateAsync(config);
-
-        panel.Children.Add(refreshButton);
-        panel.Children.Add(importButton);
-        panel.Children.Add(exportButton);
-        return panel;
-    }
-
     private void RefreshHardwareSnapshot()
     {
         try
@@ -1530,45 +1489,6 @@ public sealed partial class MainWindow
             .Take(8)
             .Select(sensor => sensor.Id)
             .ToList();
-    }
-
-    private async Task ImportHardwareTemplateAsync(HardwareMonitorConfig config)
-    {
-        string? path = await _folderPickerService.PickOpenFileAsync(_hwnd, ".json");
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        try
-        {
-            HardwareOverlayTemplate template = await HardwareOverlayTemplateService.ImportAsync(path);
-            HardwareOverlayTemplateService.ApplyToConfig(template, config);
-            ApplySettings();
-            RenderTabs(_selectedMonitorId);
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-        }
-    }
-
-    private async Task ExportHardwareTemplateAsync(HardwareMonitorConfig config)
-    {
-        string? path = await _folderPickerService.PickSaveFileAsync(_hwnd, ".json", "hardware-overlay-template");
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        try
-        {
-            await HardwareOverlayTemplateService.ExportAsync(HardwareOverlayTemplateService.FromConfig(config), path);
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-        }
     }
 
     private static string GetHardwareMetricGroupLabel(HardwareMetricGroup group)

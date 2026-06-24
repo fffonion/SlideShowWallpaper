@@ -412,7 +412,23 @@ public sealed partial class WallpaperWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         Brush brush = CreateElementBrush(element.Foreground);
-        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, Math.Max(17, fontSize + 2), brush));
+        double iconSize = Math.Max(17, fontSize + 2);
+        if (TryCreateBitmapImage(element.ImagePath, out BitmapImage? bitmap))
+        {
+            row.Children.Add(new Microsoft.UI.Xaml.Controls.Image
+            {
+                Source = bitmap,
+                Width = iconSize,
+                Height = iconSize,
+                Stretch = Stretch.Uniform,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
+        else
+        {
+            row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, iconSize, brush));
+        }
+
         row.Children.Add(new TextBlock
         {
             Text = element.Text,
