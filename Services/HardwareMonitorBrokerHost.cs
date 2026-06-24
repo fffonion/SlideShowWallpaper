@@ -7,7 +7,6 @@ namespace SlideShowWallpaper.Services;
 
 public static class HardwareMonitorBrokerHost
 {
-    private static readonly TimeSpan IdleExitTimeout = TimeSpan.FromSeconds(90);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public static bool IsBrokerMode(IEnumerable<string> arguments)
@@ -48,17 +47,11 @@ public static class HardwareMonitorBrokerHost
                     maxNumberOfServerInstances: 1,
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
-                using CancellationTokenSource idleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                idleCancellation.CancelAfter(IdleExitTimeout);
-                server.WaitForConnectionAsync(idleCancellation.Token).GetAwaiter().GetResult();
+                server.WaitForConnectionAsync(cancellationToken).GetAwaiter().GetResult();
                 if (HandleRequest(server, reader, cancellationToken))
                 {
                     return;
                 }
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                return;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

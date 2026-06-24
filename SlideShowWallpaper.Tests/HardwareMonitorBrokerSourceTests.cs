@@ -16,7 +16,7 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void BrokerHost_ExitsWhenNoRequestsArriveBeforeIdleTimeout()
+    public void BrokerHost_WaitsForRequestsUntilParentExitsOrShutdown()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
@@ -24,11 +24,11 @@ public sealed class HardwareMonitorBrokerSourceTests
             source.IndexOf("private static void RunServer", StringComparison.Ordinal)..
             source.IndexOf("private static bool HandleRequest", StringComparison.Ordinal)];
 
-        Assert.Contains("IdleExitTimeout", source);
-        Assert.Contains("CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)", method);
-        Assert.Contains("idleCancellation.CancelAfter(IdleExitTimeout);", method);
-        Assert.Contains("server.WaitForConnectionAsync(idleCancellation.Token)", method);
-        Assert.Contains("when (!cancellationToken.IsCancellationRequested)", method);
+        Assert.DoesNotContain("IdleExitTimeout", source);
+        Assert.DoesNotContain("CancelAfter", method);
+        Assert.DoesNotContain("when (!cancellationToken.IsCancellationRequested)", method);
+        Assert.Contains("server.WaitForConnectionAsync(cancellationToken)", method);
+        Assert.Contains("HandleRequest(server, reader, cancellationToken)", method);
     }
 
     private static string FindProjectRoot()
