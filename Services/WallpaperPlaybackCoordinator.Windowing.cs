@@ -192,7 +192,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
-        ForegroundWindowInfo? foregroundWindow = _foregroundWindowService.GetForegroundWindowInfo();
+        ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)

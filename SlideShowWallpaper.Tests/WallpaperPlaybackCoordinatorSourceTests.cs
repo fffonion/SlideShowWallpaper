@@ -78,9 +78,32 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
         string method = ExtractMethod(source, "private bool ShouldPauseHardwareOverlayRefresh", "private void ClearHardwareOverlay");
 
-        Assert.Contains("_foregroundWindowService.GetForegroundWindowInfo()", method);
+        Assert.Contains("GetCoverageForegroundWindowInfo()", method);
         Assert.Contains("profile.PauseVideoWhenOtherAppMaximized", method);
         Assert.Contains("WindowCoveragePolicy.ShouldPauseVideo", method);
+    }
+
+    [Fact]
+    public void CoverageForeground_PreservesExternalForegroundWhenOverlayBecomesForeground()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private ForegroundWindowInfo? GetCoverageForegroundWindowInfo", "private void RememberExternalForegroundWindow");
+
+        Assert.Contains("_foregroundWindowService.GetForegroundWindowInfo()", method);
+        Assert.Contains("foregroundWindow.ProcessId != Environment.ProcessId", method);
+        Assert.Contains("GetLastExternalForegroundWindowInfo()", method);
+    }
+
+    [Fact]
+    public void HardwareOverlayWindow_IsShownWithoutActivating()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private HardwareOverlayWindow EnsureHardwareOverlayWindow", "private void CloseHardwareOverlayWindow");
+
+        Assert.DoesNotContain("_hardwareOverlayWindow.Activate();", method);
+        Assert.DoesNotContain(".Activate();", method);
     }
 
     [Fact]

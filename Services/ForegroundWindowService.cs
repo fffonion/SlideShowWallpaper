@@ -8,6 +8,11 @@ public sealed class ForegroundWindowService
     public ForegroundWindowInfo? GetForegroundWindowInfo()
     {
         IntPtr hwnd = NativeMethods.GetForegroundWindow();
+        return GetWindowInfo(hwnd);
+    }
+
+    public ForegroundWindowInfo? GetWindowInfo(IntPtr hwnd)
+    {
         if (hwnd == IntPtr.Zero || !NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
         {
             return null;

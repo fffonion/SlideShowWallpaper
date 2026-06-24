@@ -23,6 +23,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private readonly MonitorProfileChangeTracker _profileChanges = new();
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
     private HardwareOverlayWindow? _hardwareOverlayWindow;
+    private ForegroundWindowInfo? _lastExternalForegroundWindow;
     private bool _playbackEnabled = true;
     private bool _autoTrackNewFiles = true;
     private bool _globalMute = true;
@@ -435,11 +436,51 @@ public sealed partial class WallpaperPlaybackCoordinator
             return false;
         }
 
-        ForegroundWindowInfo? foregroundWindow = _foregroundWindowService.GetForegroundWindowInfo();
+        ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();
         return WindowCoveragePolicy.ShouldPauseVideo(
             foregroundWindow,
             monitorRect,
             Environment.ProcessId);
+    }
+
+    private ForegroundWindowInfo? GetCoverageForegroundWindowInfo()
+    {
+        ForegroundWindowInfo? foregroundWindow = _foregroundWindowService.GetForegroundWindowInfo();
+        if (foregroundWindow is null)
+        {
+            return null;
+        }
+
+        if (foregroundWindow.ProcessId != Environment.ProcessId)
+        {
+            RememberExternalForegroundWindow(foregroundWindow);
+            return foregroundWindow;
+        }
+
+        return GetLastExternalForegroundWindowInfo() ?? foregroundWindow;
+    }
+
+    private void RememberExternalForegroundWindow(ForegroundWindowInfo foregroundWindow)
+    {
+        _lastExternalForegroundWindow = foregroundWindow;
+    }
+
+    private ForegroundWindowInfo? GetLastExternalForegroundWindowInfo()
+    {
+        if (_lastExternalForegroundWindow is null)
+        {
+            return null;
+        }
+
+        ForegroundWindowInfo? refreshed = _foregroundWindowService.GetWindowInfo(_lastExternalForegroundWindow.Hwnd);
+        if (refreshed is not null && refreshed.ProcessId != Environment.ProcessId)
+        {
+            _lastExternalForegroundWindow = refreshed;
+            return refreshed;
+        }
+
+        _lastExternalForegroundWindow = null;
+        return null;
     }
 
     private void ClearHardwareOverlay()
@@ -468,7 +509,6 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         _hardwareOverlayWindow = new HardwareOverlayWindow();
         _hardwareOverlayWindow.HardwareOverlayMoved += Window_HardwareOverlayMoved;
-        _hardwareOverlayWindow.Activate();
         return _hardwareOverlayWindow;
     }
 
