@@ -42,12 +42,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260224000" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260317003" />
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\HardwareMonitorBrokerHost.cs" />
+    <Compile Remove="Services\HardwareMonitorReader.cs" />
     <Compile Remove="SlideShowWallpaper.Tests\**\*.cs" />
     <Compile Remove="HardwareBroker\**\*.cs" />
     <Content Remove=".github\**\*" />

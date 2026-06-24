@@ -31,6 +31,23 @@ public sealed class ProjectPackagingTests
 
         Assert.Contains("Microsoft.WindowsAppSDK.WinUI", packageReferences);
         Assert.DoesNotContain("Microsoft.WindowsAppSDK", packageReferences);
+        Assert.DoesNotContain("LibreHardwareMonitorLib", packageReferences);
+    }
+
+    [Fact]
+    public void ProjectExcludesBrokerOnlyHardwareReaderFromMainAssembly()
+    {
+        string projectPath = FindProjectPath();
+        XDocument project = XDocument.Load(projectPath);
+        string[] removedCompileItems = project
+            .Descendants("Compile")
+            .Select(element => element.Attribute("Remove")?.Value)
+            .Where(value => value is not null)
+            .Cast<string>()
+            .ToArray();
+
+        Assert.Contains(@"Services\HardwareMonitorBrokerHost.cs", removedCompileItems);
+        Assert.Contains(@"Services\HardwareMonitorReader.cs", removedCompileItems);
     }
 
     [Fact]
