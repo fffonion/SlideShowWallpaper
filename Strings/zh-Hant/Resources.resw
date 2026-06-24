@@ -103,4 +103,26 @@
   <data name="TransitionFade" xml:space="preserve"><value>淡入淡出</value></data>
   <data name="TransitionSlide" xml:space="preserve"><value>滑動</value></data>
   <data name="PreviewResizeHandle" xml:space="preserve"><value>調整預覽區域寬度</value></data>
+  <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>硬體監控</value></data>
+  <data name="HardwareMonitorEnabled" xml:space="preserve"><value>啟用</value></data>
+  <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>螢幕</value></data>
+  <data name="HardwareMonitorSensors" xml:space="preserve"><value>感測器</value></data>
+  <data name="HardwareMonitorPosition" xml:space="preserve"><value>位置</value></data>
+  <data name="HardwareMonitorStyle" xml:space="preserve"><value>樣式</value></data>
+  <data name="HardwareMonitorTemplate" xml:space="preserve"><value>範本</value></data>
+  <data name="HardwareMonitorPreview" xml:space="preserve"><value>預覽</value></data>
+  <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>範本操作</value></data>
+  <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>全部螢幕</value></data>
+  <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>未發現感測器。部分感測器可能需要系統管理員權限。</value></data>
+  <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>字級</value></data>
+  <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>透明度</value></data>
+  <data name="RefreshHardwareSensors" xml:space="preserve"><value>重新整理硬體感測器</value></data>
+  <data name="ImportHardwareTemplate" xml:space="preserve"><value>匯入硬體範本</value></data>
+  <data name="ExportHardwareTemplate" xml:space="preserve"><value>匯出硬體範本</value></data>
+  <data name="HardwareMetricGroupCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="HardwareMetricGroupGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="HardwareMetricGroupStorage" xml:space="preserve"><value>硬碟</value></data>
+  <data name="HardwareMetricGroupMemory" xml:space="preserve"><value>記憶體</value></data>
+  <data name="HardwareMetricGroupMotherboard" xml:space="preserve"><value>主機板</value></data>
+  <data name="HardwareMetricGroupOther" xml:space="preserve"><value>其他</value></data>
 </root>

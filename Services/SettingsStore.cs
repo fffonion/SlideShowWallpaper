@@ -44,6 +44,7 @@ public sealed class SettingsStore
                 PauseVideoWhenDisplayOffOrSleeping = GetBool(sections, "Settings", nameof(WallpaperConfig.PauseVideoWhenDisplayOffOrSleeping), true),
                 PreviewPopupDelaySeconds = GetInt(sections, "Settings", nameof(WallpaperConfig.PreviewPopupDelaySeconds), WallpaperConfig.DefaultPreviewPopupDelaySeconds),
             };
+            config.HardwareMonitor = LoadHardwareMonitorConfig(sections);
 
             int monitorCount = GetInt(sections, "Settings", "MonitorCount", 0);
             for (int index = 0; index < monitorCount; index++)
@@ -108,6 +109,7 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(WallpaperConfig.PauseVideoWhenDisplayOffOrSleeping), config.PauseVideoWhenDisplayOffOrSleeping);
         AppendValue(builder, nameof(WallpaperConfig.PreviewPopupDelaySeconds), Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, config.PreviewPopupDelaySeconds));
         AppendValue(builder, "MonitorCount", config.Monitors.Count);
+        AppendHardwareMonitorConfig(builder, config.HardwareMonitor);
 
         for (int index = 0; index < config.Monitors.Count; index++)
         {
@@ -137,6 +139,51 @@ public sealed class SettingsStore
         }
 
         File.WriteAllText(_settingsPath, builder.ToString());
+    }
+
+    private static HardwareMonitorConfig LoadHardwareMonitorConfig(Dictionary<string, Dictionary<string, string>> sections)
+    {
+        const string section = "HardwareMonitor";
+        int selectedSensorCount = GetInt(sections, section, "SelectedSensorCount", 0);
+        var config = new HardwareMonitorConfig
+        {
+            IsEnabled = GetBool(sections, section, nameof(HardwareMonitorConfig.IsEnabled), false),
+            TargetMonitorId = GetString(sections, section, nameof(HardwareMonitorConfig.TargetMonitorId)),
+            TemplateText = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.TemplateText)), HardwareMonitorConfig.DefaultTemplate),
+            X = GetDouble(sections, section, nameof(HardwareMonitorConfig.X), 24),
+            Y = GetDouble(sections, section, nameof(HardwareMonitorConfig.Y), 24),
+            FontSize = GetDouble(sections, section, nameof(HardwareMonitorConfig.FontSize), 16),
+            Opacity = GetDouble(sections, section, nameof(HardwareMonitorConfig.Opacity), 0.88),
+        };
+
+        for (int index = 0; index < selectedSensorCount; index++)
+        {
+            string sensorId = DecodeString(GetString(sections, section, $"SelectedSensor{index}"), string.Empty);
+            if (!string.IsNullOrWhiteSpace(sensorId))
+            {
+                config.SelectedSensorIds.Add(sensorId);
+            }
+        }
+
+        return config;
+    }
+
+    private static void AppendHardwareMonitorConfig(StringBuilder builder, HardwareMonitorConfig config)
+    {
+        builder.AppendLine();
+        AppendSection(builder, "HardwareMonitor");
+        AppendValue(builder, nameof(HardwareMonitorConfig.IsEnabled), config.IsEnabled);
+        AppendValue(builder, nameof(HardwareMonitorConfig.TargetMonitorId), config.TargetMonitorId);
+        AppendValue(builder, nameof(HardwareMonitorConfig.TemplateText), EncodeString(config.TemplateText));
+        AppendValue(builder, nameof(HardwareMonitorConfig.X), config.X);
+        AppendValue(builder, nameof(HardwareMonitorConfig.Y), config.Y);
+        AppendValue(builder, nameof(HardwareMonitorConfig.FontSize), config.FontSize);
+        AppendValue(builder, nameof(HardwareMonitorConfig.Opacity), config.Opacity);
+        AppendValue(builder, "SelectedSensorCount", config.SelectedSensorIds.Count);
+        for (int index = 0; index < config.SelectedSensorIds.Count; index++)
+        {
+            AppendValue(builder, $"SelectedSensor{index}", EncodeString(config.SelectedSensorIds[index]));
+        }
     }
 
     private static Dictionary<string, Dictionary<string, string>> Parse(IEnumerable<string> lines)
@@ -213,6 +260,28 @@ public sealed class SettingsStore
             .Append('=')
             .Append(Convert.ToString(value, CultureInfo.InvariantCulture))
             .AppendLine();
+    }
+
+    private static string EncodeString(string value)
+    {
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(value ?? string.Empty));
+    }
+
+    private static string DecodeString(string value, string defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        try
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(value));
+        }
+        catch
+        {
+            return defaultValue;
+        }
     }
 
     private static string GetDefaultSettingsPath()

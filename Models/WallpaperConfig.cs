@@ -78,6 +78,8 @@ public sealed class WallpaperConfig
 
     public int PreviewPopupDelaySeconds { get; set; } = DefaultPreviewPopupDelaySeconds;
 
+    public HardwareMonitorConfig HardwareMonitor { get; set; } = new();
+
     public List<MonitorProfile> Monitors { get; set; } = [];
 }
 

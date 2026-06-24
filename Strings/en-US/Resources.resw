@@ -102,5 +102,27 @@
   <data name="TransitionNone" xml:space="preserve"><value>None</value></data>
   <data name="TransitionFade" xml:space="preserve"><value>Fade</value></data>
   <data name="TransitionSlide" xml:space="preserve"><value>Slide</value></data>
+  <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>Hardware Monitor</value></data>
+  <data name="HardwareMonitorEnabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>Display</value></data>
+  <data name="HardwareMonitorSensors" xml:space="preserve"><value>Sensors</value></data>
+  <data name="HardwareMonitorPosition" xml:space="preserve"><value>Position</value></data>
+  <data name="HardwareMonitorStyle" xml:space="preserve"><value>Style</value></data>
+  <data name="HardwareMonitorTemplate" xml:space="preserve"><value>Template</value></data>
+  <data name="HardwareMonitorPreview" xml:space="preserve"><value>Preview</value></data>
+  <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>Template actions</value></data>
+  <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>All displays</value></data>
+  <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>No sensors detected. Some sensors may require administrator access.</value></data>
+  <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>Font</value></data>
+  <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>Opacity</value></data>
+  <data name="RefreshHardwareSensors" xml:space="preserve"><value>Refresh hardware sensors</value></data>
+  <data name="ImportHardwareTemplate" xml:space="preserve"><value>Import hardware template</value></data>
+  <data name="ExportHardwareTemplate" xml:space="preserve"><value>Export hardware template</value></data>
+  <data name="HardwareMetricGroupCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="HardwareMetricGroupGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="HardwareMetricGroupStorage" xml:space="preserve"><value>Storage</value></data>
+  <data name="HardwareMetricGroupMemory" xml:space="preserve"><value>Memory</value></data>
+  <data name="HardwareMetricGroupMotherboard" xml:space="preserve"><value>Motherboard</value></data>
+  <data name="HardwareMetricGroupOther" xml:space="preserve"><value>Other</value></data>
   <data name="PreviewResizeHandle" xml:space="preserve"><value>Resize preview pane</value></data>
 </root>

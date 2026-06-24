@@ -35,6 +35,17 @@ public sealed class SettingsStoreTests
             ThumbnailCacheEnabled = false,
             PauseVideoWhenDisplayOffOrSleeping = false,
             PreviewPopupDelaySeconds = 3,
+            HardwareMonitor = new HardwareMonitorConfig
+            {
+                IsEnabled = true,
+                TargetMonitorId = "display1",
+                TemplateText = "Hardware{metrics}",
+                X = 32,
+                Y = 48,
+                FontSize = 18,
+                Opacity = 0.72,
+                SelectedSensorIds = ["cpu-temp", "gpu-power"],
+            },
             Monitors =
             [
                 new MonitorProfile
@@ -77,6 +88,14 @@ public sealed class SettingsStoreTests
         Assert.False(loaded.ThumbnailCacheEnabled);
         Assert.False(loaded.PauseVideoWhenDisplayOffOrSleeping);
         Assert.Equal(3, loaded.PreviewPopupDelaySeconds);
+        Assert.True(loaded.HardwareMonitor.IsEnabled);
+        Assert.Equal("display1", loaded.HardwareMonitor.TargetMonitorId);
+        Assert.Equal("Hardware{metrics}", loaded.HardwareMonitor.TemplateText);
+        Assert.Equal(32, loaded.HardwareMonitor.X);
+        Assert.Equal(48, loaded.HardwareMonitor.Y);
+        Assert.Equal(18, loaded.HardwareMonitor.FontSize);
+        Assert.Equal(0.72, loaded.HardwareMonitor.Opacity);
+        Assert.Equal(["cpu-temp", "gpu-power"], loaded.HardwareMonitor.SelectedSensorIds);
         Assert.Equal("display1", monitor.Id);
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);

@@ -20,6 +20,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
 
         ConfigureVideoCoverageTimer();
+        ConfigureHardwareOverlayTimer();
     }
 
     private static void CloseWindowSafely(WallpaperWindow window)
@@ -57,6 +58,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         window.SetForceMuted(_globalMute);
         _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
         ConfigureVideoCoverageTimer();
+        ConfigureHardwareOverlayTimer();
     }
 
     private async Task<bool> TryShowSelectedImageAsync(MonitorProfile profile)

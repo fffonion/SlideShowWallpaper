@@ -105,6 +105,7 @@ public sealed partial class MainWindow : Window
     private readonly ThumbnailCacheService _thumbnailCacheService = new();
     private readonly TrayIconService _trayIconService;
     private readonly ImageOrderService _imageOrderService;
+    private readonly HardwareMonitorService _hardwareMonitorService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
@@ -132,6 +133,7 @@ public sealed partial class MainWindow : Window
     private MonitorProfile? _previewPopupPendingProfile;
     private int _previewSessionVersion;
     private string? _selectedMonitorId;
+    private HardwareMonitorSnapshot? _hardwareMonitorSnapshot;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
     private bool _isSettingsSelected;
@@ -151,6 +153,7 @@ public sealed partial class MainWindow : Window
         AutostartService autostartService,
         FolderPickerService folderPickerService,
         ImageOrderService imageOrderService,
+        HardwareMonitorService hardwareMonitorService,
         bool disableCloseToTray = false,
         bool startInTray = false)
     {
@@ -160,6 +163,7 @@ public sealed partial class MainWindow : Window
         _autostartService = autostartService;
         _folderPickerService = folderPickerService;
         _imageOrderService = imageOrderService;
+        _hardwareMonitorService = hardwareMonitorService;
         _disableCloseToTray = disableCloseToTray;
 
         InitializeComponent();
@@ -261,6 +265,7 @@ public sealed partial class MainWindow : Window
         _viewModel.ThumbnailCacheEnabled = config.ThumbnailCacheEnabled;
         _viewModel.PauseVideoWhenDisplayOffOrSleeping = config.PauseVideoWhenDisplayOffOrSleeping;
         _viewModel.PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, config.PreviewPopupDelaySeconds);
+        _viewModel.HardwareMonitor = config.HardwareMonitor;
         ApplyTheme(_viewModel.ThemeMode);
     }
 

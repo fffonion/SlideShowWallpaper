@@ -24,6 +24,22 @@
                 Visibility="Collapsed" />
         </Canvas>
         <Border
+            x:Name="HardwareOverlay"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="#99000000"
+            BorderBrush="#40FFFFFF"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="10,8"
+            Visibility="Collapsed">
+            <TextBlock
+                x:Name="HardwareOverlayText"
+                FontFamily="Consolas"
+                Foreground="White"
+                TextWrapping="NoWrap" />
+        </Border>
+        <Border
             x:Name="ErrorOverlay"
             Background="#D0000000"
             HorizontalAlignment="Stretch"

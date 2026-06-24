@@ -13,6 +13,7 @@ public partial class App : Application
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ImageOrderService _imageOrderService = new();
     private readonly FolderChangeWatcherService _folderChangeWatcherService = new();
+    private readonly HardwareMonitorService _hardwareMonitorService = new();
     private WallpaperPlaybackCoordinator? _coordinator;
     private SingleInstanceService? _singleInstanceService;
 
@@ -55,7 +56,7 @@ public partial class App : Application
                 }
             }
 
-            _coordinator = new WallpaperPlaybackCoordinator(_monitorService, _desktopHostService, _imageOrderService, _folderChangeWatcherService);
+            _coordinator = new WallpaperPlaybackCoordinator(_monitorService, _desktopHostService, _imageOrderService, _folderChangeWatcherService, _hardwareMonitorService);
             _window = new MainWindow(
                 _monitorService,
                 _coordinator,
@@ -63,6 +64,7 @@ public partial class App : Application
                 _autostartService,
                 _folderPickerService,
                 _imageOrderService,
+                _hardwareMonitorService,
                 launchOptions.DisableCloseToTray,
                 launchOptions.StartInTray);
             if (!launchOptions.StartInTray)

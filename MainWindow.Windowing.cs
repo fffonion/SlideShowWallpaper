@@ -154,7 +154,10 @@ public sealed partial class MainWindow
         const int contentBottomPadding = 24;
         return titleBarHeight
             + contentTopPadding
+            + EstimateSettingsSectionHeight(true, 9)
+            + 14
             + EstimateSettingsSectionHeight(true, 8)
+            + 210
             + contentBottomPadding;
     }
 
@@ -227,5 +230,6 @@ public sealed partial class MainWindow
         _coordinator.CurrentWallpaperChanged -= Coordinator_CurrentWallpaperChanged;
         _trayIconService.Dispose();
         _coordinator.Shutdown();
+        _hardwareMonitorService.Dispose();
     }
 }

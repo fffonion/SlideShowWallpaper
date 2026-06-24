@@ -52,11 +52,379 @@ public sealed partial class MainWindow
                     UpdatePreviewPopupDelay();
                 },
                 LocalizedStrings.Get("AppSettingVideoPreviewDelay")))));
+        form.Children.Add(CreateHardwareMonitorSettingsSection());
 
         Grid.SetRow(form, 0);
         root.Children.Add(form);
         StartThumbnailCacheSizeLoad();
         return root;
+    }
+
+    private Border CreateHardwareMonitorSettingsSection()
+    {
+        HardwareMonitorConfig config = _viewModel.HardwareMonitor;
+        RefreshHardwareSnapshot();
+        EnsureDefaultHardwareSensors(config);
+
+        TextBlock previewText = CreateHardwareOverlayPreviewText(config);
+        TextBox templateBox = CreateHardwareTemplateTextBox(config, previewText);
+        FrameworkElement sensorList = CreateHardwareSensorSelectionList(config, previewText);
+        FrameworkElement buttonRow = CreateHardwareTemplateButtons(config);
+        return CreateSettingsSection(
+            LocalizedStrings.Get("HardwareMonitorSettingsGroup"),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateCheckBox(config.IsEnabled, value => config.IsEnabled = value, LocalizedStrings.Get("HardwareMonitorEnabled"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorSensors"), sensorList),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorStyle"), CreateHardwareStyleControls(config)),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorPreview"), CreateHardwarePreviewSurface(config, previewText)),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplateActions"), buttonRow));
+    }
+
+    private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices()
+    {
+        var choices = new List<Choice<string>>
+        {
+            new(string.Empty, LocalizedStrings.Get("HardwareMonitorAllDisplays")),
+        };
+        choices.AddRange(_viewModel.Profiles.Select(profile => new Choice<string>(profile.Id, profile.DisplayName)));
+        return choices;
+    }
+
+    private TextBox CreateHardwareTemplateTextBox(HardwareMonitorConfig config, TextBlock previewText)
+    {
+        var textBox = new TextBox
+        {
+            Text = config.TemplateText,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 96,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        AutomationProperties.SetName(textBox, LocalizedStrings.Get("HardwareMonitorTemplate"));
+        textBox.TextChanged += (_, _) =>
+        {
+            config.TemplateText = textBox.Text;
+            UpdateHardwareOverlayPreview(previewText, config);
+            ScheduleApplySettings();
+        };
+        return textBox;
+    }
+
+    private FrameworkElement CreateHardwareSensorSelectionList(HardwareMonitorConfig config, TextBlock previewText)
+    {
+        var stack = new StackPanel
+        {
+            Spacing = 4,
+        };
+        IReadOnlyList<HardwareSensorReading> sensors = _hardwareMonitorSnapshot?.Sensors ?? [];
+        if (sensors.Count == 0)
+        {
+            stack.Children.Add(new TextBlock
+            {
+                Text = LocalizedStrings.Get("HardwareMonitorNoSensors"),
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+        else
+        {
+            foreach (HardwareSensorReading sensor in sensors.OrderBy(sensor => sensor.Group).ThenBy(sensor => sensor.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var checkBox = new CheckBox
+                {
+                    Content = $"{GetHardwareMetricGroupLabel(sensor.Group)} · {sensor.DisplayName}",
+                    IsChecked = config.SelectedSensorIds.Contains(sensor.Id, StringComparer.OrdinalIgnoreCase),
+                };
+                checkBox.Content = $"{GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}";
+                AutomationProperties.SetName(checkBox, sensor.DisplayName);
+                checkBox.Checked += (_, _) =>
+                {
+                    if (!config.SelectedSensorIds.Contains(sensor.Id, StringComparer.OrdinalIgnoreCase))
+                    {
+                        config.SelectedSensorIds.Add(sensor.Id);
+                    }
+
+                    UpdateHardwareOverlayPreview(previewText, config);
+                    ScheduleApplySettings();
+                };
+                checkBox.Unchecked += (_, _) =>
+                {
+                    config.SelectedSensorIds.RemoveAll(id => string.Equals(id, sensor.Id, StringComparison.OrdinalIgnoreCase));
+                    UpdateHardwareOverlayPreview(previewText, config);
+                    ScheduleApplySettings();
+                };
+                stack.Children.Add(checkBox);
+            }
+        }
+
+        return new ScrollViewer
+        {
+            Content = stack,
+            MaxHeight = 260,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        };
+    }
+
+    private FrameworkElement CreateHardwarePositionControls(HardwareMonitorConfig config)
+    {
+        var panel = new Grid
+        {
+            ColumnSpacing = 10,
+        };
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        FrameworkElement xControl = CreateLabeledNumberBox("X", config.X, value => config.X = value);
+        FrameworkElement yControl = CreateLabeledNumberBox("Y", config.Y, value => config.Y = value);
+        Grid.SetColumn(xControl, 0);
+        Grid.SetColumn(yControl, 1);
+        panel.Children.Add(xControl);
+        panel.Children.Add(yControl);
+        return panel;
+    }
+
+    private FrameworkElement CreateHardwareStyleControls(HardwareMonitorConfig config)
+    {
+        var panel = new Grid
+        {
+            ColumnSpacing = 10,
+        };
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        FrameworkElement fontControl = CreateLabeledNumberBox(LocalizedStrings.Get("HardwareMonitorFontSizeShort"), config.FontSize, value => config.FontSize = Math.Max(10, value));
+        FrameworkElement opacityControl = CreateLabeledNumberBox(LocalizedStrings.Get("HardwareMonitorOpacityShort"), config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1));
+        Grid.SetColumn(fontControl, 0);
+        Grid.SetColumn(opacityControl, 1);
+        panel.Children.Add(fontControl);
+        panel.Children.Add(opacityControl);
+        return panel;
+    }
+
+    private TextBlock CreateHardwareOverlayPreviewText(HardwareMonitorConfig config)
+    {
+        var text = new TextBlock
+        {
+            FontFamily = new FontFamily("Consolas"),
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+            TextWrapping = TextWrapping.Wrap,
+        };
+        UpdateHardwareOverlayPreview(text, config);
+        return text;
+    }
+
+    private FrameworkElement CreateHardwarePreviewSurface(HardwareMonitorConfig config, TextBlock previewText)
+    {
+        var overlay = new Border
+        {
+            Padding = new Thickness(10, 8, 10, 8),
+            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(170, 0, 0, 0)),
+            BorderBrush = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(80, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Child = previewText,
+        };
+        var canvas = new Canvas
+        {
+            MinHeight = 150,
+        };
+        Canvas.SetLeft(overlay, Math.Max(0, config.X));
+        Canvas.SetTop(overlay, Math.Max(0, config.Y));
+
+        bool isDragging = false;
+        double dragStartX = 0;
+        double dragStartY = 0;
+        double startLeft = 0;
+        double startTop = 0;
+        overlay.PointerPressed += (_, args) =>
+        {
+            isDragging = true;
+            dragStartX = args.GetCurrentPoint(canvas).Position.X;
+            dragStartY = args.GetCurrentPoint(canvas).Position.Y;
+            startLeft = Canvas.GetLeft(overlay);
+            startTop = Canvas.GetTop(overlay);
+            overlay.CapturePointer(args.Pointer);
+            args.Handled = true;
+        };
+        overlay.PointerMoved += (_, args) =>
+        {
+            if (!isDragging)
+            {
+                return;
+            }
+
+            global::Windows.Foundation.Point point = args.GetCurrentPoint(canvas).Position;
+            double left = Math.Max(0, startLeft + point.X - dragStartX);
+            double top = Math.Max(0, startTop + point.Y - dragStartY);
+            Canvas.SetLeft(overlay, left);
+            Canvas.SetTop(overlay, top);
+            config.X = left;
+            config.Y = top;
+            ScheduleApplySettings();
+            args.Handled = true;
+        };
+        overlay.PointerReleased += (_, args) =>
+        {
+            isDragging = false;
+            overlay.ReleasePointerCapture(args.Pointer);
+            args.Handled = true;
+        };
+        overlay.PointerCanceled += (_, args) =>
+        {
+            isDragging = false;
+            overlay.ReleasePointerCapture(args.Pointer);
+        };
+        overlay.PointerCaptureLost += (_, _) => isDragging = false;
+        canvas.Children.Add(overlay);
+
+        return new Border
+        {
+            MinHeight = 150,
+            Padding = new Thickness(8),
+            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(220, 20, 20, 20)),
+            BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Child = canvas,
+        };
+    }
+
+    private FrameworkElement CreateHardwareTemplateButtons(HardwareMonitorConfig config)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+        var refreshButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Refresh),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(refreshButton, LocalizedStrings.Get("RefreshHardwareSensors"));
+        ToolTipService.SetToolTip(refreshButton, LocalizedStrings.Get("RefreshHardwareSensors"));
+        refreshButton.Click += (_, _) =>
+        {
+            RefreshHardwareSnapshot();
+            RenderTabs(_selectedMonitorId);
+        };
+
+        var importButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.OpenFile),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(importButton, LocalizedStrings.Get("ImportHardwareTemplate"));
+        ToolTipService.SetToolTip(importButton, LocalizedStrings.Get("ImportHardwareTemplate"));
+        importButton.Click += async (_, _) => await ImportHardwareTemplateAsync(config);
+
+        var exportButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Save),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(exportButton, LocalizedStrings.Get("ExportHardwareTemplate"));
+        ToolTipService.SetToolTip(exportButton, LocalizedStrings.Get("ExportHardwareTemplate"));
+        exportButton.Click += async (_, _) => await ExportHardwareTemplateAsync(config);
+
+        panel.Children.Add(refreshButton);
+        panel.Children.Add(importButton);
+        panel.Children.Add(exportButton);
+        return panel;
+    }
+
+    private void RefreshHardwareSnapshot()
+    {
+        try
+        {
+            _hardwareMonitorSnapshot = _hardwareMonitorService.GetSnapshot();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            _hardwareMonitorSnapshot = new HardwareMonitorSnapshot([], DateTimeOffset.Now);
+        }
+    }
+
+    private void EnsureDefaultHardwareSensors(HardwareMonitorConfig config)
+    {
+        if (config.SelectedSensorIds.Count > 0 || _hardwareMonitorSnapshot is not { Sensors.Count: > 0 } snapshot)
+        {
+            return;
+        }
+
+        config.SelectedSensorIds = snapshot.Sensors
+            .Where(sensor => sensor.Kind is HardwareMetricKind.Temperature or HardwareMetricKind.FanRpm or HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable or HardwareMetricKind.Power)
+            .Take(8)
+            .Select(sensor => sensor.Id)
+            .ToList();
+    }
+
+    private void UpdateHardwareOverlayPreview(TextBlock previewText, HardwareMonitorConfig config)
+    {
+        HardwareMonitorSnapshot snapshot = _hardwareMonitorSnapshot ?? new HardwareMonitorSnapshot([], DateTimeOffset.Now);
+        previewText.Text = HardwareOverlayTextRenderer.Render(config, snapshot);
+        previewText.FontSize = Math.Max(10, config.FontSize);
+        previewText.Opacity = Math.Clamp(config.Opacity, 0.1, 1);
+    }
+
+    private async Task ImportHardwareTemplateAsync(HardwareMonitorConfig config)
+    {
+        string? path = await _folderPickerService.PickOpenFileAsync(_hwnd, ".json");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            HardwareOverlayTemplate template = await HardwareOverlayTemplateService.ImportAsync(path);
+            HardwareOverlayTemplateService.ApplyToConfig(template, config);
+            ApplySettings();
+            RenderTabs(_selectedMonitorId);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private async Task ExportHardwareTemplateAsync(HardwareMonitorConfig config)
+    {
+        string? path = await _folderPickerService.PickSaveFileAsync(_hwnd, ".json", "hardware-overlay-template");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            await HardwareOverlayTemplateService.ExportAsync(HardwareOverlayTemplateService.FromConfig(config), path);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private static string GetHardwareMetricGroupLabel(HardwareMetricGroup group)
+    {
+        return group switch
+        {
+            HardwareMetricGroup.Cpu => LocalizedStrings.Get("HardwareMetricGroupCpu"),
+            HardwareMetricGroup.Gpu => LocalizedStrings.Get("HardwareMetricGroupGpu"),
+            HardwareMetricGroup.Storage => LocalizedStrings.Get("HardwareMetricGroupStorage"),
+            HardwareMetricGroup.Memory => LocalizedStrings.Get("HardwareMetricGroupMemory"),
+            HardwareMetricGroup.Motherboard => LocalizedStrings.Get("HardwareMetricGroupMotherboard"),
+            _ => LocalizedStrings.Get("HardwareMetricGroupOther"),
+        };
     }
 
     private UIElement BuildMonitorPage(MonitorProfile profile)

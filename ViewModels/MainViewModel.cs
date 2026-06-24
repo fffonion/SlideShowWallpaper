@@ -27,5 +27,7 @@ public sealed class MainViewModel
 
     public int PreviewPopupDelaySeconds { get; set; } = WallpaperConfig.DefaultPreviewPopupDelaySeconds;
 
+    public HardwareMonitorConfig HardwareMonitor { get; set; } = new();
+
     public IReadOnlyList<MonitorProfile> Profiles => Monitors.Select(monitor => monitor.Profile).ToArray();
 }

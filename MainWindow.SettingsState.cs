@@ -30,7 +30,8 @@ public sealed partial class MainWindow
             config.PlaybackEnabled,
             config.AutoTrackNewFiles,
             config.GlobalMute,
-            config.PauseVideoWhenDisplayOffOrSleeping);
+            config.PauseVideoWhenDisplayOffOrSleeping,
+            config.HardwareMonitor);
         UpdatePreviewPopupMute();
     }
 
@@ -55,6 +56,7 @@ public sealed partial class MainWindow
             ThumbnailCacheEnabled = _viewModel.ThumbnailCacheEnabled,
             PauseVideoWhenDisplayOffOrSleeping = _viewModel.PauseVideoWhenDisplayOffOrSleeping,
             PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, _viewModel.PreviewPopupDelaySeconds),
+            HardwareMonitor = _viewModel.HardwareMonitor,
             Monitors = _viewModel.Profiles.ToList(),
         };
     }

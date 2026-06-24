@@ -98,8 +98,25 @@ public sealed partial class WallpaperWindow : Window
         StopVideo();
         ClearImageSources();
         HideError();
+        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, 0, 0, 0, 0));
         _isShowingWallpaper = false;
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
+    }
+
+    public void SetHardwareOverlay(HardwareOverlayState state)
+    {
+        if (!state.IsVisible)
+        {
+            HardwareOverlay.Visibility = Visibility.Collapsed;
+            HardwareOverlayText.Text = string.Empty;
+            return;
+        }
+
+        HardwareOverlayText.Text = state.Text;
+        HardwareOverlayText.FontSize = Math.Max(10, state.FontSize);
+        HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
+        HardwareOverlay.Margin = new Thickness(Math.Max(0, state.X), Math.Max(0, state.Y), 0, 0);
+        HardwareOverlay.Visibility = Visibility.Visible;
     }
 
     public async Task ShowImageAsync(string path)

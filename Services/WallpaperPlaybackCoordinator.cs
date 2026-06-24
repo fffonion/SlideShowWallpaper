@@ -10,9 +10,11 @@ public sealed partial class WallpaperPlaybackCoordinator
     private readonly DesktopHostService _desktopHostService;
     private readonly ImageOrderService _imageOrderService;
     private readonly FolderChangeWatcherService _folderChangeWatcherService;
+    private readonly HardwareMonitorService _hardwareMonitorService;
     private readonly ForegroundWindowService _foregroundWindowService;
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly DispatcherQueueTimer _videoCoverageTimer;
+    private readonly DispatcherQueueTimer _hardwareOverlayTimer;
     private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
@@ -25,24 +27,32 @@ public sealed partial class WallpaperPlaybackCoordinator
     private bool _globalMute = true;
     private bool _pauseVideoWhenDisplayOffOrSleeping = true;
     private bool _isDisplayOffOrSleeping;
+    private bool _hardwareOverlayRefreshInProgress;
+    private HardwareMonitorConfig _hardwareMonitorConfig = new();
 
     public WallpaperPlaybackCoordinator(
         MonitorService monitorService,
         DesktopHostService desktopHostService,
         ImageOrderService imageOrderService,
         FolderChangeWatcherService folderChangeWatcherService,
+        HardwareMonitorService? hardwareMonitorService = null,
         ForegroundWindowService? foregroundWindowService = null)
     {
         _monitorService = monitorService;
         _desktopHostService = desktopHostService;
         _imageOrderService = imageOrderService;
         _folderChangeWatcherService = folderChangeWatcherService;
+        _hardwareMonitorService = hardwareMonitorService ?? new HardwareMonitorService();
         _foregroundWindowService = foregroundWindowService ?? new ForegroundWindowService();
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         _videoCoverageTimer = _dispatcherQueue.CreateTimer();
         _videoCoverageTimer.Interval = TimeSpan.FromSeconds(1);
         _videoCoverageTimer.IsRepeating = true;
         _videoCoverageTimer.Tick += (_, _) => ApplyVideoCoverageState();
+        _hardwareOverlayTimer = _dispatcherQueue.CreateTimer();
+        _hardwareOverlayTimer.Interval = TimeSpan.FromSeconds(2);
+        _hardwareOverlayTimer.IsRepeating = true;
+        _hardwareOverlayTimer.Tick += async (_, _) => await RefreshHardwareOverlayAsync();
     }
 
     public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
@@ -58,13 +68,15 @@ public sealed partial class WallpaperPlaybackCoordinator
         bool playbackEnabled,
         bool autoTrackNewFiles = true,
         bool globalMute = true,
-        bool pauseVideoWhenDisplayOffOrSleeping = true)
+        bool pauseVideoWhenDisplayOffOrSleeping = true,
+        HardwareMonitorConfig? hardwareMonitorConfig = null)
     {
         bool globalMuteChanged = _globalMute != globalMute;
         _playbackEnabled = playbackEnabled;
         _autoTrackNewFiles = autoTrackNewFiles;
         _globalMute = globalMute;
         _pauseVideoWhenDisplayOffOrSleeping = pauseVideoWhenDisplayOffOrSleeping;
+        _hardwareMonitorConfig = hardwareMonitorConfig ?? new HardwareMonitorConfig();
         if (!_playbackEnabled)
         {
             StopPlayback();
@@ -154,6 +166,8 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         ConfigureVideoCoverageTimer();
         ApplyVideoCoverageState();
+        ConfigureHardwareOverlayTimer();
+        _ = RefreshHardwareOverlayAsync();
     }
 
     public void SetDisplayPowerVideoPause(bool isPaused)
@@ -296,6 +310,82 @@ public sealed partial class WallpaperPlaybackCoordinator
         _profileChanges.Clear();
         _folderChangeWatcherService.Clear();
         _videoCoverageTimer.Stop();
+        _hardwareOverlayTimer.Stop();
+    }
+
+    private void ConfigureHardwareOverlayTimer()
+    {
+        bool shouldRun = _playbackEnabled
+            && _hardwareMonitorConfig.IsEnabled
+            && _windows.Values.Any(window => window.IsShowingWallpaper);
+        if (shouldRun)
+        {
+            _hardwareOverlayTimer.Start();
+            return;
+        }
+
+        _hardwareOverlayTimer.Stop();
+        ClearHardwareOverlay();
+    }
+
+    private async Task RefreshHardwareOverlayAsync()
+    {
+        if (!_playbackEnabled || !_hardwareMonitorConfig.IsEnabled)
+        {
+            ClearHardwareOverlay();
+            return;
+        }
+
+        if (_hardwareOverlayRefreshInProgress)
+        {
+            return;
+        }
+
+        HardwareMonitorSnapshot snapshot;
+        _hardwareOverlayRefreshInProgress = true;
+        try
+        {
+            snapshot = await Task.Run(_hardwareMonitorService.GetSnapshot);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            ClearHardwareOverlay();
+            return;
+        }
+        finally
+        {
+            _hardwareOverlayRefreshInProgress = false;
+        }
+
+        if (!_playbackEnabled || !_hardwareMonitorConfig.IsEnabled)
+        {
+            ClearHardwareOverlay();
+            return;
+        }
+
+        string text = HardwareOverlayTextRenderer.Render(_hardwareMonitorConfig, snapshot);
+        foreach ((string monitorId, WallpaperWindow window) in _windows)
+        {
+            bool isTarget = string.IsNullOrWhiteSpace(_hardwareMonitorConfig.TargetMonitorId)
+                || string.Equals(_hardwareMonitorConfig.TargetMonitorId, monitorId, StringComparison.OrdinalIgnoreCase);
+            var state = new HardwareOverlayState(
+                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && !string.IsNullOrWhiteSpace(text),
+                text,
+                _hardwareMonitorConfig.X,
+                _hardwareMonitorConfig.Y,
+                _hardwareMonitorConfig.FontSize,
+                _hardwareMonitorConfig.Opacity);
+            window.SetHardwareOverlay(state);
+        }
+    }
+
+    private void ClearHardwareOverlay()
+    {
+        foreach (WallpaperWindow window in _windows.Values)
+        {
+            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, 0, 0, 0, 0));
+        }
     }
 
 }
