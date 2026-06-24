@@ -180,8 +180,7 @@ public sealed partial class MainWindow
             LocalizedStrings.Get("HardwareMonitorSettingsGroup"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateCheckBox(config.IsEnabled, value => config.IsEnabled = value, LocalizedStrings.Get("HardwareMonitorEnabled"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorRefreshInterval"), CreateNumberBox(config.RefreshIntervalSeconds, value => config.RefreshIntervalSeconds = Math.Max(1, (int)Math.Round(value)), LocalizedStrings.Get("HardwareMonitorRefreshInterval"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorSensors"), CreateHardwareSensorDialogButton(config)));
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))));
     }
 
     private Border CreateHardwareOverlayFormatSection(HardwareMonitorConfig config)
@@ -252,18 +251,6 @@ public sealed partial class MainWindow
         panel.Children.Add(backgroundButton);
         panel.Children.Add(clearBackgroundButton);
         return panel;
-    }
-
-    private FrameworkElement CreateHardwareSensorDialogButton(HardwareMonitorConfig config)
-    {
-        var button = new Button
-        {
-            Content = LocalizedStrings.Get("HardwareMonitorAddSensorElements"),
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-        AutomationProperties.SetName(button, LocalizedStrings.Get("HardwareMonitorAddSensorElements"));
-        button.Click += async (_, _) => await ShowHardwareSensorSelectionDialogAsync(config);
-        return button;
     }
 
     private async Task ShowHardwareSensorSelectionDialogAsync(HardwareMonitorConfig config)
@@ -600,8 +587,10 @@ public sealed partial class MainWindow
         {
             Content = LocalizedStrings.Get("HardwareMonitorAddSensorElements"),
         };
-        addSensorsButton.Click += (_, _) =>
+        AutomationProperties.SetName(addSensorsButton, LocalizedStrings.Get("HardwareMonitorAddSensorElements"));
+        addSensorsButton.Click += async (_, _) =>
         {
+            await ShowHardwareSensorSelectionDialogAsync(config);
             AddSelectedHardwareSensorsToEditor(config);
             ScheduleApplySettings();
             RenderTabs(_selectedMonitorId);
@@ -611,6 +600,7 @@ public sealed partial class MainWindow
         {
             Content = LocalizedStrings.Get("HardwareMonitorAddTextElement"),
         };
+        AutomationProperties.SetName(addTextButton, LocalizedStrings.Get("HardwareMonitorAddTextElement"));
         addTextButton.Click += (_, _) =>
         {
             HardwareOverlayElement element = CreateDefaultHardwareElement(HardwareOverlayElementKind.Text, config.Elements.Count);

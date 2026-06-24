@@ -159,7 +159,7 @@ public sealed partial class MainWindow
             + contentTopPadding
             + EstimateSettingsSectionHeight(true, 9)
             + sectionSpacing
-            + EstimateSettingsSectionHeight(true, 4)
+            + EstimateSettingsSectionHeight(true, 3)
             + contentBottomPadding;
     }
 

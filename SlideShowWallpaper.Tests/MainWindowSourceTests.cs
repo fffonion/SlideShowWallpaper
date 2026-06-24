@@ -203,6 +203,19 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void EstimateWindowHeightForSettingsPage_UsesThreeHardwareMonitorRows()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string method = source[
+            source.IndexOf("private static int EstimateWindowHeightForSettingsPage", StringComparison.Ordinal)..
+            source.IndexOf("private static int EstimateWindowHeightForHardwareEditorPage", StringComparison.Ordinal)];
+
+        Assert.Contains("EstimateSettingsSectionHeight(true, 3)", method);
+        Assert.DoesNotContain("EstimateSettingsSectionHeight(true, 4)", method);
+    }
+
+    [Fact]
     public void HardwareEditorPreviewSection_UsesTightPreviewPadding()
     {
         string root = FindProjectRoot();
@@ -368,6 +381,9 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("HardwareMonitorAddSensorElements", method);
         Assert.Contains("HardwareMonitorAddTextElement", method);
+        Assert.Contains("ShowHardwareSensorSelectionDialogAsync(config)", method);
+        Assert.Contains("AddSelectedHardwareSensorsToEditor(config)", method);
+        Assert.Contains("AutomationProperties.SetName(addSensorsButton", method);
         Assert.DoesNotContain("HardwareMonitorImportIconImage", method);
         Assert.DoesNotContain("HardwareMonitorImportBackground", method);
         Assert.DoesNotContain("HardwareMonitorClearBackground", method);
@@ -437,7 +453,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void CreateHardwareMonitorSettingsSection_UsesSensorDialogButton()
+    public void CreateHardwareMonitorSettingsSection_DoesNotShowSensorDialogButton()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
@@ -445,9 +461,14 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)..
             source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
 
-        Assert.Contains("CreateHardwareSensorDialogButton(config)", method);
+        Assert.Contains("HardwareMonitorEnabled", method);
+        Assert.Contains("HardwareMonitorRefreshInterval", method);
+        Assert.Contains("HardwareMonitorTargetDisplay", method);
+        Assert.DoesNotContain("CreateHardwareSensorDialogButton(config)", method);
+        Assert.DoesNotContain("HardwareMonitorSensors", method);
         Assert.DoesNotContain("CreateHardwareSensorSelectionList(config)", method);
         Assert.DoesNotContain("IsFullWidth: true", method);
+        Assert.DoesNotContain("private FrameworkElement CreateHardwareSensorDialogButton", source);
     }
 
     [Fact]
