@@ -101,6 +101,7 @@ public sealed partial class MainWindow
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorSettingsGroup"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateCheckBox(config.IsEnabled, value => config.IsEnabled = value, LocalizedStrings.Get("HardwareMonitorEnabled"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorRefreshInterval"), CreateNumberBox(config.RefreshIntervalSeconds, value => config.RefreshIntervalSeconds = Math.Max(1, (int)Math.Round(value)), LocalizedStrings.Get("HardwareMonitorRefreshInterval"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorSensors"), sensorList),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),

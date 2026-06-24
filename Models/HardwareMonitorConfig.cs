@@ -23,7 +23,11 @@ public sealed class HardwareMonitorConfig
 {
     public const string DefaultTemplate = "{metrics}";
 
+    public const int DefaultRefreshIntervalSeconds = 5;
+
     public bool IsEnabled { get; set; }
+
+    public int RefreshIntervalSeconds { get; set; } = DefaultRefreshIntervalSeconds;
 
     public string TargetMonitorId { get; set; } = string.Empty;
 
@@ -43,6 +47,8 @@ public sealed class HardwareMonitorConfig
 public sealed class HardwareOverlayTemplate
 {
     public string Name { get; set; } = "Hardware Overlay";
+
+    public int RefreshIntervalSeconds { get; set; } = HardwareMonitorConfig.DefaultRefreshIntervalSeconds;
 
     public string TemplateText { get; set; } = HardwareMonitorConfig.DefaultTemplate;
 

@@ -126,6 +126,19 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareMonitorSettingsSection_ContainsRefreshIntervalRow()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)..
+            source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
+
+        Assert.Contains("HardwareMonitorRefreshInterval", method);
+        Assert.Contains("config.RefreshIntervalSeconds", method);
+    }
+
+    [Fact]
     public void RenderTabs_AddsHardwareMonitorNavigationAboveSettings()
     {
         string root = FindProjectRoot();

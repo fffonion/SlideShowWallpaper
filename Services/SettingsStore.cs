@@ -148,6 +148,7 @@ public sealed class SettingsStore
         var config = new HardwareMonitorConfig
         {
             IsEnabled = GetBool(sections, section, nameof(HardwareMonitorConfig.IsEnabled), false),
+            RefreshIntervalSeconds = Math.Max(1, GetInt(sections, section, nameof(HardwareMonitorConfig.RefreshIntervalSeconds), HardwareMonitorConfig.DefaultRefreshIntervalSeconds)),
             TargetMonitorId = GetString(sections, section, nameof(HardwareMonitorConfig.TargetMonitorId)),
             TemplateText = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.TemplateText)), HardwareMonitorConfig.DefaultTemplate),
             X = GetDouble(sections, section, nameof(HardwareMonitorConfig.X), 24),
@@ -173,6 +174,7 @@ public sealed class SettingsStore
         builder.AppendLine();
         AppendSection(builder, "HardwareMonitor");
         AppendValue(builder, nameof(HardwareMonitorConfig.IsEnabled), config.IsEnabled);
+        AppendValue(builder, nameof(HardwareMonitorConfig.RefreshIntervalSeconds), Math.Max(1, config.RefreshIntervalSeconds));
         AppendValue(builder, nameof(HardwareMonitorConfig.TargetMonitorId), config.TargetMonitorId);
         AppendValue(builder, nameof(HardwareMonitorConfig.TemplateText), EncodeString(config.TemplateText));
         AppendValue(builder, nameof(HardwareMonitorConfig.X), config.X);

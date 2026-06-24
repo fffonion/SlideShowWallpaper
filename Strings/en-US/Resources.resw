@@ -104,6 +104,7 @@
   <data name="TransitionSlide" xml:space="preserve"><value>Slide</value></data>
   <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>Hardware Monitor</value></data>
   <data name="HardwareMonitorEnabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="HardwareMonitorRefreshInterval" xml:space="preserve"><value>Refresh interval (seconds)</value></data>
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>Display</value></data>
   <data name="HardwareMonitorSensors" xml:space="preserve"><value>Sensors</value></data>
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>Position</value></data>

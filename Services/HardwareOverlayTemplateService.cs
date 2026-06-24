@@ -15,6 +15,7 @@ public static class HardwareOverlayTemplateService
         return new HardwareOverlayTemplate
         {
             TemplateText = config.TemplateText,
+            RefreshIntervalSeconds = config.RefreshIntervalSeconds,
             X = config.X,
             Y = config.Y,
             FontSize = config.FontSize,
@@ -28,6 +29,7 @@ public static class HardwareOverlayTemplateService
         config.TemplateText = string.IsNullOrWhiteSpace(template.TemplateText)
             ? HardwareMonitorConfig.DefaultTemplate
             : template.TemplateText;
+        config.RefreshIntervalSeconds = Math.Max(1, template.RefreshIntervalSeconds);
         config.X = template.X;
         config.Y = template.Y;
         config.FontSize = template.FontSize;

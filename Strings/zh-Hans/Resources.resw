@@ -105,6 +105,7 @@
   <data name="PreviewResizeHandle" xml:space="preserve"><value>调整预览区域宽度</value></data>
   <data name="HardwareMonitorSettingsGroup" xml:space="preserve"><value>硬件监控</value></data>
   <data name="HardwareMonitorEnabled" xml:space="preserve"><value>启用</value></data>
+  <data name="HardwareMonitorRefreshInterval" xml:space="preserve"><value>刷新间隔（秒）</value></data>
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>屏幕</value></data>
   <data name="HardwareMonitorSensors" xml:space="preserve"><value>传感器</value></data>
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>位置</value></data>

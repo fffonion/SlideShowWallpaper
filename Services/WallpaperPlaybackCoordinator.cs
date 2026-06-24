@@ -50,7 +50,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _videoCoverageTimer.IsRepeating = true;
         _videoCoverageTimer.Tick += (_, _) => ApplyVideoCoverageState();
         _hardwareOverlayTimer = _dispatcherQueue.CreateTimer();
-        _hardwareOverlayTimer.Interval = TimeSpan.FromSeconds(2);
+        _hardwareOverlayTimer.Interval = TimeSpan.FromSeconds(HardwareMonitorConfig.DefaultRefreshIntervalSeconds);
         _hardwareOverlayTimer.IsRepeating = true;
         _hardwareOverlayTimer.Tick += async (_, _) => await RefreshHardwareOverlayAsync();
     }
@@ -318,6 +318,13 @@ public sealed partial class WallpaperPlaybackCoordinator
         bool shouldRun = _playbackEnabled
             && _hardwareMonitorConfig.IsEnabled
             && _windows.Values.Any(window => window.IsShowingWallpaper);
+        TimeSpan interval = TimeSpan.FromSeconds(Math.Max(1, _hardwareMonitorConfig.RefreshIntervalSeconds));
+        if (_hardwareOverlayTimer.Interval != interval)
+        {
+            _hardwareOverlayTimer.Stop();
+            _hardwareOverlayTimer.Interval = interval;
+        }
+
         if (shouldRun)
         {
             _hardwareOverlayTimer.Start();

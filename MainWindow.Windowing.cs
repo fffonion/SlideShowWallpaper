@@ -168,7 +168,7 @@ public sealed partial class MainWindow
         const int previewEditorHeight = 210;
         return titleBarHeight
             + contentTopPadding
-            + EstimateSettingsSectionHeight(true, 8)
+            + EstimateSettingsSectionHeight(true, 9)
             + previewEditorHeight
             + contentBottomPadding;
     }

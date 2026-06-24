@@ -38,6 +38,7 @@ public sealed class SettingsStoreTests
             HardwareMonitor = new HardwareMonitorConfig
             {
                 IsEnabled = true,
+                RefreshIntervalSeconds = 9,
                 TargetMonitorId = "display1",
                 TemplateText = "Hardware{metrics}",
                 X = 32,
@@ -89,6 +90,7 @@ public sealed class SettingsStoreTests
         Assert.False(loaded.PauseVideoWhenDisplayOffOrSleeping);
         Assert.Equal(3, loaded.PreviewPopupDelaySeconds);
         Assert.True(loaded.HardwareMonitor.IsEnabled);
+        Assert.Equal(9, loaded.HardwareMonitor.RefreshIntervalSeconds);
         Assert.Equal("display1", loaded.HardwareMonitor.TargetMonitorId);
         Assert.Equal("Hardware{metrics}", loaded.HardwareMonitor.TemplateText);
         Assert.Equal(32, loaded.HardwareMonitor.X);
@@ -325,5 +327,35 @@ public sealed class SettingsStoreTests
         WallpaperConfig config = store.Load();
 
         Assert.Equal(WallpaperConfig.DefaultPreviewPopupDelaySeconds, config.PreviewPopupDelaySeconds);
+    }
+
+    [Fact]
+    public void HardwareMonitorConfig_WithDefaultConstructor_UsesFiveSecondRefreshInterval()
+    {
+        var config = new HardwareMonitorConfig();
+
+        Assert.Equal(5, config.RefreshIntervalSeconds);
+    }
+
+    [Fact]
+    public void Load_WithMissingHardwareMonitorRefreshInterval_UsesFiveSeconds()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, "SlideShowWallpaper.ini");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(
+            path,
+            """
+            [Settings]
+            MonitorCount=0
+
+            [HardwareMonitor]
+            IsEnabled=True
+            """);
+        var store = new SettingsStore(path);
+
+        WallpaperConfig config = store.Load();
+
+        Assert.Equal(HardwareMonitorConfig.DefaultRefreshIntervalSeconds, config.HardwareMonitor.RefreshIntervalSeconds);
     }
 }
