@@ -449,11 +449,28 @@ public sealed partial class WallpaperPlaybackCoordinator
             return false;
         }
 
-        ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();
+        IReadOnlyList<ForegroundWindowInfo> coverageWindows = GetCoverageWindowInfos();
         return WindowCoveragePolicy.ShouldPauseVideo(
-            foregroundWindow,
+            coverageWindows,
             monitorRect,
             Environment.ProcessId);
+    }
+
+    private IReadOnlyList<ForegroundWindowInfo> GetCoverageWindowInfos()
+    {
+        ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();
+        IReadOnlyList<ForegroundWindowInfo> visibleWindows = _foregroundWindowService.GetVisibleWindowInfos();
+        if (foregroundWindow is null)
+        {
+            return visibleWindows;
+        }
+
+        if (visibleWindows.Any(window => window.Hwnd == foregroundWindow.Hwnd))
+        {
+            return visibleWindows;
+        }
+
+        return [foregroundWindow, .. visibleWindows];
     }
 
     private ForegroundWindowInfo? GetCoverageForegroundWindowInfo()

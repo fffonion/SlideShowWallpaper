@@ -29,6 +29,26 @@ public sealed class NativeMethodsSourceTests
         Assert.DoesNotContain("NativeMethods.GetCurrentProcess()", trimmerSource);
     }
 
+    [Fact]
+    public void WindowCoverageEnumeration_UsesVisibilityAndMinimizedFilters()
+    {
+        string root = FindProjectRoot();
+        string nativeSource = File.ReadAllText(Path.Combine(root, "Interop", "NativeMethods.cs"));
+        string foregroundSource = File.ReadAllText(Path.Combine(root, "Services", "ForegroundWindowService.cs"));
+
+        Assert.Contains("EnumWindows", nativeSource);
+        Assert.Contains("IsWindowVisible", nativeSource);
+        Assert.Contains("IsIconic", nativeSource);
+        Assert.Contains("GetClassName", nativeSource);
+        Assert.Contains("GetVisibleWindowInfos", foregroundSource);
+        Assert.Contains("if (!IsVisibleTopLevelWindow(hwnd))", foregroundSource);
+        Assert.Contains("NativeMethods.EnumWindows", foregroundSource);
+        Assert.Contains("NativeMethods.IsWindowVisible(hwnd)", foregroundSource);
+        Assert.Contains("!NativeMethods.IsIconic(hwnd)", foregroundSource);
+        Assert.Contains("!IsShellWindowClass(GetWindowClassName(hwnd))", foregroundSource);
+        Assert.Contains("className is \"Progman\" or \"WorkerW\" or \"Shell_TrayWnd\" or \"Shell_SecondaryTrayWnd\"", foregroundSource);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

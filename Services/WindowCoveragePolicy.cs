@@ -34,6 +34,26 @@ public static class WindowCoveragePolicy
             : coverageRatio >= FullscreenCoverageRatio;
     }
 
+    public static bool ShouldPauseVideo(
+        IReadOnlyList<ForegroundWindowInfo> windows,
+        NativeMethods.RECT monitorRect,
+        int currentProcessId,
+        bool pauseWhenDisplayOffOrSleeping = false,
+        bool isDisplayOffOrSleeping = false)
+    {
+        if (pauseWhenDisplayOffOrSleeping && isDisplayOffOrSleeping)
+        {
+            return true;
+        }
+
+        return windows.Any(window => ShouldPauseVideo(
+            window,
+            monitorRect,
+            currentProcessId,
+            pauseWhenDisplayOffOrSleeping: false,
+            isDisplayOffOrSleeping: false));
+    }
+
     private static double CalculateCoverageRatio(NativeMethods.RECT windowRect, NativeMethods.RECT monitorRect)
     {
         int left = Math.Max(windowRect.Left, monitorRect.Left);

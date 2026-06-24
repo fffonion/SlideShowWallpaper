@@ -94,9 +94,33 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
         string method = ExtractMethod(source, "private bool ShouldPauseHardwareOverlayRefresh", "private void ClearHardwareOverlay");
 
-        Assert.Contains("GetCoverageForegroundWindowInfo()", method);
+        Assert.Contains("GetCoverageWindowInfos()", method);
         Assert.Contains("profile.PauseVideoWhenOtherAppMaximized", method);
         Assert.Contains("WindowCoveragePolicy.ShouldPauseVideo", method);
+    }
+
+    [Fact]
+    public void ApplyVideoCoverageState_UsesVisibleCoverageWindows()
+    {
+        string source = ReadCoordinatorWindowingSource();
+        string method = ExtractMethod(source, "private void ApplyVideoCoverageState", "private void RestartTimer");
+
+        Assert.Contains("IReadOnlyList<ForegroundWindowInfo> coverageWindows = GetCoverageWindowInfos();", method);
+        Assert.Contains("profile.PauseVideoWhenOtherAppMaximized ? coverageWindows : []", method);
+        Assert.DoesNotContain("ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();", method);
+    }
+
+    [Fact]
+    public void CoverageWindows_EnumeratesVisibleWindowsAndKeepsForegroundFallback()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private IReadOnlyList<ForegroundWindowInfo> GetCoverageWindowInfos", "private ForegroundWindowInfo? GetCoverageForegroundWindowInfo");
+
+        Assert.Contains("_foregroundWindowService.GetVisibleWindowInfos()", method);
+        Assert.Contains("GetCoverageForegroundWindowInfo()", method);
+        Assert.Contains("visibleWindows.Any(window => window.Hwnd == foregroundWindow.Hwnd)", method);
+        Assert.Contains("return [foregroundWindow, .. visibleWindows];", method);
     }
 
     [Fact]

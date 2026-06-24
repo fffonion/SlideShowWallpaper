@@ -66,6 +66,26 @@ public sealed class WindowCoveragePolicyTests
     }
 
     [Fact]
+    public void ShouldPauseVideo_WithVisibleMaximizedWindowBehindForegroundPopup_ReturnsTrue()
+    {
+        var foregroundPopup = new ForegroundWindowInfo(
+            new IntPtr(1),
+            Environment.ProcessId + 1,
+            IsMaximized: false,
+            new NativeMethods.RECT { Left = 100, Top = 100, Right = 500, Bottom = 400 });
+        var maximizedWindow = new ForegroundWindowInfo(
+            new IntPtr(2),
+            Environment.ProcessId + 2,
+            IsMaximized: true,
+            new NativeMethods.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1040 });
+        var monitor = new NativeMethods.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+
+        bool result = WindowCoveragePolicy.ShouldPauseVideo([foregroundPopup, maximizedWindow], monitor, Environment.ProcessId);
+
+        Assert.True(result);
+    }
+
+    [Fact]
     public void ShouldPauseVideo_WithDisplayPowerPauseEnabled_ReturnsTrue()
     {
         var monitor = new NativeMethods.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };

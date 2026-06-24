@@ -192,7 +192,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
-        ForegroundWindowInfo? foregroundWindow = GetCoverageForegroundWindowInfo();
+        IReadOnlyList<ForegroundWindowInfo> coverageWindows = GetCoverageWindowInfos();
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
@@ -200,7 +200,7 @@ public sealed partial class WallpaperPlaybackCoordinator
                 && !profile.IsStopped
                 && _monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
                 && WindowCoveragePolicy.ShouldPauseVideo(
-                    profile.PauseVideoWhenOtherAppMaximized ? foregroundWindow : null,
+                    profile.PauseVideoWhenOtherAppMaximized ? coverageWindows : [],
                     monitorRect,
                     Environment.ProcessId,
                     _pauseVideoWhenDisplayOffOrSleeping,
