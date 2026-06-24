@@ -6,21 +6,20 @@ namespace SlideShowWallpaper.Services;
 
 public sealed partial class WallpaperPlaybackCoordinator
 {
-    private void CloseWindow(string monitorId)
+    private void HideWindow(string monitorId)
     {
         _queueVersions[monitorId] = _queueVersions.TryGetValue(monitorId, out int currentVersion) ? currentVersion + 1 : 1;
-        if (_timers.Remove(monitorId, out DispatcherQueueTimer? timer))
+        if (_timers.TryGetValue(monitorId, out DispatcherQueueTimer? timer))
         {
             timer.Stop();
         }
 
-        if (_windows.Remove(monitorId, out WallpaperWindow? window))
+        if (_windows.TryGetValue(monitorId, out WallpaperWindow? window))
         {
-            CloseWindowSafely(window);
+            window.HideWallpaperWindow();
         }
 
         ConfigureVideoCoverageTimer();
-        _profileChanges.Forget(monitorId);
     }
 
     private static void CloseWindowSafely(WallpaperWindow window)
@@ -44,6 +43,10 @@ public sealed partial class WallpaperPlaybackCoordinator
             window.VideoEnded += (_, _) => _ = ShowNextAsync(monitorId);
             _windows[profile.Id] = window;
             window.Activate();
+        }
+        else
+        {
+            window.ShowWallpaperWindow();
         }
 
         if (applyProfile)
@@ -163,7 +166,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private void ConfigureVideoCoverageTimer()
     {
         bool shouldRun = _playbackEnabled
-            && _windows.Count > 0
+            && _windows.Values.Any(window => window.IsShowingWallpaper)
             && _profiles.Values.Any(profile => profile.PauseVideoWhenOtherAppMaximized && !profile.IsStopped);
         if (shouldRun)
         {
@@ -177,7 +180,7 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     private void ApplyVideoCoverageState()
     {
-        if (!_playbackEnabled || _windows.Count == 0)
+        if (!_playbackEnabled || !_windows.Values.Any(window => window.IsShowingWallpaper))
         {
             return;
         }
@@ -186,6 +189,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
+                && window.IsShowingWallpaper
                 && !profile.IsStopped
                 && _monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
                 && WindowCoveragePolicy.ShouldPauseVideo(

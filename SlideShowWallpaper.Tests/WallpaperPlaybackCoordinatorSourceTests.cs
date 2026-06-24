@@ -39,13 +39,34 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
-    public void CloseWindow_ConfiguresVideoCoverageTimerAfterRemovingWindow()
+    public void HideWindow_HidesWallpaperInsteadOfClosingWindow()
     {
         string source = ReadCoordinatorWindowingSource();
-        string method = ExtractMethod(source, "private void CloseWindow", "private static void CloseWindowSafely");
+        string method = ExtractMethod(source, "private void HideWindow", "private static void CloseWindowSafely");
 
-        Assert.Contains("_windows.Remove(monitorId", method);
+        Assert.Contains("window.HideWallpaperWindow();", method);
+        Assert.DoesNotContain("window.Close();", method);
         Assert.Contains("ConfigureVideoCoverageTimer();", method);
+    }
+
+    [Fact]
+    public void ApplyVideoCoverageState_OnlyTouchesShowingWallpaperWindows()
+    {
+        string source = ReadCoordinatorWindowingSource();
+        string method = ExtractMethod(source, "private void ApplyVideoCoverageState", "private void RestartTimer");
+
+        Assert.Contains("window.IsShowingWallpaper", method);
+    }
+
+    [Fact]
+    public void DisplayPowerResume_RehostsActiveWindows()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "public void SetDisplayPowerVideoPause", "public void PauseOrResume");
+
+        Assert.Contains("RehostActiveWindows();", method);
+        Assert.Contains("_desktopHostService.HostOnDesktop(window, monitorId, _monitorRects);", method);
     }
 
     [Fact]

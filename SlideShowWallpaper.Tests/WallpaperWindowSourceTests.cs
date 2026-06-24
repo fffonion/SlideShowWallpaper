@@ -107,6 +107,21 @@ public sealed class WallpaperWindowSourceTests
         Assert.Contains("VideoPlayer.Visibility = Visibility.Collapsed;", stopVideo);
     }
 
+    [Fact]
+    public void HideWallpaperWindow_ReleasesMediaAndHidesInsteadOfClosing()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string hideWallpaperWindow = source[
+            source.IndexOf("public void HideWallpaperWindow", StringComparison.Ordinal)..
+            source.IndexOf("public async Task ShowImageAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("StopVideo();", hideWallpaperWindow);
+        Assert.Contains("ClearImageSources();", hideWallpaperWindow);
+        Assert.Contains("AppWindow.Hide();", hideWallpaperWindow);
+        Assert.DoesNotContain("Close();", hideWallpaperWindow);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

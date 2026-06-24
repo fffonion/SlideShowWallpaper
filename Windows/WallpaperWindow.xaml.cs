@@ -26,6 +26,7 @@ public sealed partial class WallpaperWindow : Window
     private MediaKind _currentKind = MediaKind.Image;
     private int _mediaRequestVersion;
     private bool _isClosed;
+    private bool _isShowingWallpaper;
     private bool _videoPausedByCoverage;
     private bool _forceMuted;
 
@@ -54,6 +55,8 @@ public sealed partial class WallpaperWindow : Window
 
     public event EventHandler? VideoEnded;
 
+    public bool IsShowingWallpaper => _isShowingWallpaper;
+
     public void ApplyProfile(MonitorProfile profile)
     {
         _profile = profile;
@@ -71,6 +74,30 @@ public sealed partial class WallpaperWindow : Window
     {
         _forceMuted = forceMuted;
         ApplyMute(_profile);
+    }
+
+    public void ShowWallpaperWindow()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        AppWindow.Show();
+    }
+
+    public void HideWallpaperWindow()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        StopVideo();
+        ClearImageSources();
+        HideError();
+        _isShowingWallpaper = false;
+        AppWindow.Hide();
     }
 
     public async Task ShowImageAsync(string path)
@@ -157,6 +184,7 @@ public sealed partial class WallpaperWindow : Window
             player.Source = MediaSource.CreateFromStorageFile(file);
             VideoPlayer.Visibility = Visibility.Visible;
             ApplyProfile(_profile);
+            _isShowingWallpaper = true;
             player.Play();
             if (_videoPausedByCoverage)
             {
@@ -298,6 +326,7 @@ public sealed partial class WallpaperWindow : Window
         _currentKind = MediaKind.Image;
         CurrentImage.Source = bitmap;
         _currentImagePath = path;
+        _isShowingWallpaper = true;
         CurrentImage.Opacity = 1;
         ApplyImageLayout(CurrentImage, _currentTransform, _profile);
         NextImage.Opacity = 0;

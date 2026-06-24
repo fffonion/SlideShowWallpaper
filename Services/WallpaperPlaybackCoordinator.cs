@@ -94,7 +94,8 @@ public sealed partial class WallpaperPlaybackCoordinator
 
             if (profile.IsStopped)
             {
-                CloseWindow(profile.Id);
+                HideWindow(profile.Id);
+                _profileChanges.Forget(profile.Id);
                 continue;
             }
 
@@ -102,7 +103,8 @@ public sealed partial class WallpaperPlaybackCoordinator
             if (!change.HasChanges
                 && _queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue)
                 && existingQueue.Count > 0
-                && _windows.TryGetValue(profile.Id, out WallpaperWindow? existingWindow))
+                && _windows.TryGetValue(profile.Id, out WallpaperWindow? existingWindow)
+                && existingWindow.IsShowingWallpaper)
             {
                 if (globalMuteChanged)
                 {
@@ -120,16 +122,18 @@ public sealed partial class WallpaperPlaybackCoordinator
 
             if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
             {
-                CloseWindow(profile.Id);
+                HideWindow(profile.Id);
                 continue;
             }
 
-            if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            bool needsMedia = !_windows.TryGetValue(profile.Id, out WallpaperWindow? window) || !window.IsShowingWallpaper;
+            if (window is null)
             {
                 EnsureWindow(profile);
             }
             else
             {
+                window.ShowWallpaperWindow();
                 _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
                 if (change.VisualChanged)
                 {
@@ -142,6 +146,10 @@ public sealed partial class WallpaperPlaybackCoordinator
             }
 
             ConfigureTimer(profile);
+            if (needsMedia)
+            {
+                _ = ShowNextAsync(profile.Id);
+            }
         }
 
         ConfigureVideoCoverageTimer();
@@ -150,13 +158,31 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     public void SetDisplayPowerVideoPause(bool isPaused)
     {
-        if (_isDisplayOffOrSleeping == isPaused)
+        bool stateChanged = _isDisplayOffOrSleeping != isPaused;
+        _isDisplayOffOrSleeping = isPaused;
+        if (!isPaused)
+        {
+            RehostActiveWindows();
+        }
+
+        if (!stateChanged && isPaused)
         {
             return;
         }
 
-        _isDisplayOffOrSleeping = isPaused;
         ApplyVideoCoverageState();
+    }
+
+    private void RehostActiveWindows()
+    {
+        _monitorRects = _monitorService.GetMonitorRects();
+        foreach ((string monitorId, WallpaperWindow window) in _windows)
+        {
+            if (window.IsShowingWallpaper)
+            {
+                _desktopHostService.HostOnDesktop(window, monitorId, _monitorRects);
+            }
+        }
     }
 
     public void PauseOrResume(string monitorId, bool isPaused)

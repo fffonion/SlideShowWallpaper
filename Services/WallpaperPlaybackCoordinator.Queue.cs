@@ -1,4 +1,5 @@
 using SlideShowWallpaper.Models;
+using SlideShowWallpaper.Windows;
 
 namespace SlideShowWallpaper.Services;
 
@@ -35,7 +36,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             ReplaceQueue(profile, images.Select(image => image.Path), preserveInitialOrder: true);
             if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
             {
-                CloseWindow(profile.Id);
+                HideWindow(profile.Id);
                 return;
             }
 
@@ -85,11 +86,11 @@ public sealed partial class WallpaperPlaybackCoordinator
             ReplaceQueueAfterCurrent(profile, images.Select(image => image.Path));
             if (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0)
             {
-                CloseWindow(profile.Id);
+                HideWindow(profile.Id);
                 return;
             }
 
-            if (hadWindow)
+            if (hadWindow && _windows.TryGetValue(profile.Id, out WallpaperWindow? existingWindow) && existingWindow.IsShowingWallpaper)
             {
                 if (!_timers.ContainsKey(profile.Id))
                 {
