@@ -930,9 +930,18 @@ public sealed partial class MainWindow
 
         bool loaded = false;
         bool loading = false;
+        bool reopenDropDownAfterLoad = false;
+        bool suppressSelectionChanged = false;
         combo.DropDownOpened += async (_, _) =>
         {
-            if (loaded || loading)
+            if (loaded)
+            {
+                return;
+            }
+
+            combo.IsDropDownOpen = false;
+            reopenDropDownAfterLoad = true;
+            if (loading)
             {
                 return;
             }
@@ -943,6 +952,7 @@ public sealed partial class MainWindow
             try
             {
                 IReadOnlyList<string> fonts = await Task.Run(FontCatalogService.GetInstalledFontFamilies);
+                suppressSelectionChanged = true;
                 combo.Items.Clear();
                 foreach (string font in MergeSelectedFont(selectedFont, fonts))
                 {
@@ -953,6 +963,10 @@ public sealed partial class MainWindow
                     .OfType<ComboBoxItem>()
                     .FirstOrDefault(item => string.Equals(item.Tag as string, selectedFont, StringComparison.OrdinalIgnoreCase));
                 loaded = true;
+                if (reopenDropDownAfterLoad)
+                {
+                    combo.IsDropDownOpen = true;
+                }
             }
             catch (Exception exception)
             {
@@ -960,6 +974,8 @@ public sealed partial class MainWindow
             }
             finally
             {
+                suppressSelectionChanged = false;
+                reopenDropDownAfterLoad = false;
                 loading = false;
                 progress.IsActive = false;
                 progress.Visibility = Visibility.Collapsed;
@@ -967,7 +983,8 @@ public sealed partial class MainWindow
         };
         combo.SelectionChanged += (_, _) =>
         {
-            if (combo.SelectedItem is ComboBoxItem { Tag: string font }
+            if (!suppressSelectionChanged
+                && combo.SelectedItem is ComboBoxItem { Tag: string font }
                 && !string.Equals(font, selectedFont, StringComparison.Ordinal))
             {
                 selectedFont = font;

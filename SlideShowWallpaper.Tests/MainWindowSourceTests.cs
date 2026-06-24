@@ -521,6 +521,21 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareFontCombo_LoadsFontsBeforeReopeningDropDown()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareFontCombo", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareColorPicker", StringComparison.Ordinal)];
+
+        Assert.Contains("combo.IsDropDownOpen = false;", method);
+        Assert.Contains("reopenDropDownAfterLoad", method);
+        Assert.Contains("combo.IsDropDownOpen = true;", method);
+        Assert.Contains("suppressSelectionChanged", method);
+    }
+
+    [Fact]
     public void CreateHardwareSensorIconControls_ClearsCustomImagePath()
     {
         string root = FindProjectRoot();
