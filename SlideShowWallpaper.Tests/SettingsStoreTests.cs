@@ -44,6 +44,7 @@ public sealed class SettingsStoreTests
                 TemplateText = "Hardware{metrics}",
                 X = 32,
                 Y = 48,
+                FontFamily = "Cascadia Mono",
                 FontSize = 18,
                 Opacity = 0.72,
                 SelectedSensorIds = ["cpu-temp", "gpu-power"],
@@ -118,6 +119,7 @@ public sealed class SettingsStoreTests
         Assert.Equal("Hardware{metrics}", loaded.HardwareMonitor.TemplateText);
         Assert.Equal(32, loaded.HardwareMonitor.X);
         Assert.Equal(48, loaded.HardwareMonitor.Y);
+        Assert.Equal("Cascadia Mono", loaded.HardwareMonitor.FontFamily);
         Assert.Equal(18, loaded.HardwareMonitor.FontSize);
         Assert.Equal(0.72, loaded.HardwareMonitor.Opacity);
         Assert.Equal(["cpu-temp", "gpu-power"], loaded.HardwareMonitor.SelectedSensorIds);

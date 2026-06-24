@@ -107,7 +107,7 @@ public sealed partial class WallpaperWindow : Window
         StopVideo();
         ClearImageSources();
         HideError();
-        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, 0, 0));
+        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, "Segoe UI", 0, 0));
         _isShowingWallpaper = false;
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
@@ -125,10 +125,12 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
+        string fontFamily = string.IsNullOrWhiteSpace(state.FontFamily) ? "Segoe UI" : state.FontFamily;
         double fontSize = Math.Max(10, state.FontSize);
-        if (state.Elements.Count > 0 || !string.IsNullOrWhiteSpace(state.BackgroundImagePath))
+        bool hasBackgroundSize = ImageDimensionReader.TryRead(state.BackgroundImagePath, out int backgroundWidth, out int backgroundHeight);
+        if (state.Elements.Count > 0 || hasBackgroundSize)
         {
-            RenderHardwareOverlayCanvas(state, fontSize);
+            RenderHardwareOverlayCanvas(state, fontFamily, fontSize, backgroundWidth, backgroundHeight);
             return;
         }
 
@@ -143,12 +145,12 @@ public sealed partial class WallpaperWindow : Window
         HardwareOverlayContent.Children.Clear();
         if (!string.IsNullOrWhiteSpace(state.Text))
         {
-            HardwareOverlayContent.Children.Add(CreateHardwareOverlayText(state.Text, fontSize));
+            HardwareOverlayContent.Children.Add(CreateHardwareOverlayText(state.Text, fontFamily, fontSize));
         }
 
         foreach (HardwareOverlayMetric metric in state.Metrics)
         {
-            HardwareOverlayContent.Children.Add(CreateHardwareMetricRow(metric, fontSize));
+            HardwareOverlayContent.Children.Add(CreateHardwareMetricRow(metric, fontFamily, fontSize));
         }
 
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
@@ -156,15 +158,21 @@ public sealed partial class WallpaperWindow : Window
         HardwareOverlay.Visibility = Visibility.Visible;
     }
 
-    private void RenderHardwareOverlayCanvas(HardwareOverlayState state, double fontSize)
+    private void RenderHardwareOverlayCanvas(
+        HardwareOverlayState state,
+        string fontFamily,
+        double fontSize,
+        int backgroundWidth,
+        int backgroundHeight)
     {
         HardwareOverlay.Padding = new Thickness(0);
         HardwareOverlayContent.Children.Clear();
         HardwareOverlayContent.Visibility = Visibility.Collapsed;
         HardwareOverlayCanvas.Children.Clear();
 
-        double width = Math.Max(300, state.Elements.Count == 0 ? 300 : state.Elements.Max(element => element.X + element.Width) + 16);
-        double height = Math.Max(160, state.Elements.Count == 0 ? 160 : state.Elements.Max(element => element.Y + element.Height) + 16);
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(state.Elements, backgroundWidth, backgroundHeight);
+        double width = layout.Width;
+        double height = layout.Height;
         HardwareOverlay.Width = width;
         HardwareOverlay.Height = height;
         HardwareOverlayRoot.Width = width;
@@ -195,12 +203,12 @@ public sealed partial class WallpaperWindow : Window
             };
             if (!string.IsNullOrWhiteSpace(state.Text))
             {
-                legacyContent.Children.Add(CreateHardwareOverlayText(state.Text, fontSize));
+                legacyContent.Children.Add(CreateHardwareOverlayText(state.Text, fontFamily, fontSize));
             }
 
             foreach (HardwareOverlayMetric metric in state.Metrics)
             {
-                legacyContent.Children.Add(CreateHardwareMetricRow(metric, fontSize));
+                legacyContent.Children.Add(CreateHardwareMetricRow(metric, fontFamily, fontSize));
             }
 
             Canvas.SetLeft(legacyContent, 0);
@@ -210,7 +218,7 @@ public sealed partial class WallpaperWindow : Window
 
         foreach (HardwareOverlayElementState element in state.Elements)
         {
-            UIElement visual = CreateHardwareOverlayElement(element, fontSize);
+            UIElement visual = CreateHardwareOverlayElement(element, fontFamily, fontSize);
             Canvas.SetLeft(visual, element.X);
             Canvas.SetTop(visual, element.Y);
             HardwareOverlayCanvas.Children.Add(visual);
@@ -331,19 +339,19 @@ public sealed partial class WallpaperWindow : Window
         return Math.Clamp(value, 0, maximum);
     }
 
-    private static TextBlock CreateHardwareOverlayText(string text, double fontSize)
+    private static TextBlock CreateHardwareOverlayText(string text, string fontFamily, double fontSize)
     {
         return new TextBlock
         {
             Text = text,
-            FontFamily = new FontFamily("Consolas"),
+            FontFamily = new FontFamily(fontFamily),
             FontSize = fontSize,
             Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
             TextWrapping = TextWrapping.NoWrap,
         };
     }
 
-    private static StackPanel CreateHardwareMetricRow(HardwareOverlayMetric metric, double fontSize)
+    private static StackPanel CreateHardwareMetricRow(HardwareOverlayMetric metric, string fontFamily, double fontSize)
     {
         var row = new StackPanel
         {
@@ -352,11 +360,11 @@ public sealed partial class WallpaperWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         row.Children.Add(HardwareOverlayIconFactory.CreateIcon(metric.IconKind, Math.Max(17, fontSize + 2)));
-        row.Children.Add(CreateHardwareOverlayText(metric.ValueText, fontSize));
+        row.Children.Add(CreateHardwareOverlayText(metric.ValueText, fontFamily, fontSize));
         return row;
     }
 
-    private static UIElement CreateHardwareOverlayElement(HardwareOverlayElementState element, double fallbackFontSize)
+    private static UIElement CreateHardwareOverlayElement(HardwareOverlayElementState element, string fallbackFontFamily, double fallbackFontSize)
     {
         if (element.Kind == HardwareOverlayElementKind.Image && TryCreateBitmapImage(element.ImagePath, out BitmapImage? bitmap))
         {
@@ -372,13 +380,14 @@ public sealed partial class WallpaperWindow : Window
 
         if (element.Kind == HardwareOverlayElementKind.Sensor)
         {
-            return CreateHardwareOverlaySensorElement(element, fallbackFontSize);
+            return CreateHardwareOverlaySensorElement(element, fallbackFontFamily, fallbackFontSize);
         }
 
+        string fontFamily = string.IsNullOrWhiteSpace(element.FontFamily) ? fallbackFontFamily : element.FontFamily;
         return new TextBlock
         {
             Text = element.Text,
-            FontFamily = new FontFamily(element.FontFamily),
+            FontFamily = new FontFamily(fontFamily),
             FontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize),
             Foreground = CreateElementBrush(element.Foreground),
             Width = element.Width,
@@ -389,8 +398,9 @@ public sealed partial class WallpaperWindow : Window
         };
     }
 
-    private static UIElement CreateHardwareOverlaySensorElement(HardwareOverlayElementState element, double fallbackFontSize)
+    private static UIElement CreateHardwareOverlaySensorElement(HardwareOverlayElementState element, string fallbackFontFamily, double fallbackFontSize)
     {
+        string fontFamily = string.IsNullOrWhiteSpace(element.FontFamily) ? fallbackFontFamily : element.FontFamily;
         double fontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize);
         var row = new StackPanel
         {
@@ -406,7 +416,7 @@ public sealed partial class WallpaperWindow : Window
         row.Children.Add(new TextBlock
         {
             Text = element.Text,
-            FontFamily = new FontFamily(element.FontFamily),
+            FontFamily = new FontFamily(fontFamily),
             FontSize = fontSize,
             Foreground = brush,
             TextWrapping = TextWrapping.NoWrap,

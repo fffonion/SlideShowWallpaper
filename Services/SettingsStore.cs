@@ -155,6 +155,7 @@ public sealed class SettingsStore
             TemplateText = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.TemplateText)), HardwareMonitorConfig.DefaultTemplate),
             X = GetDouble(sections, section, nameof(HardwareMonitorConfig.X), 24),
             Y = GetDouble(sections, section, nameof(HardwareMonitorConfig.Y), 24),
+            FontFamily = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.FontFamily)), "Segoe UI"),
             FontSize = GetDouble(sections, section, nameof(HardwareMonitorConfig.FontSize), 16),
             Opacity = GetDouble(sections, section, nameof(HardwareMonitorConfig.Opacity), 0.88),
             BackgroundImagePath = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundImagePath)), string.Empty),
@@ -199,6 +200,7 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(HardwareMonitorConfig.TemplateText), EncodeString(config.TemplateText));
         AppendValue(builder, nameof(HardwareMonitorConfig.X), config.X);
         AppendValue(builder, nameof(HardwareMonitorConfig.Y), config.Y);
+        AppendValue(builder, nameof(HardwareMonitorConfig.FontFamily), EncodeString(config.FontFamily));
         AppendValue(builder, nameof(HardwareMonitorConfig.FontSize), config.FontSize);
         AppendValue(builder, nameof(HardwareMonitorConfig.Opacity), config.Opacity);
         AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundImagePath), EncodeString(config.BackgroundImagePath));
@@ -239,8 +241,8 @@ public sealed class SettingsStore
             Y = GetDouble(sections, section, $"{prefix}.Y", 24),
             Width = Math.Max(20, GetDouble(sections, section, $"{prefix}.Width", 160)),
             Height = Math.Max(20, GetDouble(sections, section, $"{prefix}.Height", 40)),
-            FontFamily = DecodeString(GetString(sections, section, $"{prefix}.FontFamily"), "Segoe UI"),
-            FontSize = Math.Max(8, GetDouble(sections, section, $"{prefix}.FontSize", 16)),
+            FontFamily = DecodeString(GetString(sections, section, $"{prefix}.FontFamily"), string.Empty),
+            FontSize = Math.Max(0, GetDouble(sections, section, $"{prefix}.FontSize", 0)),
             Foreground = DecodeString(GetString(sections, section, $"{prefix}.Foreground"), "#FFFFFFFF"),
             Opacity = Math.Clamp(GetDouble(sections, section, $"{prefix}.Opacity", 1), 0.05, 1),
         };
@@ -259,7 +261,7 @@ public sealed class SettingsStore
         AppendValue(builder, $"{prefix}.Width", Math.Max(20, element.Width));
         AppendValue(builder, $"{prefix}.Height", Math.Max(20, element.Height));
         AppendValue(builder, $"{prefix}.FontFamily", EncodeString(element.FontFamily));
-        AppendValue(builder, $"{prefix}.FontSize", Math.Max(8, element.FontSize));
+        AppendValue(builder, $"{prefix}.FontSize", Math.Max(0, element.FontSize));
         AppendValue(builder, $"{prefix}.Foreground", EncodeString(element.Foreground));
         AppendValue(builder, $"{prefix}.Opacity", Math.Clamp(element.Opacity, 0.05, 1));
     }

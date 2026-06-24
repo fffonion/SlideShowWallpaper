@@ -100,6 +100,33 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
+    public void CreateElementStates_WithEmptyElementFont_UsesGlobalFontSettings()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            FontFamily = "Cascadia Mono",
+            FontSize = 21,
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Id = "element1",
+                    Kind = HardwareOverlayElementKind.Text,
+                    Text = "GPU",
+                    FontFamily = string.Empty,
+                    FontSize = 0,
+                },
+            ],
+        };
+        var snapshot = new HardwareMonitorSnapshot([], DateTimeOffset.Now);
+
+        HardwareOverlayElementState element = Assert.Single(HardwareOverlayTextRenderer.CreateElementStates(config, snapshot));
+
+        Assert.Equal("Cascadia Mono", element.FontFamily);
+        Assert.Equal(21, element.FontSize);
+    }
+
+    [Fact]
     public void FormatReading_WithVramAvailableInMegabytes_DisplaysGigabytes()
     {
         var reading = new HardwareSensorReading(

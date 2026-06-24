@@ -57,6 +57,8 @@ public sealed class HardwareMonitorConfig
 
     public double Y { get; set; } = 24;
 
+    public string FontFamily { get; set; } = "Segoe UI";
+
     public double FontSize { get; set; } = 16;
 
     public double Opacity { get; set; } = 0.88;
@@ -90,9 +92,9 @@ public sealed class HardwareOverlayElement
 
     public double Height { get; set; } = 40;
 
-    public string FontFamily { get; set; } = "Segoe UI";
+    public string FontFamily { get; set; } = string.Empty;
 
-    public double FontSize { get; set; } = 16;
+    public double FontSize { get; set; }
 
     public string Foreground { get; set; } = "#FFFFFFFF";
 
@@ -110,6 +112,8 @@ public sealed class HardwareOverlayTemplate
     public double X { get; set; } = 24;
 
     public double Y { get; set; } = 24;
+
+    public string FontFamily { get; set; } = "Segoe UI";
 
     public double FontSize { get; set; } = 16;
 
@@ -263,6 +267,7 @@ public sealed record HardwareOverlayState(
     IReadOnlyList<HardwareOverlayMetric> Metrics,
     double X,
     double Y,
+    string FontFamily,
     double FontSize,
     double Opacity)
 {

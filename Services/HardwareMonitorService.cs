@@ -210,8 +210,10 @@ public static class HardwareOverlayTextRenderer
             .Where(IsVisibleReading)
             .GroupBy(sensor => sensor.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        string fallbackFontFamily = string.IsNullOrWhiteSpace(config.FontFamily) ? "Segoe UI" : config.FontFamily;
+        double fallbackFontSize = Math.Max(8, config.FontSize);
         return config.Elements
-            .Select(element => CreateElementState(element, readings))
+            .Select(element => CreateElementState(element, readings, fallbackFontFamily, fallbackFontSize))
             .ToArray();
     }
 
@@ -272,7 +274,9 @@ public static class HardwareOverlayTextRenderer
 
     private static HardwareOverlayElementState CreateElementState(
         HardwareOverlayElement element,
-        IReadOnlyDictionary<string, HardwareSensorReading> readings)
+        IReadOnlyDictionary<string, HardwareSensorReading> readings,
+        string fallbackFontFamily,
+        double fallbackFontSize)
     {
         readings.TryGetValue(element.SensorId, out HardwareSensorReading? sensorReading);
         string text = element.Kind switch
@@ -295,8 +299,8 @@ public static class HardwareOverlayTextRenderer
             Math.Max(0, element.Y),
             Math.Max(20, element.Width),
             Math.Max(20, element.Height),
-            string.IsNullOrWhiteSpace(element.FontFamily) ? "Segoe UI" : element.FontFamily,
-            Math.Max(8, element.FontSize),
+            string.IsNullOrWhiteSpace(element.FontFamily) ? fallbackFontFamily : element.FontFamily,
+            element.FontSize > 0 ? Math.Max(8, element.FontSize) : fallbackFontSize,
             string.IsNullOrWhiteSpace(element.Foreground) ? "#FFFFFFFF" : element.Foreground,
             Math.Clamp(element.Opacity, 0.05, 1));
     }

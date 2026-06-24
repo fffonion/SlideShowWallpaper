@@ -18,6 +18,7 @@ public static class HardwareOverlayTemplateService
             RefreshIntervalSeconds = config.RefreshIntervalSeconds,
             X = config.X,
             Y = config.Y,
+            FontFamily = config.FontFamily,
             FontSize = config.FontSize,
             Opacity = config.Opacity,
             SelectedSensorIds = config.SelectedSensorIds.ToList(),
@@ -34,6 +35,7 @@ public static class HardwareOverlayTemplateService
         config.RefreshIntervalSeconds = Math.Max(1, template.RefreshIntervalSeconds);
         config.X = template.X;
         config.Y = template.Y;
+        config.FontFamily = string.IsNullOrWhiteSpace(template.FontFamily) ? "Segoe UI" : template.FontFamily;
         config.FontSize = template.FontSize;
         config.Opacity = Math.Clamp(template.Opacity, 0.1, 1);
         config.SelectedSensorIds = template.SelectedSensorIds.ToList();

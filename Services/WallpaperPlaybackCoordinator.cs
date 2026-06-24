@@ -390,6 +390,7 @@ public sealed partial class WallpaperPlaybackCoordinator
                 metrics,
                 _hardwareMonitorConfig.X,
                 _hardwareMonitorConfig.Y,
+                string.IsNullOrWhiteSpace(_hardwareMonitorConfig.FontFamily) ? "Segoe UI" : _hardwareMonitorConfig.FontFamily,
                 _hardwareMonitorConfig.FontSize,
                 _hardwareMonitorConfig.Opacity)
             {
@@ -404,7 +405,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     {
         foreach (WallpaperWindow window in _windows.Values)
         {
-            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, 0, 0));
+            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, "Segoe UI", 0, 0));
         }
     }
 

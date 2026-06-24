@@ -190,7 +190,9 @@ public sealed partial class MainWindow
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorStyle"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorStyle"), CreateHardwareStyleControls(config)),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareTextBox(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value => config.FontSize = Math.Max(10, value), LocalizedStrings.Get("HardwareMonitorFontSize"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateNumberBox(config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1), LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplateActions"), buttonRow));
     }
@@ -483,23 +485,6 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private FrameworkElement CreateHardwareStyleControls(HardwareMonitorConfig config)
-    {
-        var panel = new Grid
-        {
-            ColumnSpacing = 10,
-        };
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        FrameworkElement fontControl = CreateLabeledNumberBox(LocalizedStrings.Get("HardwareMonitorFontSizeShort"), config.FontSize, value => config.FontSize = Math.Max(10, value));
-        FrameworkElement opacityControl = CreateLabeledNumberBox(LocalizedStrings.Get("HardwareMonitorOpacityShort"), config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1));
-        Grid.SetColumn(fontControl, 0);
-        Grid.SetColumn(opacityControl, 1);
-        panel.Children.Add(fontControl);
-        panel.Children.Add(opacityControl);
-        return panel;
-    }
-
     private FrameworkElement CreateHardwareEditorPreviewSection(HardwareMonitorConfig config)
     {
         var stack = new StackPanel
@@ -609,10 +594,16 @@ public sealed partial class MainWindow
 
     private FrameworkElement CreateHardwareEditorPreviewSurface(HardwareMonitorConfig config)
     {
+        HardwareMonitorSnapshot snapshot = _hardwareMonitorSnapshot ?? new HardwareMonitorSnapshot([], DateTimeOffset.Now);
+        IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(config, snapshot);
+        bool hasBackgroundSize = ImageDimensionReader.TryRead(config.BackgroundImagePath, out int backgroundWidth, out int backgroundHeight);
+        HardwareOverlayLayout layout = hasBackgroundSize || elements.Count > 0
+            ? HardwareOverlayLayoutCalculator.Calculate(elements, backgroundWidth, backgroundHeight)
+            : new HardwareOverlayLayout(720, 420);
         var canvas = new Canvas
         {
-            Width = 720,
-            Height = 420,
+            Width = layout.Width,
+            Height = layout.Height,
             Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 18, 22, 26)),
         };
         AutomationProperties.SetName(canvas, LocalizedStrings.Get("HardwareMonitorPreview"));
@@ -627,14 +618,25 @@ public sealed partial class MainWindow
             });
         }
 
-        HardwareMonitorSnapshot snapshot = _hardwareMonitorSnapshot ?? new HardwareMonitorSnapshot([], DateTimeOffset.Now);
-        IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(config, snapshot);
         Line verticalGuide = CreateHardwareEditorGuideLine(isVertical: true, canvas.Width, canvas.Height);
         Line horizontalGuide = CreateHardwareEditorGuideLine(isVertical: false, canvas.Width, canvas.Height);
         foreach (HardwareOverlayElement element in config.Elements)
         {
             HardwareOverlayElementState state = elements.FirstOrDefault(item => string.Equals(item.Id, element.Id, StringComparison.OrdinalIgnoreCase))
-                ?? new HardwareOverlayElementState(element.Id, element.Kind, element.Text, element.ImagePath, HardwareOverlayIconKind.Generic, element.X, element.Y, element.Width, element.Height, element.FontFamily, element.FontSize, element.Foreground, element.Opacity);
+                ?? new HardwareOverlayElementState(
+                    element.Id,
+                    element.Kind,
+                    element.Text,
+                    element.ImagePath,
+                    HardwareOverlayIconKind.Generic,
+                    element.X,
+                    element.Y,
+                    element.Width,
+                    element.Height,
+                    string.IsNullOrWhiteSpace(element.FontFamily) ? config.FontFamily : element.FontFamily,
+                    element.FontSize > 0 ? element.FontSize : config.FontSize,
+                    element.Foreground,
+                    element.Opacity);
             FrameworkElement visual = CreateHardwareEditorElementVisual(state, string.Equals(config.SelectedElementId, element.Id, StringComparison.OrdinalIgnoreCase));
             AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide);
             Canvas.SetLeft(visual, Math.Clamp(element.X, 0, canvas.Width - Math.Min(element.Width, canvas.Width)));
@@ -892,7 +894,6 @@ public sealed partial class MainWindow
             Y = y,
             Width = kind == HardwareOverlayElementKind.Image ? 48 : 176,
             Height = kind == HardwareOverlayElementKind.Image ? 48 : 28,
-            FontSize = 16,
             Foreground = "#FFFFFFFF",
             Opacity = 1,
         };
