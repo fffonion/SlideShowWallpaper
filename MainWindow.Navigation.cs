@@ -21,11 +21,10 @@ public sealed partial class MainWindow
         }
 
         SettingsNavigationPanel.Children.Clear();
-        SettingsNavigationPanel.Children.Add(CreateHardwareMonitorNavigationItem());
         SettingsNavigationPanel.Children.Add(CreateHardwareEditorNavigationItem());
         SettingsNavigationPanel.Children.Add(CreateSettingsNavigationItem());
 
-        if (_isHardwareMonitorSelected || _isHardwareEditorSelected || _isSettingsSelected)
+        if (_isHardwareEditorSelected || _isSettingsSelected)
         {
             _selectedMonitorId = null;
             UpdateMonitorNavigationVisuals();
@@ -36,7 +35,6 @@ public sealed partial class MainWindow
         if (MonitorNavigationPanel.Children.Count == 0)
         {
             _selectedMonitorId = null;
-            _isHardwareMonitorSelected = false;
             _isHardwareEditorSelected = false;
             _isSettingsSelected = true;
             UpdateMonitorNavigationVisuals();
@@ -60,12 +58,6 @@ public sealed partial class MainWindow
     {
         string label = LocalizedStrings.Get("Settings");
         return CreateNavigationItem(label, "\uE713", SettingsNavigationTag, SettingsNavigationItem_Click);
-    }
-
-    private Button CreateHardwareMonitorNavigationItem()
-    {
-        string label = LocalizedStrings.Get("HardwareMonitorSettingsGroup");
-        return CreateNavigationItem(label, "\uE950", HardwareMonitorNavigationTag, HardwareMonitorNavigationItem_Click);
     }
 
     private Button CreateHardwareEditorNavigationItem()
@@ -146,7 +138,6 @@ public sealed partial class MainWindow
         AutomationProperties.SetAutomationId(item, tag switch
         {
             MonitorProfile profile => $"MonitorNavigationItem_{profile.Id}",
-            string value when string.Equals(value, HardwareMonitorNavigationTag, StringComparison.Ordinal) => "HardwareMonitorNavigationItem",
             string value when string.Equals(value, HardwareEditorNavigationTag, StringComparison.Ordinal) => "HardwareEditorNavigationItem",
             _ => "SettingsNavigationItem",
         });
@@ -162,7 +153,7 @@ public sealed partial class MainWindow
                 continue;
             }
 
-            bool isSelected = !_isHardwareMonitorSelected && !_isHardwareEditorSelected && !_isSettingsSelected && string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase);
+            bool isSelected = !_isHardwareEditorSelected && !_isSettingsSelected && string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase);
             UpdateNavigationButtonVisual(item, visuals, isSelected);
         }
 
@@ -175,7 +166,6 @@ public sealed partial class MainWindow
 
             bool isSelected = tag switch
             {
-                HardwareMonitorNavigationTag => _isHardwareMonitorSelected,
                 HardwareEditorNavigationTag => _isHardwareEditorSelected,
                 SettingsNavigationTag => _isSettingsSelected,
                 _ => false,
@@ -193,12 +183,6 @@ public sealed partial class MainWindow
 
     private void ShowSelectedMonitorPage()
     {
-        if (_isHardwareMonitorSelected)
-        {
-            MonitorContent.Content = BuildHardwareMonitorSettingsPage();
-            return;
-        }
-
         if (_isSettingsSelected)
         {
             MonitorContent.Content = BuildAppSettingsPage();
@@ -220,7 +204,6 @@ public sealed partial class MainWindow
         {
             CancelSelectedPreviewLoad();
             _selectedMonitorId = profile.Id;
-            _isHardwareMonitorSelected = false;
             _isHardwareEditorSelected = false;
             _isSettingsSelected = false;
         }
@@ -233,20 +216,8 @@ public sealed partial class MainWindow
     {
         CancelSelectedPreviewLoad();
         _selectedMonitorId = null;
-        _isHardwareMonitorSelected = false;
         _isHardwareEditorSelected = false;
         _isSettingsSelected = true;
-        UpdateMonitorNavigationVisuals();
-        ShowSelectedMonitorPage();
-    }
-
-    private void HardwareMonitorNavigationItem_Click(object sender, RoutedEventArgs e)
-    {
-        CancelSelectedPreviewLoad();
-        _selectedMonitorId = null;
-        _isHardwareMonitorSelected = true;
-        _isHardwareEditorSelected = false;
-        _isSettingsSelected = false;
         UpdateMonitorNavigationVisuals();
         ShowSelectedMonitorPage();
     }
@@ -255,7 +226,6 @@ public sealed partial class MainWindow
     {
         CancelSelectedPreviewLoad();
         _selectedMonitorId = null;
-        _isHardwareMonitorSelected = false;
         _isHardwareEditorSelected = true;
         _isSettingsSelected = false;
         UpdateMonitorNavigationVisuals();

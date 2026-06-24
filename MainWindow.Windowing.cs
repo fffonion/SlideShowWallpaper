@@ -27,10 +27,8 @@ public sealed partial class MainWindow
     {
         const int minimumHeight = 720;
         double scale = GetWindowScale();
-        int measuredHeight = _isHardwareMonitorSelected
-            ? EstimateWindowHeightForHardwareMonitorPage()
-            : _isHardwareEditorSelected
-                ? EstimateWindowHeightForHardwareEditorPage()
+        int measuredHeight = _isHardwareEditorSelected
+            ? EstimateWindowHeightForHardwareEditorPage()
             : _isSettingsSelected
                 ? EstimateWindowHeightForSettingsPage()
                 : EstimateWindowHeightForMonitorPage(targetWidth);
@@ -156,19 +154,11 @@ public sealed partial class MainWindow
         const int titleBarHeight = 48;
         const int contentTopPadding = 12;
         const int contentBottomPadding = 24;
+        const int sectionSpacing = 14;
         return titleBarHeight
             + contentTopPadding
             + EstimateSettingsSectionHeight(true, 9)
-            + contentBottomPadding;
-    }
-
-    private static int EstimateWindowHeightForHardwareMonitorPage()
-    {
-        const int titleBarHeight = 48;
-        const int contentTopPadding = 12;
-        const int contentBottomPadding = 24;
-        return titleBarHeight
-            + contentTopPadding
+            + sectionSpacing
             + EstimateSettingsSectionHeight(true, 4)
             + contentBottomPadding;
     }

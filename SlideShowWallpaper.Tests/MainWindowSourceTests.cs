@@ -119,7 +119,7 @@ public sealed class MainWindowSourceTests
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
             source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
-            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)];
+            source.IndexOf("private FrameworkElement CreateAutostartControls", StringComparison.Ordinal)];
 
         Assert.Contains("new ScrollViewer", method);
         Assert.Contains("VerticalScrollBarVisibility = ScrollBarVisibility.Auto", method);
@@ -127,30 +127,17 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void BuildAppSettingsPage_DoesNotContainHardwareMonitorSection()
+    public void BuildAppSettingsPage_ContainsHardwareMonitorSection()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
             source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
-            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)];
+            source.IndexOf("private FrameworkElement CreateAutostartControls", StringComparison.Ordinal)];
 
-        Assert.DoesNotContain("CreateHardwareMonitorSettingsSection()", method);
-    }
-
-    [Fact]
-    public void BuildHardwareMonitorSettingsPage_ContainsHardwareMonitorSection()
-    {
-        string root = FindProjectRoot();
-        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
-        string method = source[
-            source.IndexOf("private UIElement BuildHardwareMonitorSettingsPage", StringComparison.Ordinal)..
-            source.IndexOf("private UIElement BuildHardwareEditorPage", StringComparison.Ordinal)];
-
+        Assert.Contains("EnsureDefaultHardwareSensors(hardwareMonitorConfig)", method);
         Assert.Contains("CreateHardwareMonitorSettingsSection()", method);
-        Assert.Contains("new ScrollViewer", method);
-        Assert.DoesNotContain("CreateHardwareEditorPreviewSection", method);
-        Assert.DoesNotContain("CreateHardwareOverlayFormatSection", method);
+        Assert.DoesNotContain("CreateHardwareSensorSelectionList", method);
     }
 
     [Fact]
@@ -296,7 +283,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void CreateHardwareMonitorSettingsSection_UsesFullWidthSensorRow()
+    public void CreateHardwareMonitorSettingsSection_UsesSensorDialogButton()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
@@ -304,8 +291,24 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)..
             source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
 
-        Assert.Contains("CreateHardwareSensorSelectionList(config)", method);
-        Assert.Contains("IsFullWidth: true", method);
+        Assert.Contains("CreateHardwareSensorDialogButton(config)", method);
+        Assert.DoesNotContain("CreateHardwareSensorSelectionList(config)", method);
+        Assert.DoesNotContain("IsFullWidth: true", method);
+    }
+
+    [Fact]
+    public void ShowHardwareSensorSelectionDialog_UsesContentDialog()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private async Task ShowHardwareSensorSelectionDialogAsync", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareSensorSelectionList", StringComparison.Ordinal)];
+
+        Assert.Contains("new ContentDialog", method);
+        Assert.Contains("XamlRoot = Root.XamlRoot", method);
+        Assert.Contains("CreateHardwareSensorSelectionList(config, ReloadDialogSensors)", method);
+        Assert.Contains("CloseButtonText = LocalizedStrings.Get(\"DialogClose\")", method);
     }
 
     [Fact]
@@ -366,24 +369,23 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void RenderTabs_AddsHardwareNavigationAboveSettings()
+    public void RenderTabs_AddsHardwareEditorNavigationAboveSettings()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Navigation.cs"));
         string method = source[
             source.IndexOf("private void RenderTabs", StringComparison.Ordinal)..
             source.IndexOf("private Button CreateMonitorNavigationItem", StringComparison.Ordinal)];
-        int hardwareIndex = method.IndexOf("SettingsNavigationPanel.Children.Add(CreateHardwareMonitorNavigationItem());", StringComparison.Ordinal);
         int editorIndex = method.IndexOf("SettingsNavigationPanel.Children.Add(CreateHardwareEditorNavigationItem());", StringComparison.Ordinal);
         int settingsIndex = method.IndexOf("SettingsNavigationPanel.Children.Add(CreateSettingsNavigationItem());", StringComparison.Ordinal);
 
-        Assert.True(hardwareIndex >= 0);
-        Assert.True(editorIndex > hardwareIndex);
+        Assert.DoesNotContain("CreateHardwareMonitorNavigationItem", method);
+        Assert.True(editorIndex >= 0);
         Assert.True(settingsIndex > editorIndex);
     }
 
     [Fact]
-    public void ShowSelectedMonitorPage_WhenHardwarePagesSelected_RendersMatchingPage()
+    public void ShowSelectedMonitorPage_WhenHardwareEditorSelected_RendersEditorPage()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Navigation.cs"));
@@ -391,8 +393,8 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void ShowSelectedMonitorPage", StringComparison.Ordinal)..
             source.IndexOf("private void MonitorNavigationItem_Click", StringComparison.Ordinal)];
 
-        Assert.Contains("if (_isHardwareMonitorSelected)", method);
-        Assert.Contains("BuildHardwareMonitorSettingsPage()", method);
+        Assert.DoesNotContain("_isHardwareMonitorSelected", method);
+        Assert.DoesNotContain("BuildHardwareMonitorSettingsPage()", method);
         Assert.Contains("if (_isHardwareEditorSelected)", method);
         Assert.Contains("BuildHardwareEditorPage()", method);
     }

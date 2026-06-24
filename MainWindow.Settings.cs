@@ -17,6 +17,10 @@ public sealed partial class MainWindow
 
     private UIElement BuildAppSettingsPage()
     {
+        HardwareMonitorConfig hardwareMonitorConfig = _viewModel.HardwareMonitor;
+        RefreshHardwareSnapshot();
+        EnsureDefaultHardwareSensors(hardwareMonitorConfig);
+
         var root = new Grid
         {
             RowSpacing = 12,
@@ -53,6 +57,7 @@ public sealed partial class MainWindow
                     UpdatePreviewPopupDelay();
                 },
                 LocalizedStrings.Get("AppSettingVideoPreviewDelay")))));
+        form.Children.Add(CreateHardwareMonitorSettingsSection());
         Grid.SetRow(form, 0);
         root.Children.Add(form);
         StartThumbnailCacheSizeLoad();
@@ -114,26 +119,6 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private UIElement BuildHardwareMonitorSettingsPage()
-    {
-        HardwareMonitorConfig config = _viewModel.HardwareMonitor;
-        RefreshHardwareSnapshot();
-        EnsureDefaultHardwareSensors(config);
-
-        var form = new StackPanel
-        {
-            Spacing = 14,
-        };
-        form.Children.Add(CreateHardwareMonitorSettingsSection());
-
-        return new ScrollViewer
-        {
-            Content = form,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        };
-    }
-
     private UIElement BuildHardwareEditorPage()
     {
         HardwareMonitorConfig config = _viewModel.HardwareMonitor;
@@ -186,13 +171,12 @@ public sealed partial class MainWindow
     {
         HardwareMonitorConfig config = _viewModel.HardwareMonitor;
 
-        FrameworkElement sensorList = CreateHardwareSensorSelectionList(config);
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorSettingsGroup"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateCheckBox(config.IsEnabled, value => config.IsEnabled = value, LocalizedStrings.Get("HardwareMonitorEnabled"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorRefreshInterval"), CreateNumberBox(config.RefreshIntervalSeconds, value => config.RefreshIntervalSeconds = Math.Max(1, (int)Math.Round(value)), LocalizedStrings.Get("HardwareMonitorRefreshInterval"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorSensors"), sensorList, IsFullWidth: true));
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorSensors"), CreateHardwareSensorDialogButton(config)));
     }
 
     private Border CreateHardwareOverlayFormatSection(HardwareMonitorConfig config)
@@ -238,7 +222,48 @@ public sealed partial class MainWindow
         return textBox;
     }
 
-    private FrameworkElement CreateHardwareSensorSelectionList(HardwareMonitorConfig config)
+    private FrameworkElement CreateHardwareSensorDialogButton(HardwareMonitorConfig config)
+    {
+        var button = new Button
+        {
+            Content = LocalizedStrings.Get("HardwareMonitorAddSensorElements"),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(button, LocalizedStrings.Get("HardwareMonitorAddSensorElements"));
+        button.Click += async (_, _) => await ShowHardwareSensorSelectionDialogAsync(config);
+        return button;
+    }
+
+    private async Task ShowHardwareSensorSelectionDialogAsync(HardwareMonitorConfig config)
+    {
+        ContentControl? contentHost = null;
+        void ReloadDialogSensors()
+        {
+            RefreshHardwareSnapshot();
+            if (contentHost is not null)
+            {
+                contentHost.Content = CreateHardwareSensorSelectionList(config, ReloadDialogSensors);
+            }
+        }
+
+        contentHost = new ContentControl
+        {
+            Content = CreateHardwareSensorSelectionList(config, ReloadDialogSensors),
+            MinWidth = 560,
+        };
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = LocalizedStrings.Get("HardwareMonitorSensors"),
+            Content = contentHost,
+            CloseButtonText = LocalizedStrings.Get("DialogClose"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        await dialog.ShowAsync();
+    }
+
+    private FrameworkElement CreateHardwareSensorSelectionList(HardwareMonitorConfig config, Action? refreshRequested = null)
     {
         var root = new StackPanel
         {
@@ -360,6 +385,12 @@ public sealed partial class MainWindow
         searchBox.TextChanged += (_, _) => RenderSensorList();
         refreshButton.Click += (_, _) =>
         {
+            if (refreshRequested is not null)
+            {
+                refreshRequested();
+                return;
+            }
+
             RefreshHardwareSnapshot();
             RenderTabs(_selectedMonitorId);
         };

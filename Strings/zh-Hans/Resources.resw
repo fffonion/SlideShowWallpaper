@@ -119,6 +119,7 @@
   <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>全选</value></data>
   <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>反选</value></data>
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>添加传感器</value></data>
+  <data name="DialogClose" xml:space="preserve"><value>关闭</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>添加文本</value></data>
   <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>导入图标图片</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>导入背景</value></data>

@@ -118,6 +118,7 @@
   <data name="HardwareMonitorSelectAll" xml:space="preserve"><value>Select all</value></data>
   <data name="HardwareMonitorInvertSelection" xml:space="preserve"><value>Invert</value></data>
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>Add sensors</value></data>
+  <data name="DialogClose" xml:space="preserve"><value>Close</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>Add text</value></data>
   <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>Import icon image</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>Import background</value></data>
