@@ -15,6 +15,8 @@ public static class AppTempPaths
 
     public static string TransientThumbnails { get; } = Path.Combine(Root, "thumbnail-session");
 
+    public static string Broker { get; } = Path.Combine(Root, "broker");
+
     public static string MediaLibraryCache { get; } = Path.Combine(Root, "media-library-cache.json");
 
     public static void Cleanup()

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>SlideShowWallpaper</RootNamespace>
+    <AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>
+    <AssemblyTitle>Codex 壁纸大师 Broker</AssemblyTitle>
+    <FileDescription>Codex 壁纸大师 Broker</FileDescription>
+    <Product>Codex 壁纸大师</Product>
+    <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Models\HardwareMonitorConfig.cs" Link="Models\HardwareMonitorConfig.cs" />
+    <Compile Include="..\Services\AppLog.cs" Link="Services\AppLog.cs" />
+    <Compile Include="..\Services\CurrentProcessPrivilege.cs" Link="Services\CurrentProcessPrivilege.cs" />
+    <Compile Include="..\Services\HardwareMonitorBrokerHost.cs" Link="Services\HardwareMonitorBrokerHost.cs" />
+    <Compile Include="..\Services\HardwareMonitorBrokerProtocol.cs" Link="Services\HardwareMonitorBrokerProtocol.cs" />
+    <Compile Include="..\Services\HardwareMonitorReader.cs" Link="Services\HardwareMonitorReader.cs" />
+  </ItemGroup>
+</Project>

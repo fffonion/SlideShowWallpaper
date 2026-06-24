@@ -49,16 +49,21 @@
 
   <ItemGroup>
     <Compile Remove="SlideShowWallpaper.Tests\**\*.cs" />
+    <Compile Remove="HardwareBroker\**\*.cs" />
     <Content Remove=".github\**\*" />
     <Content Remove="artifacts\**\*" />
     <Content Remove="docs\**\*" />
+    <Content Remove="HardwareBroker\**\*" />
     <Content Remove="SlideShowWallpaper.Tests\**\*" />
     <None Remove=".github\**\*" />
     <None Remove="artifacts\**\*" />
     <None Remove="docs\**\*" />
+    <None Remove="HardwareBroker\**\*" />
     <None Remove="SlideShowWallpaper.Tests\**\*" />
     <Page Remove="SlideShowWallpaper.Tests\**\*" />
+    <Page Remove="HardwareBroker\**\*" />
     <PRIResource Remove="SlideShowWallpaper.Tests\**\*" />
+    <PRIResource Remove="HardwareBroker\**\*" />
   </ItemGroup>
 
   <!--
@@ -82,11 +87,30 @@
     <SingleFileRuntimeIdentifier Condition="'$(SingleFileRuntimeIdentifier)' == ''">win-x64</SingleFileRuntimeIdentifier>
     <SingleFilePublishDir Condition="'$(SingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)\</SingleFilePublishDir>
     <SelfContainedSingleFilePublishDir Condition="'$(SelfContainedSingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)-self-contained\</SelfContainedSingleFilePublishDir>
+    <HardwareBrokerProject>$(MSBuildProjectDirectory)\HardwareBroker\SlideShowWallpaper.HardwareBroker.csproj</HardwareBrokerProject>
+    <HardwareBrokerExecutableName>SlideShowWallpaper.HardwareBroker.exe</HardwareBrokerExecutableName>
+    <HardwareBrokerPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\hardware-broker\</HardwareBrokerPublishDir>
+    <HardwareBrokerEmbeddedExecutable>$(HardwareBrokerPublishDir)$(HardwareBrokerExecutableName)</HardwareBrokerEmbeddedExecutable>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+
+  <Target Name="BuildHardwareBroker" BeforeTargets="AssignTargetPaths" Condition="'$(SkipHardwareBrokerBuild)' != 'true' and Exists('$(HardwareBrokerProject)')">
+    <RemoveDir Directories="$(HardwareBrokerPublishDir)" />
+    <MSBuild
+      Projects="$(HardwareBrokerProject)"
+      Targets="Restore"
+      Properties="Configuration=$(Configuration);Platform=$(Platform);RuntimeIdentifier=$(RuntimeIdentifier);SkipHardwareBrokerBuild=true" />
+    <MSBuild
+      Projects="$(HardwareBrokerProject)"
+      Targets="Publish"
+      Properties="Configuration=$(Configuration);Platform=$(Platform);RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(HardwareBrokerPublishDir);SelfContained=false;PublishSingleFile=true;EnableCompressionInSingleFile=false;PublishTrimmed=false;DebugSymbols=false;DebugType=None;SkipHardwareBrokerBuild=true" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(HardwareBrokerEmbeddedExecutable)" LogicalName="$(HardwareBrokerExecutableName)" />
+    </ItemGroup>
+  </Target>
 
   <Target Name="BuildSingleFile">
     <RemoveDir Directories="$(SingleFilePublishDir)" />
