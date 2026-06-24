@@ -260,6 +260,7 @@ public static class HardwareOverlayTextRenderer
                 HardwareMetricGroup.Cpu => HardwareOverlayIconKind.Cpu,
                 HardwareMetricGroup.Gpu => HardwareOverlayIconKind.Gpu,
                 HardwareMetricGroup.Storage => HardwareOverlayIconKind.Storage,
+                HardwareMetricGroup.Motherboard => HardwareOverlayIconKind.Motherboard,
                 _ => HardwareOverlayIconKind.Temperature,
             },
             HardwareMetricKind.FanRpm => HardwareOverlayIconKind.Fan,

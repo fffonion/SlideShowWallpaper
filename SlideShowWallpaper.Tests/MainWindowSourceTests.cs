@@ -792,6 +792,32 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HardwareOverlayIconFactory_UsesBladeDiskAndMotherboardShapes()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayIconFactory.cs"));
+        string fanMethod = source[
+            source.IndexOf("private static void DrawFan", StringComparison.Ordinal)..
+            source.IndexOf("private static void DrawMemory", StringComparison.Ordinal)];
+        string storageMethod = source[
+            source.IndexOf("private static void DrawStorage", StringComparison.Ordinal)..
+            source.IndexOf("private static void DrawThermometer", StringComparison.Ordinal)];
+        string motherboardMethod = source[
+            source.IndexOf("private static void DrawMotherboard", StringComparison.Ordinal)..
+            source.IndexOf("private static void DrawThermometer", StringComparison.Ordinal)];
+
+        Assert.Contains("case HardwareOverlayIconKind.Motherboard:", source);
+        Assert.Contains("DrawMotherboard(canvas, brush, scale);", source);
+        Assert.Contains("AddFanBlade", fanMethod);
+        Assert.Contains("RotateTransform", source);
+        Assert.DoesNotContain("AddEllipse(canvas, 8.5, 2.5, 3, 7", fanMethod);
+        Assert.Contains("AddEllipse(canvas, 6, 6, 8, 8", storageMethod);
+        Assert.Contains("AddLine(canvas, 10, 10, 14, 7", storageMethod);
+        Assert.Contains("AddCircuitNode", motherboardMethod);
+        Assert.Contains("AddLine(canvas, 5, 7, 9, 7", motherboardMethod);
+    }
+
+    [Fact]
     public void ReplaceHardwareElementImage_UpdatesSelectedElementWithoutAddingNewElement()
     {
         string root = FindProjectRoot();

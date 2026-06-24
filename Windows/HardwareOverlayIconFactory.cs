@@ -29,6 +29,9 @@ internal static class HardwareOverlayIconFactory
             case HardwareOverlayIconKind.Storage:
                 DrawStorage(canvas, brush, scale);
                 break;
+            case HardwareOverlayIconKind.Motherboard:
+                DrawMotherboard(canvas, brush, scale);
+                break;
             case HardwareOverlayIconKind.Temperature:
                 DrawThermometer(canvas, brush, scale);
                 break;
@@ -77,9 +80,25 @@ internal static class HardwareOverlayIconFactory
 
     private static void DrawStorage(Canvas canvas, Brush brush, double scale)
     {
-        AddRoundedRect(canvas, 4, 5, 12, 10, brush, scale, strokeOnly: true);
-        AddLine(canvas, 6, 11, 14, 11, brush, scale);
-        AddEllipse(canvas, 12, 7, 2, 2, brush, scale, strokeOnly: false);
+        AddRoundedRect(canvas, 3.5, 4.5, 13, 11, brush, scale, strokeOnly: true);
+        AddEllipse(canvas, 6, 6, 8, 8, brush, scale, strokeOnly: true);
+        AddEllipse(canvas, 9, 9, 2, 2, brush, scale, strokeOnly: false);
+        AddLine(canvas, 10, 10, 14, 7, brush, scale);
+        AddEllipse(canvas, 13.4, 12.2, 1.6, 1.6, brush, scale, strokeOnly: false);
+    }
+
+    private static void DrawMotherboard(Canvas canvas, Brush brush, double scale)
+    {
+        AddRoundedRect(canvas, 3.5, 3.5, 13, 13, brush, scale, strokeOnly: true);
+        AddRoundedRect(canvas, 7.5, 7.5, 5, 5, brush, scale, strokeOnly: true);
+        AddLine(canvas, 5, 7, 9, 7, brush, scale);
+        AddLine(canvas, 11, 13, 11, 16, brush, scale);
+        AddLine(canvas, 13, 9, 16, 9, brush, scale);
+        AddLine(canvas, 7, 11, 4, 11, brush, scale);
+        AddCircuitNode(canvas, 5, 7, brush, scale);
+        AddCircuitNode(canvas, 16, 9, brush, scale);
+        AddCircuitNode(canvas, 4, 11, brush, scale);
+        AddCircuitNode(canvas, 11, 16, brush, scale);
     }
 
     private static void DrawThermometer(Canvas canvas, Brush brush, double scale)
@@ -91,10 +110,11 @@ internal static class HardwareOverlayIconFactory
 
     private static void DrawFan(Canvas canvas, Brush brush, double scale)
     {
+        AddFanBlade(canvas, brush, scale, 0);
+        AddFanBlade(canvas, brush, scale, 90);
+        AddFanBlade(canvas, brush, scale, 180);
+        AddFanBlade(canvas, brush, scale, 270);
         AddEllipse(canvas, 8.5, 8.5, 3, 3, brush, scale, strokeOnly: false);
-        AddEllipse(canvas, 8.5, 2.5, 3, 7, brush, scale, strokeOnly: true);
-        AddEllipse(canvas, 11, 9.5, 7, 3, brush, scale, strokeOnly: true);
-        AddEllipse(canvas, 2, 9.5, 7, 3, brush, scale, strokeOnly: true);
     }
 
     private static void DrawMemory(Canvas canvas, Brush brush, double scale)
@@ -130,6 +150,47 @@ internal static class HardwareOverlayIconFactory
             },
         };
         canvas.Children.Add(polygon);
+    }
+
+    private static void AddFanBlade(Canvas canvas, Brush brush, double scale, double angle)
+    {
+        var geometry = new PathGeometry();
+        var figure = new PathFigure
+        {
+            StartPoint = new global::Windows.Foundation.Point(10 * scale, 8.7 * scale),
+            IsClosed = true,
+            IsFilled = true,
+        };
+        figure.Segments.Add(new BezierSegment
+        {
+            Point1 = new global::Windows.Foundation.Point(11.5 * scale, 7 * scale),
+            Point2 = new global::Windows.Foundation.Point(12.4 * scale, 5 * scale),
+            Point3 = new global::Windows.Foundation.Point(11.5 * scale, 3.4 * scale),
+        });
+        figure.Segments.Add(new LineSegment
+        {
+            Point = new global::Windows.Foundation.Point(8.6 * scale, 4.1 * scale),
+        });
+        figure.Segments.Add(new BezierSegment
+        {
+            Point1 = new global::Windows.Foundation.Point(8.2 * scale, 5.8 * scale),
+            Point2 = new global::Windows.Foundation.Point(8.6 * scale, 7.5 * scale),
+            Point3 = new global::Windows.Foundation.Point(10 * scale, 8.7 * scale),
+        });
+        geometry.Figures.Add(figure);
+
+        canvas.Children.Add(new Microsoft.UI.Xaml.Shapes.Path
+        {
+            Data = geometry,
+            Fill = brush,
+            Opacity = 0.92,
+            RenderTransform = new RotateTransform
+            {
+                Angle = angle,
+                CenterX = 10 * scale,
+                CenterY = 10 * scale,
+            },
+        });
     }
 
     private static void DrawGeneric(Canvas canvas, Brush brush, double scale)
@@ -180,6 +241,11 @@ internal static class HardwareOverlayIconFactory
         Canvas.SetLeft(ellipse, left * scale);
         Canvas.SetTop(ellipse, top * scale);
         canvas.Children.Add(ellipse);
+    }
+
+    private static void AddCircuitNode(Canvas canvas, double centerX, double centerY, Brush brush, double scale)
+    {
+        AddEllipse(canvas, centerX - 0.8, centerY - 0.8, 1.6, 1.6, brush, scale, strokeOnly: false);
     }
 
     private static void AddLine(Canvas canvas, double x1, double y1, double x2, double y2, Brush brush, double scale)

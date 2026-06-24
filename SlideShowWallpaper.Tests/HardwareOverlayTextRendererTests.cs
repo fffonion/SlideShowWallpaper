@@ -56,6 +56,24 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
+    public void CreateMetrics_WithMotherboardTemperature_UsesMotherboardIcon()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            SelectedSensorIds = ["board-temp"],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("board-temp", "Mainboard", "Temperature", HardwareMetricKind.Temperature, HardwareMetricGroup.Motherboard, 43, "C"),
+            ],
+            DateTimeOffset.Now);
+
+        HardwareOverlayMetric metric = Assert.Single(HardwareOverlayTextRenderer.CreateMetrics(config, snapshot));
+
+        Assert.Equal(HardwareOverlayIconKind.Motherboard, metric.IconKind);
+    }
+
+    [Fact]
     public void CreateElementStates_WithSensorElement_UsesCurrentSensorValue()
     {
         var config = new HardwareMonitorConfig

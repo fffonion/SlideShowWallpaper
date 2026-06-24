@@ -24,6 +24,7 @@ public enum HardwareOverlayIconKind
     Cpu,
     Gpu,
     Storage,
+    Motherboard,
     Temperature,
     Fan,
     Memory,
