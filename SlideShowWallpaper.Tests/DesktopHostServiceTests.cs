@@ -39,15 +39,13 @@ public sealed class DesktopHostServiceTests
     }
 
     [Fact]
-    public void HostOverlayOnDesktop_ReturnsHostOffsetAndAvoidsBottomZOrder()
+    public void DesktopHostService_DoesNotExposeOverlayHosting()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "DesktopHostService.cs"));
-        string method = source[source.IndexOf("public DesktopHostOffset HostOverlayOnDesktop", StringComparison.Ordinal)..];
 
-        Assert.Contains("NativeMethods.SetParent(hwnd, target.HostWindow)", method);
-        Assert.Contains("return new DesktopHostOffset(hostRect.Left, hostRect.Top);", method);
-        Assert.Contains("insertAfterWindow == NativeMethods.HWND_BOTTOM", method);
+        Assert.DoesNotContain("HostOverlayOnDesktop", source);
+        Assert.DoesNotContain("DesktopHostOffset", source);
     }
 
     private static string FindProjectRoot()

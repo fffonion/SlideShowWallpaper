@@ -30,32 +30,6 @@ public sealed class DesktopHostService
         }
     }
 
-    public DesktopHostOffset HostOverlayOnDesktop(Window window)
-    {
-        IntPtr hwnd = WindowNative.GetWindowHandle(window);
-        DesktopHostTarget target = GetDesktopHostTarget();
-        NativeMethods.RECT hostRect = default;
-        if (target.HostWindow != IntPtr.Zero)
-        {
-            NativeMethods.SetParent(hwnd, target.HostWindow);
-            NativeMethods.GetWindowRect(target.HostWindow, out hostRect);
-            if (target.IconListWindow != IntPtr.Zero)
-            {
-                MakeDesktopIconListTransparent(target.IconListWindow);
-            }
-        }
-
-        IntPtr insertAfterWindow = target.InsertAfterWindow;
-        uint flags = (uint)(NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
-        if (insertAfterWindow == IntPtr.Zero || insertAfterWindow == NativeMethods.HWND_BOTTOM)
-        {
-            flags |= (uint)NativeMethods.SWP_NOZORDER;
-        }
-
-        NativeMethods.SetWindowPos(hwnd, insertAfterWindow, 0, 0, 0, 0, flags);
-        return new DesktopHostOffset(hostRect.Left, hostRect.Top);
-    }
-
     public static uint CreatePositionFlags(IntPtr insertAfterWindow)
     {
         return insertAfterWindow == IntPtr.Zero
@@ -117,5 +91,3 @@ public sealed class DesktopHostService
 
     private readonly record struct DesktopHostTarget(IntPtr HostWindow, IntPtr InsertAfterWindow, IntPtr IconListWindow);
 }
-
-public readonly record struct DesktopHostOffset(int Left, int Top);

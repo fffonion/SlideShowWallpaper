@@ -21,10 +21,9 @@ public sealed partial class HardwareOverlayWindow : Window
     private double _currentY;
     private double _dragStartX;
     private double _dragStartY;
-    private int _desktopHostOriginX;
-    private int _desktopHostOriginY;
     private bool _isDragging;
     private bool _isClosed;
+    private bool _isVisible;
 
     public HardwareOverlayWindow()
     {
@@ -37,12 +36,6 @@ public sealed partial class HardwareOverlayWindow : Window
     }
 
     public event EventHandler<HardwareOverlayMovedEventArgs>? HardwareOverlayMoved;
-
-    public void SetDesktopHostOrigin(int left, int top)
-    {
-        _desktopHostOriginX = left;
-        _desktopHostOriginY = top;
-    }
 
     public void SetHardwareOverlay(HardwareOverlayState state, NativeMethods.RECT monitorRect)
     {
@@ -73,7 +66,11 @@ public sealed partial class HardwareOverlayWindow : Window
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
         ResizeToOverlay();
         SetOverlayPosition(state.X, state.Y);
-        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOWNA);
+        if (!_isVisible)
+        {
+            NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOWNA);
+            _isVisible = true;
+        }
     }
 
     public void HideOverlay()
@@ -84,6 +81,7 @@ public sealed partial class HardwareOverlayWindow : Window
         }
 
         _isDragging = false;
+        _isVisible = false;
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
 
@@ -314,8 +312,8 @@ public sealed partial class HardwareOverlayWindow : Window
         NativeMethods.SetWindowPos(
             _hwnd,
             IntPtr.Zero,
-            screenX - _desktopHostOriginX,
-            screenY - _desktopHostOriginY,
+            screenX,
+            screenY,
             0,
             0,
             (uint)(NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE));

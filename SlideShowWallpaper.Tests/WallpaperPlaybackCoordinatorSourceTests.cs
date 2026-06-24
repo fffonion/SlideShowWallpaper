@@ -48,9 +48,9 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
 
         Assert.Contains("HardwareOverlayWindow? _hardwareOverlayWindow", source);
         Assert.Contains("EnsureHardwareOverlayWindow()", refreshMethod);
-        Assert.Contains("_desktopHostService.HostOverlayOnDesktop(overlayWindow)", refreshMethod);
-        Assert.Contains("overlayWindow.SetDesktopHostOrigin(hostOffset.Left, hostOffset.Top)", refreshMethod);
         Assert.Contains("overlayWindow.SetHardwareOverlay(state, monitorRect)", refreshMethod);
+        Assert.DoesNotContain("HostOverlayOnDesktop", refreshMethod);
+        Assert.DoesNotContain("SetDesktopHostOrigin", refreshMethod);
         Assert.DoesNotContain("window.SetHardwareOverlay(state)", refreshMethod);
         Assert.Contains("_hardwareOverlayWindow?.HideOverlay();", source);
     }

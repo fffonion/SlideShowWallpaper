@@ -16,7 +16,7 @@ public sealed class HardwareOverlayWindowSourceTests
         Assert.Contains("NativeMethods.GetCursorPos(out _dragStartCursor)", source);
         Assert.Contains("SetOverlayPosition(_dragStartX + ((cursor.X - _dragStartCursor.X) / scale)", source);
         Assert.Contains("HardwareOverlayMoved?.Invoke(this, new HardwareOverlayMovedEventArgs(_currentX, _currentY));", source);
-        Assert.Contains("public void SetDesktopHostOrigin(int left, int top)", source);
+        Assert.DoesNotContain("SetDesktopHostOrigin", source);
     }
 
     [Fact]
@@ -29,9 +29,22 @@ public sealed class HardwareOverlayWindowSourceTests
         Assert.Contains("_monitorRect = monitorRect;", source);
         Assert.Contains("Root.XamlRoot?.RasterizationScale", source);
         Assert.Contains("NativeMethods.SetWindowPos(", source);
-        Assert.Contains("screenX - _desktopHostOriginX", source);
-        Assert.Contains("screenY - _desktopHostOriginY", source);
+        Assert.Contains("screenX,", source);
+        Assert.Contains("screenY,", source);
+        Assert.DoesNotContain("_desktopHostOrigin", source);
         Assert.Contains("NativeMethods.SW_SHOWNA", source);
+    }
+
+    [Fact]
+    public void HardwareOverlayWindow_DoesNotShowAgainOnEveryRefresh()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml.cs"));
+
+        Assert.Contains("private bool _isVisible;", source);
+        Assert.Contains("if (!_isVisible)", source);
+        Assert.Contains("_isVisible = true;", source);
+        Assert.Contains("_isVisible = false;", source);
     }
 
     private static string FindProjectRoot()
