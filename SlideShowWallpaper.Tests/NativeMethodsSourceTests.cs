@@ -14,6 +14,21 @@ public sealed class NativeMethodsSourceTests
         Assert.Contains("return (uint)(red | (green << 8) | (blue << 16));", source);
     }
 
+    [Fact]
+    public void CurrentProcessHandle_UsesManagedProcessHandleInsteadOfPInvoke()
+    {
+        string root = FindProjectRoot();
+        string nativeSource = File.ReadAllText(Path.Combine(root, "Interop", "NativeMethods.cs"));
+        string restartSource = File.ReadAllText(Path.Combine(root, "Services", "UnelevatedRestartService.cs"));
+        string trimmerSource = File.ReadAllText(Path.Combine(root, "Services", "ProcessMemoryTrimmer.cs"));
+
+        Assert.DoesNotContain("GetCurrentProcess()", nativeSource);
+        Assert.Contains("Process.GetCurrentProcess()", restartSource);
+        Assert.Contains("Process.GetCurrentProcess()", trimmerSource);
+        Assert.DoesNotContain("NativeMethods.GetCurrentProcess()", restartSource);
+        Assert.DoesNotContain("NativeMethods.GetCurrentProcess()", trimmerSource);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

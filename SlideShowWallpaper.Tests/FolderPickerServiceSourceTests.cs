@@ -3,6 +3,20 @@ namespace SlideShowWallpaper.Tests;
 public sealed class FolderPickerServiceSourceTests
 {
     [Fact]
+    public void PickerImplementation_KeepsIFileDialogForNativeFileSystemOptions()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "FolderPickerService.cs"));
+
+        Assert.Contains("IFileDialog", source);
+        Assert.Contains("FOS_FORCEFILESYSTEM", source);
+        Assert.Contains("FOS_NOCHANGEDIR", source);
+        Assert.Contains("new COMDLG_FILTERSPEC(\"All files (*.*)\", \"*.*\")", source);
+        Assert.Contains("SetDefaultExtension", source);
+        Assert.DoesNotContain("Microsoft.Windows.Storage.Pickers", source);
+    }
+
+    [Fact]
     public void PickOpenFileAsync_UsesNativeOpenFileDialog()
     {
         string root = FindProjectRoot();

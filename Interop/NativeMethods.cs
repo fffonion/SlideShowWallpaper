@@ -110,9 +110,6 @@ public static partial class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
-    [DllImport("kernel32.dll")]
-    internal static extern IntPtr GetCurrentProcess();
-
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool CloseHandle(IntPtr hObject);
 

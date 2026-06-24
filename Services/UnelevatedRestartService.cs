@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using SlideShowWallpaper.Interop;
 
@@ -41,7 +42,8 @@ public sealed class UnelevatedRestartService
         IntPtr primaryToken = IntPtr.Zero;
         try
         {
-            if (!NativeMethods.OpenProcessToken(NativeMethods.GetCurrentProcess(), NativeMethods.TOKEN_QUERY, out processToken))
+            using Process currentProcess = Process.GetCurrentProcess();
+            if (!NativeMethods.OpenProcessToken(currentProcess.Handle, NativeMethods.TOKEN_QUERY, out processToken))
             {
                 return false;
             }

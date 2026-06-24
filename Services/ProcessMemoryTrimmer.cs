@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime;
 using SlideShowWallpaper.Interop;
 
@@ -13,7 +14,8 @@ public static class ProcessMemoryTrimmer
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             GC.WaitForPendingFinalizers();
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-            NativeMethods.EmptyWorkingSet(NativeMethods.GetCurrentProcess());
+            using Process process = Process.GetCurrentProcess();
+            NativeMethods.EmptyWorkingSet(process.Handle);
         }
         catch (Exception exception)
         {
