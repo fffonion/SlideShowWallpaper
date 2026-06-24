@@ -194,12 +194,30 @@ public sealed class MainWindowSourceTests
         Assert.DoesNotContain("MinimumHardwareEditorSettingsWidth", method);
         Assert.Contains("CreateHardwareOverlayFormatSection(config)", method);
         Assert.Contains("CreateHardwareElementSettingsSection(config)", method);
+        Assert.Contains("previewSection.HorizontalAlignment = HorizontalAlignment.Left;", method);
         Assert.Contains("globalSection.HorizontalAlignment = HorizontalAlignment.Stretch;", method);
         Assert.Contains("elementSection.HorizontalAlignment = HorizontalAlignment.Stretch;", method);
+        Assert.Contains("MinWidth = 0", method);
         Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });", method);
         Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });", method);
         Assert.Contains("Grid.SetColumn(formatGrid, 2)", method);
         Assert.DoesNotContain("formatScrollViewer", method);
+    }
+
+    [Fact]
+    public void HardwareEditorSizing_UsesCompactPreviewPane()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+
+        Assert.Contains("MinimumHardwareEditorPaneWidth = 320", source);
+        Assert.Contains("MaximumHardwareEditorPaneWidth = 520", source);
+        Assert.Contains("HardwareEditorPreviewDefaultWidth = 360", source);
+        Assert.Contains("HardwareEditorPreviewDefaultHeight = 210", source);
+        Assert.Contains("HardwareEditorPreviewMaxWidth = 360", source);
+        Assert.Contains("HardwareEditorPreviewMaxHeight = 520", source);
+        Assert.DoesNotContain("MinimumHardwareEditorPaneWidth = 560", source);
+        Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 1100", source);
     }
 
     [Fact]
@@ -227,9 +245,17 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSurface", StringComparison.Ordinal)..
             source.IndexOf("private Border CreateHardwareElementSettingsSection", StringComparison.Ordinal)];
 
-        Assert.Contains("Spacing = 8", sectionMethod);
-        Assert.Contains("Padding = new Thickness(8)", sectionMethod);
+        Assert.Contains("Spacing = 6", sectionMethod);
+        Assert.Contains("Padding = new Thickness(6)", sectionMethod);
         Assert.Contains("Padding = new Thickness(0)", surfaceMethod);
+        Assert.Contains("new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight)", surfaceMethod);
+        Assert.Contains("new Viewbox", surfaceMethod);
+        Assert.Contains("MaxWidth = HardwareEditorPreviewMaxWidth", surfaceMethod);
+        Assert.Contains("MaxHeight = HardwareEditorPreviewMaxHeight", surfaceMethod);
+        Assert.Contains("Stretch = Stretch.Uniform", surfaceMethod);
+        Assert.Contains("Child = viewbox", surfaceMethod);
+        Assert.DoesNotContain("new HardwareOverlayLayout(720, 420)", surfaceMethod);
+        Assert.DoesNotContain("Padding = new Thickness(8)", sectionMethod);
         Assert.DoesNotContain("Padding = new Thickness(16)", sectionMethod);
     }
 

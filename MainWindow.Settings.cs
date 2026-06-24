@@ -141,6 +141,7 @@ public sealed partial class MainWindow
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         FrameworkElement previewSection = CreateHardwareEditorPreviewSection(config);
+        previewSection.HorizontalAlignment = HorizontalAlignment.Left;
         Grid.SetColumn(previewSection, 0);
         root.Children.Add(previewSection);
 
@@ -153,6 +154,7 @@ public sealed partial class MainWindow
             RowSpacing = 14,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
+            MinWidth = 0,
         };
         formatGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -551,8 +553,8 @@ public sealed partial class MainWindow
     {
         var stack = new StackPanel
         {
-            Spacing = 8,
-            Padding = new Thickness(8),
+            Spacing = 6,
+            Padding = new Thickness(6),
         };
 
         var title = new TextBlock
@@ -623,7 +625,7 @@ public sealed partial class MainWindow
         bool hasBackgroundSize = ImageDimensionReader.TryRead(config.BackgroundImagePath, out int backgroundWidth, out int backgroundHeight);
         HardwareOverlayLayout layout = hasBackgroundSize || elements.Count > 0
             ? HardwareOverlayLayoutCalculator.Calculate(elements, backgroundWidth, backgroundHeight)
-            : new HardwareOverlayLayout(720, 420);
+            : new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight);
         var canvas = new Canvas
         {
             Width = layout.Width,
@@ -672,6 +674,16 @@ public sealed partial class MainWindow
         canvas.Children.Add(verticalGuide);
         canvas.Children.Add(horizontalGuide);
 
+        var viewbox = new Viewbox
+        {
+            MaxWidth = HardwareEditorPreviewMaxWidth,
+            MaxHeight = HardwareEditorPreviewMaxHeight,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Child = canvas,
+        };
+        AutomationProperties.SetName(viewbox, LocalizedStrings.Get("HardwareMonitorPreview"));
+
         return new Border
         {
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -680,7 +692,7 @@ public sealed partial class MainWindow
             BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
-            Child = canvas,
+            Child = viewbox,
         };
     }
 
