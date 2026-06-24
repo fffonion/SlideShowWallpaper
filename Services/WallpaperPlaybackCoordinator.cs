@@ -63,6 +63,8 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     public event EventHandler<CurrentWallpaperChangedEventArgs>? CurrentWallpaperChanged;
 
+    public event EventHandler<HardwareOverlayMovedEventArgs>? HardwareOverlayMoved;
+
     public void ApplyProfiles(
         IReadOnlyList<MonitorProfile> profiles,
         bool playbackEnabled,
@@ -299,7 +301,7 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         foreach (WallpaperWindow window in _windows.Values)
         {
-            CloseWindowSafely(window);
+            CloseTrackedWindowSafely(window);
         }
 
         _windows.Clear();
@@ -406,6 +408,12 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
     }
 
+    private void Window_HardwareOverlayMoved(object? sender, HardwareOverlayMovedEventArgs args)
+    {
+        _hardwareMonitorConfig.X = Math.Max(0, args.X);
+        _hardwareMonitorConfig.Y = Math.Max(0, args.Y);
+        HardwareOverlayMoved?.Invoke(this, new HardwareOverlayMovedEventArgs(_hardwareMonitorConfig.X, _hardwareMonitorConfig.Y));
+    }
 }
 
 public sealed record OrderedImagesChangedEventArgs(string MonitorId, IReadOnlyList<ImageMetadata> Images);

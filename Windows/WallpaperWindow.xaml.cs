@@ -5,9 +5,11 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
+using Windows.Foundation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
@@ -30,6 +32,10 @@ public sealed partial class WallpaperWindow : Window
     private bool _isShowingWallpaper;
     private bool _videoPausedByCoverage;
     private bool _forceMuted;
+    private bool _isHardwareOverlayDragging;
+    private Point _hardwareOverlayDragStartPoint;
+    private double _hardwareOverlayDragStartX;
+    private double _hardwareOverlayDragStartY;
 
     public WallpaperWindow(MonitorProfile profile)
     {
@@ -44,6 +50,7 @@ public sealed partial class WallpaperWindow : Window
         _mediaPlayer = CreateMediaPlayer(profile.VideoLoop);
         VideoPlayer.SetMediaPlayer(_mediaPlayer);
         ConfigureWindow();
+        ConfigureHardwareOverlayDrag();
         ApplyProfile(profile);
         Root.SizeChanged += (_, _) => ApplyProfile(_profile);
         Closed += (_, _) =>
@@ -56,6 +63,8 @@ public sealed partial class WallpaperWindow : Window
     }
 
     public event EventHandler? VideoEnded;
+
+    public event EventHandler<HardwareOverlayMovedEventArgs>? HardwareOverlayMoved;
 
     public bool IsShowingWallpaper => _isShowingWallpaper;
 
@@ -143,7 +152,7 @@ public sealed partial class WallpaperWindow : Window
         }
 
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
-        HardwareOverlay.Margin = new Thickness(Math.Max(0, state.X), Math.Max(0, state.Y), 0, 0);
+        SetHardwareOverlayPosition(state.X, state.Y);
         HardwareOverlay.Visibility = Visibility.Visible;
     }
 
@@ -208,8 +217,118 @@ public sealed partial class WallpaperWindow : Window
         }
 
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
-        HardwareOverlay.Margin = new Thickness(Math.Max(0, state.X), Math.Max(0, state.Y), 0, 0);
+        SetHardwareOverlayPosition(state.X, state.Y);
         HardwareOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void ConfigureHardwareOverlayDrag()
+    {
+        HardwareOverlay.PointerPressed += HardwareOverlay_PointerPressed;
+        HardwareOverlay.PointerMoved += HardwareOverlay_PointerMoved;
+        HardwareOverlay.PointerReleased += HardwareOverlay_PointerReleased;
+        HardwareOverlay.PointerCanceled += HardwareOverlay_PointerCanceled;
+        HardwareOverlay.PointerCaptureLost += HardwareOverlay_PointerCaptureLost;
+    }
+
+    private void HardwareOverlay_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (HardwareOverlay.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        _isHardwareOverlayDragging = true;
+        _hardwareOverlayDragStartPoint = e.GetCurrentPoint(Root).Position;
+        _hardwareOverlayDragStartX = HardwareOverlay.Margin.Left;
+        _hardwareOverlayDragStartY = HardwareOverlay.Margin.Top;
+        HardwareOverlay.CapturePointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void HardwareOverlay_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_isHardwareOverlayDragging)
+        {
+            return;
+        }
+
+        Point currentPoint = e.GetCurrentPoint(Root).Position;
+        SetHardwareOverlayPosition(
+            _hardwareOverlayDragStartX + currentPoint.X - _hardwareOverlayDragStartPoint.X,
+            _hardwareOverlayDragStartY + currentPoint.Y - _hardwareOverlayDragStartPoint.Y);
+        e.Handled = true;
+    }
+
+    private void HardwareOverlay_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        CompleteHardwareOverlayDrag(true, e);
+        e.Handled = true;
+    }
+
+    private void HardwareOverlay_PointerCanceled(object sender, PointerRoutedEventArgs e)
+    {
+        CompleteHardwareOverlayDrag(false, e);
+    }
+
+    private void HardwareOverlay_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+    {
+        CompleteHardwareOverlayDrag(true, e);
+    }
+
+    private void CompleteHardwareOverlayDrag(bool notify, PointerRoutedEventArgs e)
+    {
+        if (!_isHardwareOverlayDragging)
+        {
+            return;
+        }
+
+        _isHardwareOverlayDragging = false;
+        try
+        {
+            HardwareOverlay.ReleasePointerCapture(e.Pointer);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
+        if (notify)
+        {
+            HardwareOverlayMoved?.Invoke(this, new HardwareOverlayMovedEventArgs(HardwareOverlay.Margin.Left, HardwareOverlay.Margin.Top));
+        }
+    }
+
+    private void SetHardwareOverlayPosition(double x, double y)
+    {
+        double clampedX = ClampHardwareOverlayCoordinate(x, GetViewportWidth(Root), GetOverlayWidth());
+        double clampedY = ClampHardwareOverlayCoordinate(y, GetViewportHeight(Root), GetOverlayHeight());
+        HardwareOverlay.Margin = new Thickness(clampedX, clampedY, 0, 0);
+    }
+
+    private double GetOverlayWidth()
+    {
+        if (HardwareOverlay.ActualWidth > 0)
+        {
+            return HardwareOverlay.ActualWidth;
+        }
+
+        return double.IsNaN(HardwareOverlay.Width) ? 0 : HardwareOverlay.Width;
+    }
+
+    private double GetOverlayHeight()
+    {
+        if (HardwareOverlay.ActualHeight > 0)
+        {
+            return HardwareOverlay.ActualHeight;
+        }
+
+        return double.IsNaN(HardwareOverlay.Height) ? 0 : HardwareOverlay.Height;
+    }
+
+    private static double ClampHardwareOverlayCoordinate(double value, double viewportLength, double overlayLength)
+    {
+        double maximum = Math.Max(0, viewportLength - Math.Max(0, overlayLength));
+        return Math.Clamp(value, 0, maximum);
     }
 
     private static TextBlock CreateHardwareOverlayText(string text, double fontSize)

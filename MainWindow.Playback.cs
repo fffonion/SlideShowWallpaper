@@ -44,6 +44,13 @@ public sealed partial class MainWindow
         }
     }
 
+    private void Coordinator_HardwareOverlayMoved(object? sender, HardwareOverlayMovedEventArgs args)
+    {
+        _viewModel.HardwareMonitor.X = Math.Max(0, args.X);
+        _viewModel.HardwareMonitor.Y = Math.Max(0, args.Y);
+        _settingsStore.Save(CreateConfig());
+    }
+
     private async void PreviewList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressPreviewSelection)

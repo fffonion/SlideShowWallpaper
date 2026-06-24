@@ -35,6 +35,12 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
     }
 
+    private void CloseTrackedWindowSafely(WallpaperWindow window)
+    {
+        window.HardwareOverlayMoved -= Window_HardwareOverlayMoved;
+        CloseWindowSafely(window);
+    }
+
     private void EnsureWindow(MonitorProfile profile, bool applyProfile = true)
     {
         if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
@@ -42,6 +48,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             window = new WallpaperWindow(profile);
             string monitorId = profile.Id;
             window.VideoEnded += (_, _) => _ = ShowNextAsync(monitorId);
+            window.HardwareOverlayMoved += Window_HardwareOverlayMoved;
             _windows[profile.Id] = window;
             window.Activate();
         }

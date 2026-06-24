@@ -240,6 +240,7 @@ public sealed partial class MainWindow
         DisposePreviewPopup();
         _coordinator.OrderedImagesChanged -= Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged -= Coordinator_CurrentWallpaperChanged;
+        _coordinator.HardwareOverlayMoved -= Coordinator_HardwareOverlayMoved;
         _trayIconService.Dispose();
         _coordinator.Shutdown();
         _hardwareMonitorService.Dispose();

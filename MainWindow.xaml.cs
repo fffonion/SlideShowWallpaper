@@ -210,6 +210,7 @@ public sealed partial class MainWindow : Window
             HandleDisplayPowerPauseChanged);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
+        _coordinator.HardwareOverlayMoved += Coordinator_HardwareOverlayMoved;
         Root.Loaded += Root_Loaded;
         if (startInTray)
         {

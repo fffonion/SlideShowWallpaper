@@ -131,9 +131,111 @@ public sealed record HardwareSensorReading(
     double Value,
     string Unit)
 {
-    public string DisplayName => string.IsNullOrWhiteSpace(HardwareName)
-        ? SensorName
-        : $"{HardwareName} / {SensorName}";
+    public string DisplayName => HardwareSensorDisplayName.Build(HardwareName, SensorName, Kind, Group, Id);
+}
+
+public static class HardwareSensorDisplayName
+{
+    public static string Build(
+        string hardwareName,
+        string sensorName,
+        HardwareMetricKind kind,
+        HardwareMetricGroup group,
+        string id)
+    {
+        string normalizedSensorName = NormalizeWhitespace(sensorName);
+        string readableSensorName = BuildReadableSensorName(normalizedSensorName, kind, group, id);
+        string normalizedHardwareName = NormalizeWhitespace(hardwareName);
+        if (string.IsNullOrWhiteSpace(normalizedHardwareName))
+        {
+            return readableSensorName;
+        }
+
+        if (readableSensorName.Contains(normalizedHardwareName, StringComparison.OrdinalIgnoreCase))
+        {
+            return readableSensorName;
+        }
+
+        return $"{normalizedHardwareName} / {readableSensorName}";
+    }
+
+    private static string BuildReadableSensorName(
+        string sensorName,
+        HardwareMetricKind kind,
+        HardwareMetricGroup group,
+        string id)
+    {
+        if (!IsOrdinalOnlyName(sensorName))
+        {
+            return string.IsNullOrWhiteSpace(sensorName) ? GetMetricName(kind, group) : sensorName;
+        }
+
+        string ordinal = ExtractOrdinal(sensorName) ?? ExtractIdentifierOrdinal(id);
+        string metricName = GetMetricName(kind, group);
+        return string.IsNullOrWhiteSpace(ordinal)
+            ? metricName
+            : $"{metricName} {ordinal}";
+    }
+
+    private static string GetMetricName(HardwareMetricKind kind, HardwareMetricGroup group)
+    {
+        return kind switch
+        {
+            HardwareMetricKind.Temperature => group switch
+            {
+                HardwareMetricGroup.Cpu => "CPU temperature",
+                HardwareMetricGroup.Gpu => "GPU temperature",
+                HardwareMetricGroup.Storage => "Drive temperature",
+                _ => "Temperature",
+            },
+            HardwareMetricKind.FanRpm => "Fan",
+            HardwareMetricKind.MemoryAvailable => "Memory available",
+            HardwareMetricKind.VramAvailable => "VRAM available",
+            HardwareMetricKind.Power => group == HardwareMetricGroup.Gpu ? "GPU power" : "CPU power",
+            _ => "Sensor",
+        };
+    }
+
+    private static bool IsOrdinalOnlyName(string sensorName)
+    {
+        if (string.IsNullOrWhiteSpace(sensorName))
+        {
+            return true;
+        }
+
+        string value = sensorName.Trim();
+        if (value.StartsWith('#') && value.Skip(1).All(char.IsDigit))
+        {
+            return true;
+        }
+
+        return value.All(char.IsDigit);
+    }
+
+    private static string? ExtractOrdinal(string sensorName)
+    {
+        string value = sensorName.Trim();
+        if (value.Length == 0)
+        {
+            return null;
+        }
+
+        return value.StartsWith("#", StringComparison.Ordinal)
+            ? value
+            : $"#{value}";
+    }
+
+    private static string ExtractIdentifierOrdinal(string id)
+    {
+        string[] parts = id.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string? lastNumber = parts.LastOrDefault(part => part.All(char.IsDigit));
+        return string.IsNullOrWhiteSpace(lastNumber) ? string.Empty : $"#{lastNumber}";
+    }
+
+    private static string NormalizeWhitespace(string value)
+    {
+        return string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
 }
 
 public sealed record HardwareMonitorSnapshot(IReadOnlyList<HardwareSensorReading> Sensors, DateTimeOffset CapturedAt, bool IsElevated = false);
@@ -168,3 +270,5 @@ public sealed record HardwareOverlayState(
 
     public IReadOnlyList<HardwareOverlayElementState> Elements { get; init; } = [];
 }
+
+public sealed record HardwareOverlayMovedEventArgs(double X, double Y);
