@@ -20,6 +20,7 @@ public sealed partial class WallpaperWindow : Window
     private readonly TranslateTransform _currentTransform = new();
     private readonly TranslateTransform _nextTransform = new();
     private readonly TranslateTransform _videoTransform = new();
+    private readonly IntPtr _hwnd;
     private MediaPlayer _mediaPlayer;
     private MonitorProfile _profile;
     private string _currentImagePath = string.Empty;
@@ -36,6 +37,7 @@ public sealed partial class WallpaperWindow : Window
         InitializeComponent();
         Title = LocalizedStrings.Get("PlayerTitle");
         SystemBackdrop = null;
+        _hwnd = WindowNative.GetWindowHandle(this);
         CurrentImage.RenderTransform = _currentTransform;
         NextImage.RenderTransform = _nextTransform;
         VideoPlayer.RenderTransform = _videoTransform;
@@ -83,7 +85,7 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
-        AppWindow.Show();
+        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);
     }
 
     public void HideWallpaperWindow()
@@ -97,7 +99,7 @@ public sealed partial class WallpaperWindow : Window
         ClearImageSources();
         HideError();
         _isShowingWallpaper = false;
-        AppWindow.Hide();
+        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
 
     public async Task ShowImageAsync(string path)
@@ -263,8 +265,7 @@ public sealed partial class WallpaperWindow : Window
 
     private void ConfigureWindow()
     {
-        IntPtr hwnd = WindowNative.GetWindowHandle(this);
-        Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
         AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
         if (appWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -274,7 +275,7 @@ public sealed partial class WallpaperWindow : Window
             presenter.IsMinimizable = false;
         }
 
-        NativeMethods.RemoveWindowFrame(hwnd);
+        NativeMethods.RemoveWindowFrame(_hwnd);
     }
 
     private void ApplyMute(MonitorProfile profile)

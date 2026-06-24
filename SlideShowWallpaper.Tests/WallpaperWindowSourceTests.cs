@@ -112,14 +112,20 @@ public sealed class WallpaperWindowSourceTests
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string showWallpaperWindow = source[
+            source.IndexOf("public void ShowWallpaperWindow", StringComparison.Ordinal)..
+            source.IndexOf("public void HideWallpaperWindow", StringComparison.Ordinal)];
         string hideWallpaperWindow = source[
             source.IndexOf("public void HideWallpaperWindow", StringComparison.Ordinal)..
             source.IndexOf("public async Task ShowImageAsync", StringComparison.Ordinal)];
 
+        Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);", showWallpaperWindow);
+        Assert.DoesNotContain("AppWindow.Show();", showWallpaperWindow);
         Assert.Contains("StopVideo();", hideWallpaperWindow);
         Assert.Contains("ClearImageSources();", hideWallpaperWindow);
-        Assert.Contains("AppWindow.Hide();", hideWallpaperWindow);
+        Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);", hideWallpaperWindow);
         Assert.DoesNotContain("Close();", hideWallpaperWindow);
+        Assert.DoesNotContain("AppWindow.Hide();", hideWallpaperWindow);
     }
 
     private static string FindProjectRoot()
