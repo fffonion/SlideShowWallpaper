@@ -56,6 +56,7 @@
                 </Grid>
 
                 <Border
+                    x:Name="ContentFrame"
                     Grid.Column="1"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"

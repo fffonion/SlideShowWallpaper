@@ -1,5 +1,6 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Services;
 using Windows.Graphics;
@@ -65,13 +66,13 @@ public sealed partial class MainWindow
         int estimatedHeight = CalculatePreferredWindowHeight(targetWidth, maximumHeight);
         try
         {
-            Root.Measure(new global::Windows.Foundation.Size(targetWidth / scale, maximumHeight / scale));
-            if (!double.IsFinite(Root.DesiredSize.Height) || Root.DesiredSize.Height <= 0)
+            double logicalHeight = MeasureSettingsContentHeight(targetWidth / scale);
+            if (!double.IsFinite(logicalHeight) || logicalHeight <= 0)
             {
                 return estimatedHeight;
             }
 
-            int measuredHeight = (int)Math.Ceiling(Root.DesiredSize.Height * scale);
+            int measuredHeight = (int)Math.Ceiling(logicalHeight * scale);
             return Math.Clamp(measuredHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);
         }
         catch (Exception exception)
@@ -79,6 +80,53 @@ public sealed partial class MainWindow
             AppLog.Write(exception);
             return estimatedHeight;
         }
+    }
+
+    private double MeasureSettingsContentHeight(double logicalWindowWidth)
+    {
+        if (MonitorContent.Content is not FrameworkElement content)
+        {
+            return 0;
+        }
+
+        double titleBarHeight = AppTitleBar.ActualHeight > 0 ? AppTitleBar.ActualHeight : 48;
+        double contentFrameHeight = ContentFrame.Padding.Top
+            + ContentFrame.Padding.Bottom
+            + ContentFrame.BorderThickness.Top
+            + ContentFrame.BorderThickness.Bottom;
+        double contentWidth = MonitorContent.ActualWidth > 0
+            ? MonitorContent.ActualWidth
+            : EstimateSettingsContentWidth(logicalWindowWidth);
+        double contentHeight = MeasureIntrinsicContentHeight(content, contentWidth);
+        return titleBarHeight + contentFrameHeight + contentHeight;
+    }
+
+    private static double EstimateSettingsContentWidth(double logicalWindowWidth)
+    {
+        const double monitorLayoutLeftPadding = 16;
+        const double monitorLayoutNegativeMargin = -8;
+        const double navigationWidth = 228;
+        const double monitorLayoutColumnSpacing = 8;
+        const double contentBorderThickness = 2;
+        const double contentHorizontalPadding = 32;
+        return Math.Max(
+            0,
+            logicalWindowWidth
+            - monitorLayoutLeftPadding
+            - monitorLayoutNegativeMargin
+            - navigationWidth
+            - monitorLayoutColumnSpacing
+            - contentBorderThickness
+            - contentHorizontalPadding);
+    }
+
+    private static double MeasureIntrinsicContentHeight(FrameworkElement element, double logicalWidth)
+    {
+        FrameworkElement measureTarget = element is ScrollViewer scrollViewer && scrollViewer.Content is FrameworkElement scrollContent
+            ? scrollContent
+            : element;
+        measureTarget.Measure(new global::Windows.Foundation.Size(logicalWidth, double.PositiveInfinity));
+        return measureTarget.DesiredSize.Height;
     }
 
     private void MoveAndResizeSettingsWindow(RectInt32 workArea, int width, int height)

@@ -372,10 +372,11 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void MeasuredWindowHeight_UsesMeasuredContentInsteadOfGrowingFromEstimate()
+    public void MeasuredWindowHeight_UsesIntrinsicContentInsteadOfStretchingRoot()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string xaml = File.ReadAllText(Path.Combine(root, "MainWindow.xaml"));
         string configureMethod = source[
             source.IndexOf("private void ConfigureSettingsWindow", StringComparison.Ordinal)..
             source.IndexOf("private int CalculatePreferredWindowHeight", StringComparison.Ordinal)];
@@ -391,7 +392,14 @@ public sealed class MainWindowSourceTests
         Assert.Contains("AppWindow.Size.Width > 0 ? AppWindow.Size.Width : GetPreferredSettingsWindowWidth(workArea)", resizeMethod);
         Assert.Contains("Math.Ceiling(PreferredSettingsWindowWidth * GetWindowScale())", source);
         Assert.DoesNotContain("Math.Min(1540, workArea.Width)", source);
-        Assert.Contains("Root.Measure(new global::Windows.Foundation.Size(targetWidth / scale, maximumHeight / scale));", measuredMethod);
+        Assert.Contains("double logicalHeight = MeasureSettingsContentHeight(targetWidth / scale);", measuredMethod);
+        Assert.Contains("x:Name=\"ContentFrame\"", xaml);
+        Assert.Contains("MonitorContent.Content is not FrameworkElement content", source);
+        Assert.Contains("MonitorContent.ActualWidth > 0", source);
+        Assert.Contains("ContentFrame.Padding.Top", source);
+        Assert.Contains("MeasureIntrinsicContentHeight(content, contentWidth)", source);
+        Assert.Contains("element is ScrollViewer scrollViewer && scrollViewer.Content is FrameworkElement scrollContent", source);
+        Assert.DoesNotContain("Root.Measure(", measuredMethod);
         Assert.DoesNotContain("Math.Max(measuredHeight, estimatedHeight)", measuredMethod);
         Assert.Contains("return Math.Clamp(measuredHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);", measuredMethod);
     }
