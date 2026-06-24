@@ -21,6 +21,21 @@ public sealed class HardwareOverlayTemplateServiceTests
     }
 
     [Fact]
+    public void FromConfig_IncludesOverlaySize()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            OverlayWidth = 512,
+            OverlayHeight = 288,
+        };
+
+        HardwareOverlayTemplate template = HardwareOverlayTemplateService.FromConfig(config);
+
+        Assert.Equal(512, template.OverlayWidth);
+        Assert.Equal(288, template.OverlayHeight);
+    }
+
+    [Fact]
     public void ApplyToConfig_IncludesBackgroundColor()
     {
         var config = new HardwareMonitorConfig();
@@ -34,6 +49,22 @@ public sealed class HardwareOverlayTemplateServiceTests
 
         Assert.Equal(@"C:\Wallpapers\panel.png", config.BackgroundImagePath);
         Assert.Equal("#80223344", config.BackgroundColor);
+    }
+
+    [Fact]
+    public void ApplyToConfig_IncludesOverlaySize()
+    {
+        var config = new HardwareMonitorConfig();
+        var template = new HardwareOverlayTemplate
+        {
+            OverlayWidth = 640,
+            OverlayHeight = 360,
+        };
+
+        HardwareOverlayTemplateService.ApplyToConfig(template, config);
+
+        Assert.Equal(640, config.OverlayWidth);
+        Assert.Equal(360, config.OverlayHeight);
     }
 
     [Fact]

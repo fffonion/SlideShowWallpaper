@@ -107,7 +107,7 @@ public sealed partial class WallpaperWindow : Window
         StopVideo();
         ClearImageSources();
         HideError();
-        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, "Segoe UI", 0, 0));
+        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, 0, 0, "Segoe UI", 0, 0));
         _isShowingWallpaper = false;
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
@@ -135,9 +135,12 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
+        HardwareOverlayLayout rowLayout = HardwareOverlayLayoutCalculator.Calculate([], requestedWidth: state.Width, requestedHeight: state.Height);
         HardwareOverlay.Padding = new Thickness(10, 8, 10, 8);
-        HardwareOverlay.Width = double.NaN;
-        HardwareOverlay.Height = double.NaN;
+        HardwareOverlay.Width = rowLayout.Width;
+        HardwareOverlay.Height = rowLayout.Height;
+        HardwareOverlayRoot.Width = rowLayout.Width;
+        HardwareOverlayRoot.Height = rowLayout.Height;
         HardwareOverlayCanvas.Children.Clear();
         HardwareOverlayCanvas.Visibility = Visibility.Collapsed;
         HardwareOverlayBackground.Source = null;
@@ -171,7 +174,12 @@ public sealed partial class WallpaperWindow : Window
         HardwareOverlayContent.Visibility = Visibility.Collapsed;
         HardwareOverlayCanvas.Children.Clear();
 
-        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(state.Elements, backgroundWidth, backgroundHeight);
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(
+            state.Elements,
+            backgroundWidth,
+            backgroundHeight,
+            state.Width,
+            state.Height);
         double width = layout.Width;
         double height = layout.Height;
         HardwareOverlay.Width = width;

@@ -233,6 +233,19 @@ public sealed partial class MainWindow
         }
     }
 
+    private static void EnsureHardwareOverlaySize(HardwareMonitorConfig config)
+    {
+        if (config.OverlayWidth <= 0)
+        {
+            config.OverlayWidth = HardwareMonitorConfig.DefaultOverlayWidth;
+        }
+
+        if (config.OverlayHeight <= 0)
+        {
+            config.OverlayHeight = HardwareMonitorConfig.DefaultOverlayHeight;
+        }
+    }
+
     private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices()
     {
         var choices = new List<Choice<string>>
@@ -700,9 +713,13 @@ public sealed partial class MainWindow
         HardwareMonitorSnapshot snapshot = _hardwareMonitorSnapshot ?? new HardwareMonitorSnapshot([], DateTimeOffset.Now);
         IReadOnlyList<HardwareOverlayElementState> elements = HardwareOverlayTextRenderer.CreateElementStates(config, snapshot);
         bool hasBackgroundSize = ImageDimensionReader.TryRead(config.BackgroundImagePath, out int backgroundWidth, out int backgroundHeight);
-        HardwareOverlayLayout layout = hasBackgroundSize || elements.Count > 0
-            ? HardwareOverlayLayoutCalculator.Calculate(elements, backgroundWidth, backgroundHeight)
-            : new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight);
+        EnsureHardwareOverlaySize(config);
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(
+            elements,
+            hasBackgroundSize ? backgroundWidth : 0,
+            hasBackgroundSize ? backgroundHeight : 0,
+            config.OverlayWidth,
+            config.OverlayHeight);
         var canvas = new Canvas
         {
             Width = layout.Width,
@@ -767,15 +784,15 @@ public sealed partial class MainWindow
 
         var surfaceGrid = new Grid
         {
-            Width = _hardwareEditorPreviewWidth,
-            Height = _hardwareEditorPreviewHeight,
+            Width = layout.Width,
+            Height = layout.Height,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         var previewViewport = new ScrollViewer
         {
             Content = canvas,
-            Width = _hardwareEditorPreviewWidth,
-            Height = _hardwareEditorPreviewHeight,
+            Width = layout.Width,
+            Height = layout.Height,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -783,7 +800,7 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetName(previewViewport, LocalizedStrings.Get("HardwareMonitorPreview"));
         surfaceGrid.Children.Add(previewViewport);
-        FrameworkElement resizeHandle = CreateHardwareEditorPreviewResizeHandle(surfaceGrid, previewViewport);
+        FrameworkElement resizeHandle = CreateHardwareEditorPreviewResizeHandle(config, surfaceGrid, previewViewport, canvas);
         surfaceGrid.Children.Add(resizeHandle);
 
         return new Border
@@ -798,7 +815,11 @@ public sealed partial class MainWindow
         };
     }
 
-    private FrameworkElement CreateHardwareEditorPreviewResizeHandle(Grid surfaceGrid, FrameworkElement previewViewport)
+    private FrameworkElement CreateHardwareEditorPreviewResizeHandle(
+        HardwareMonitorConfig config,
+        Grid surfaceGrid,
+        FrameworkElement previewViewport,
+        Canvas canvas)
     {
         bool isResizing = false;
         double startX = 0;
@@ -840,8 +861,8 @@ public sealed partial class MainWindow
             global::Windows.Foundation.Point position = args.GetCurrentPoint(surfaceGrid).Position;
             startX = position.X;
             startY = position.Y;
-            startWidth = _hardwareEditorPreviewWidth;
-            startHeight = _hardwareEditorPreviewHeight;
+            startWidth = config.OverlayWidth;
+            startHeight = config.OverlayHeight;
             handle.CapturePointer(args.Pointer);
             args.Handled = true;
         };
@@ -854,18 +875,22 @@ public sealed partial class MainWindow
 
             global::Windows.Foundation.Point position = args.GetCurrentPoint(surfaceGrid).Position;
             global::Windows.Foundation.Point delta = new(position.X - startX, position.Y - startY);
-            _hardwareEditorPreviewWidth = Math.Clamp(startWidth + delta.X, HardwareEditorPreviewResizeMinWidth, HardwareEditorPreviewResizeMaxWidth);
-            _hardwareEditorPreviewHeight = Math.Clamp(startHeight + delta.Y, HardwareEditorPreviewResizeMinHeight, HardwareEditorPreviewResizeMaxHeight);
-            surfaceGrid.Width = _hardwareEditorPreviewWidth;
-            surfaceGrid.Height = _hardwareEditorPreviewHeight;
-            previewViewport.Width = _hardwareEditorPreviewWidth;
-            previewViewport.Height = _hardwareEditorPreviewHeight;
+            config.OverlayWidth = Math.Clamp(startWidth + delta.X, HardwareEditorPreviewResizeMinWidth, HardwareEditorPreviewResizeMaxWidth);
+            config.OverlayHeight = Math.Clamp(startHeight + delta.Y, HardwareEditorPreviewResizeMinHeight, HardwareEditorPreviewResizeMaxHeight);
+            canvas.Width = config.OverlayWidth;
+            canvas.Height = config.OverlayHeight;
+            surfaceGrid.Width = config.OverlayWidth;
+            surfaceGrid.Height = config.OverlayHeight;
+            previewViewport.Width = config.OverlayWidth;
+            previewViewport.Height = config.OverlayHeight;
             args.Handled = true;
         };
         handle.PointerReleased += (_, args) =>
         {
             isResizing = false;
             handle.ReleasePointerCapture(args.Pointer);
+            ScheduleApplySettings();
+            RefreshHardwareEditorPreview(config);
             args.Handled = true;
         };
         handle.PointerCanceled += (_, args) =>

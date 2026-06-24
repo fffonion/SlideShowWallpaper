@@ -270,19 +270,15 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("MinimumHardwareEditorPaneWidth = 320", source);
         Assert.Contains("MaximumHardwareEditorPaneWidth = 940", source);
-        Assert.Contains("HardwareEditorPreviewDefaultWidth = 360", source);
-        Assert.Contains("HardwareEditorPreviewDefaultHeight = 210", source);
-        Assert.Contains("HardwareEditorPreviewMaxWidth = 360", source);
-        Assert.Contains("HardwareEditorPreviewMaxHeight = 520", source);
         Assert.Contains("HardwareEditorPreviewResizeHandleSize", source);
         Assert.Contains("HardwareEditorPreviewResizeMinWidth = 240", source);
         Assert.Contains("HardwareEditorPreviewResizeMaxWidth = 900", source);
-        Assert.Contains("_hardwareEditorPreviewWidth = HardwareEditorPreviewMaxWidth", source);
-        Assert.Contains("_hardwareEditorPreviewHeight = HardwareEditorPreviewDefaultHeight", source);
         Assert.Contains("_hardwareEditorSelectedElementIds", source);
         Assert.DoesNotContain("MinimumHardwareEditorPaneWidth = 560", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 520", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 1100", source);
+        Assert.DoesNotContain("_hardwareEditorPreviewWidth", source);
+        Assert.DoesNotContain("_hardwareEditorPreviewHeight", source);
     }
 
     [Fact]
@@ -316,12 +312,14 @@ public sealed class MainWindowSourceTests
         Assert.Contains("Content = CreateHardwareEditorPreviewSurface(config)", sectionMethod);
         Assert.Contains("stack.Children.Add(_hardwareEditorPreviewHost);", sectionMethod);
         Assert.Contains("Padding = new Thickness(0)", surfaceMethod);
-        Assert.Contains("new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight)", surfaceMethod);
+        Assert.Contains("EnsureHardwareOverlaySize(config);", surfaceMethod);
+        Assert.Contains("config.OverlayWidth", surfaceMethod);
+        Assert.Contains("config.OverlayHeight", surfaceMethod);
         Assert.Contains("new ScrollViewer", surfaceMethod);
         Assert.Contains("Content = canvas", surfaceMethod);
-        Assert.Contains("Width = _hardwareEditorPreviewWidth", surfaceMethod);
-        Assert.Contains("Height = _hardwareEditorPreviewHeight", surfaceMethod);
-        Assert.Contains("CreateHardwareEditorPreviewResizeHandle(surfaceGrid, previewViewport)", surfaceMethod);
+        Assert.Contains("Width = layout.Width", surfaceMethod);
+        Assert.Contains("Height = layout.Height", surfaceMethod);
+        Assert.Contains("CreateHardwareEditorPreviewResizeHandle(config, surfaceGrid, previewViewport, canvas)", surfaceMethod);
         Assert.Contains("surfaceGrid.Children.Add(previewViewport);", surfaceMethod);
         Assert.Contains("surfaceGrid.Children.Add(resizeHandle);", surfaceMethod);
         Assert.Contains("Child = surfaceGrid", surfaceMethod);
@@ -346,10 +344,11 @@ public sealed class MainWindowSourceTests
         Assert.Contains("Width = HardwareEditorPreviewResizeHandleSize", method);
         Assert.Contains("Height = HardwareEditorPreviewResizeHandleSize", method);
         Assert.Contains("handle.CapturePointer(args.Pointer);", method);
-        Assert.Contains("surfaceGrid.Width = _hardwareEditorPreviewWidth;", method);
-        Assert.Contains("surfaceGrid.Height = _hardwareEditorPreviewHeight;", method);
-        Assert.Contains("previewViewport.Width = _hardwareEditorPreviewWidth;", method);
-        Assert.Contains("previewViewport.Height = _hardwareEditorPreviewHeight;", method);
+        Assert.Contains("config.OverlayWidth =", method);
+        Assert.Contains("config.OverlayHeight =", method);
+        Assert.Contains("canvas.Width = config.OverlayWidth;", method);
+        Assert.Contains("canvas.Height = config.OverlayHeight;", method);
+        Assert.Contains("ScheduleApplySettings();", method);
         Assert.Contains("Math.Clamp(startWidth + delta.X", method);
         Assert.Contains("Math.Clamp(startHeight + delta.Y", method);
         Assert.DoesNotContain("MaxWidth = _hardwareEditorPreviewWidth", method);

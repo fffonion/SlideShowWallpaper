@@ -179,11 +179,12 @@ public sealed partial class HardwareOverlayWindow : Window
 
     private void RenderHardwareOverlayRows(HardwareOverlayState state, string fontFamily, double fontSize)
     {
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate([], requestedWidth: state.Width, requestedHeight: state.Height);
         HardwareOverlay.Padding = new Thickness(10, 8, 10, 8);
-        HardwareOverlay.Width = double.NaN;
-        HardwareOverlay.Height = double.NaN;
-        HardwareOverlayRoot.Width = double.NaN;
-        HardwareOverlayRoot.Height = double.NaN;
+        HardwareOverlay.Width = layout.Width;
+        HardwareOverlay.Height = layout.Height;
+        HardwareOverlayRoot.Width = layout.Width;
+        HardwareOverlayRoot.Height = layout.Height;
         HardwareOverlayCanvas.Children.Clear();
         HardwareOverlayCanvas.Visibility = Visibility.Collapsed;
         HardwareOverlayBackground.Source = null;
@@ -213,7 +214,12 @@ public sealed partial class HardwareOverlayWindow : Window
         HardwareOverlayContent.Visibility = Visibility.Collapsed;
         HardwareOverlayCanvas.Children.Clear();
 
-        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(state.Elements, backgroundWidth, backgroundHeight);
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(
+            state.Elements,
+            backgroundWidth,
+            backgroundHeight,
+            state.Width,
+            state.Height);
         double width = layout.Width;
         double height = layout.Height;
         HardwareOverlay.Width = width;

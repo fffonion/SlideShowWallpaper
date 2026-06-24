@@ -18,6 +18,18 @@ public sealed class HardwareOverlayLayoutCalculatorTests
     }
 
     [Fact]
+    public void Calculate_WithRequestedSize_UsesRequestedSize()
+    {
+        HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(
+            [CreateElement(20, 30, 100, 40)],
+            requestedWidth: 420,
+            requestedHeight: 260);
+
+        Assert.Equal(420, layout.Width);
+        Assert.Equal(260, layout.Height);
+    }
+
+    [Fact]
     public void Calculate_WithoutBackgroundSize_UsesElementBounds()
     {
         HardwareOverlayLayout layout = HardwareOverlayLayoutCalculator.Calculate(

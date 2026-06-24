@@ -403,6 +403,8 @@ public sealed partial class WallpaperPlaybackCoordinator
             metrics,
             _hardwareMonitorConfig.X,
             _hardwareMonitorConfig.Y,
+            _hardwareMonitorConfig.OverlayWidth,
+            _hardwareMonitorConfig.OverlayHeight,
             string.IsNullOrWhiteSpace(_hardwareMonitorConfig.FontFamily) ? "Segoe UI" : _hardwareMonitorConfig.FontFamily,
             _hardwareMonitorConfig.FontSize,
             _hardwareMonitorConfig.Opacity)

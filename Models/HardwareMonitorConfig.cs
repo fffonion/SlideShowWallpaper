@@ -45,6 +45,10 @@ public sealed class HardwareMonitorConfig
 
     public const int DefaultRefreshIntervalSeconds = 5;
 
+    public const double DefaultOverlayWidth = 360;
+
+    public const double DefaultOverlayHeight = 210;
+
     public bool IsEnabled { get; set; }
 
     public int RefreshIntervalSeconds { get; set; } = DefaultRefreshIntervalSeconds;
@@ -56,6 +60,10 @@ public sealed class HardwareMonitorConfig
     public double X { get; set; } = 24;
 
     public double Y { get; set; } = 24;
+
+    public double OverlayWidth { get; set; } = DefaultOverlayWidth;
+
+    public double OverlayHeight { get; set; } = DefaultOverlayHeight;
 
     public string FontFamily { get; set; } = "Segoe UI";
 
@@ -116,6 +124,10 @@ public sealed class HardwareOverlayTemplate
     public double X { get; set; } = 24;
 
     public double Y { get; set; } = 24;
+
+    public double OverlayWidth { get; set; } = HardwareMonitorConfig.DefaultOverlayWidth;
+
+    public double OverlayHeight { get; set; } = HardwareMonitorConfig.DefaultOverlayHeight;
 
     public string FontFamily { get; set; } = "Segoe UI";
 
@@ -273,6 +285,8 @@ public sealed record HardwareOverlayState(
     IReadOnlyList<HardwareOverlayMetric> Metrics,
     double X,
     double Y,
+    double Width,
+    double Height,
     string FontFamily,
     double FontSize,
     double Opacity)
