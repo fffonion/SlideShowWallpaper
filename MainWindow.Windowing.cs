@@ -29,6 +29,8 @@ public sealed partial class MainWindow
         double scale = GetWindowScale();
         int measuredHeight = _isHardwareMonitorSelected
             ? EstimateWindowHeightForHardwareMonitorPage()
+            : _isHardwareEditorSelected
+                ? EstimateWindowHeightForHardwareEditorPage()
             : _isSettingsSelected
                 ? EstimateWindowHeightForSettingsPage()
                 : EstimateWindowHeightForMonitorPage(targetWidth);
@@ -165,11 +167,21 @@ public sealed partial class MainWindow
         const int titleBarHeight = 48;
         const int contentTopPadding = 12;
         const int contentBottomPadding = 24;
-        const int previewEditorHeight = 210;
         return titleBarHeight
             + contentTopPadding
-            + EstimateSettingsSectionHeight(true, 9)
-            + previewEditorHeight
+            + EstimateSettingsSectionHeight(true, 4)
+            + contentBottomPadding;
+    }
+
+    private static int EstimateWindowHeightForHardwareEditorPage()
+    {
+        const int titleBarHeight = 48;
+        const int contentTopPadding = 12;
+        const int contentBottomPadding = 24;
+        const int editorCanvasSectionHeight = 540;
+        return titleBarHeight
+            + contentTopPadding
+            + editorCanvasSectionHeight
             + contentBottomPadding;
     }
 

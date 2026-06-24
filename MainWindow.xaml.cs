@@ -25,6 +25,7 @@ namespace SlideShowWallpaper;
 public sealed partial class MainWindow : Window
 {
     private const string HardwareMonitorNavigationTag = "__hardware_monitor";
+    private const string HardwareEditorNavigationTag = "__hardware_editor";
     private const string SettingsNavigationTag = "__settings";
     private const double DefaultPreviewPaneWidth = 250;
     private const double MinimumPreviewPaneWidth = 160;
@@ -139,6 +140,7 @@ public sealed partial class MainWindow : Window
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
     private bool _isHardwareMonitorSelected;
+    private bool _isHardwareEditorSelected;
     private bool _isSettingsSelected;
     private bool _settingsUiUnloadedForBackground;
     private bool _backgroundStartupTrimPending;

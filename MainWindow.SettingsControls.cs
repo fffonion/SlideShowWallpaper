@@ -140,6 +140,33 @@ public sealed partial class MainWindow
         };
     }
 
+    private static Border CreateSettingsContentSection(string title, FrameworkElement content)
+    {
+        var stack = new StackPanel();
+        var titleBlock = new TextBlock
+        {
+            Text = title,
+            FontSize = 22,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Margin = new Thickness(16, 14, 16, 10),
+        };
+        AutomationProperties.SetName(titleBlock, title);
+        stack.Children.Add(titleBlock);
+        stack.Children.Add(CreateSettingsDivider());
+
+        content.Margin = new Thickness(16, 12, 16, 14);
+        stack.Children.Add(content);
+
+        return new Border
+        {
+            Background = GetThemeBrush("CardBackgroundFillColorDefaultBrush"),
+            BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Child = stack,
+        };
+    }
+
     private static Border CreateSettingsRow(SettingsRow row)
     {
         var content = new Grid
