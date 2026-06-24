@@ -33,11 +33,9 @@
             CornerRadius="6"
             Padding="10,8"
             Visibility="Collapsed">
-            <TextBlock
-                x:Name="HardwareOverlayText"
-                FontFamily="Consolas"
-                Foreground="White"
-                TextWrapping="NoWrap" />
+            <StackPanel
+                x:Name="HardwareOverlayContent"
+                Spacing="5" />
         </Border>
         <Border
             x:Name="ErrorOverlay"

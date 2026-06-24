@@ -19,6 +19,21 @@ public enum HardwareMetricGroup
     Other
 }
 
+public enum HardwareOverlayIconKind
+{
+    CpuTemperature,
+    GpuTemperature,
+    StorageTemperature,
+    Temperature,
+    Fan,
+    Memory,
+    Vram,
+    CpuPower,
+    GpuPower,
+    Power,
+    Generic
+}
+
 public sealed class HardwareMonitorConfig
 {
     public const string DefaultTemplate = "{metrics}";
@@ -79,4 +94,13 @@ public sealed record HardwareSensorReading(
 
 public sealed record HardwareMonitorSnapshot(IReadOnlyList<HardwareSensorReading> Sensors, DateTimeOffset CapturedAt);
 
-public sealed record HardwareOverlayState(bool IsVisible, string Text, double X, double Y, double FontSize, double Opacity);
+public sealed record HardwareOverlayMetric(HardwareOverlayIconKind IconKind, string ValueText);
+
+public sealed record HardwareOverlayState(
+    bool IsVisible,
+    string Text,
+    IReadOnlyList<HardwareOverlayMetric> Metrics,
+    double X,
+    double Y,
+    double FontSize,
+    double Opacity);

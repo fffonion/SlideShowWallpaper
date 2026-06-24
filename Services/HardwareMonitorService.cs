@@ -168,14 +168,31 @@ public static class HardwareOverlayTextRenderer
 {
     public static string Render(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
     {
-        IReadOnlyList<HardwareSensorReading> selected = SelectSensors(config, snapshot);
-        string metrics = string.Join(Environment.NewLine, selected.Select(FormatReading));
+        string metrics = string.Join(Environment.NewLine, CreateMetrics(config, snapshot).Select(metric => metric.ValueText));
         string template = string.IsNullOrWhiteSpace(config.TemplateText)
             ? HardwareMonitorConfig.DefaultTemplate
             : config.TemplateText;
         return template
             .Replace("{metrics}", metrics, StringComparison.OrdinalIgnoreCase)
             .Replace("{time}", snapshot.CapturedAt.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string RenderStaticText(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
+    {
+        string template = string.IsNullOrWhiteSpace(config.TemplateText)
+            ? HardwareMonitorConfig.DefaultTemplate
+            : config.TemplateText;
+        return template
+            .Replace("{metrics}", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}", snapshot.CapturedAt.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture), StringComparison.OrdinalIgnoreCase)
+            .Trim();
+    }
+
+    public static IReadOnlyList<HardwareOverlayMetric> CreateMetrics(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
+    {
+        return SelectSensors(config, snapshot)
+            .Select(reading => new HardwareOverlayMetric(GetIconKind(reading), FormatReading(reading)))
+            .ToArray();
     }
 
     public static IReadOnlyList<HardwareSensorReading> SelectSensors(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
@@ -198,31 +215,29 @@ public static class HardwareOverlayTextRenderer
             HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable => reading.Value.ToString("0.0", CultureInfo.CurrentCulture),
             _ => reading.Value.ToString("0.#", CultureInfo.CurrentCulture),
         };
-        string unit = reading.Unit == "C" ? "°C" : reading.Unit;
-        if (reading.Unit == "C")
-        {
-            unit = "\u00B0C";
-        }
+        string unit = reading.Unit == "C" ? "\u00B0C" : reading.Unit;
 
-        return $"{GetReadingIcon(reading)} {value} {unit}";
+        return $"{value} {unit}";
     }
 
-    private static string GetReadingIcon(HardwareSensorReading reading)
+    public static HardwareOverlayIconKind GetIconKind(HardwareSensorReading reading)
     {
         return reading.Kind switch
         {
             HardwareMetricKind.Temperature => reading.Group switch
             {
-                HardwareMetricGroup.Cpu => "\u25A3 \uD83C\uDF21\uFE0F",
-                HardwareMetricGroup.Gpu => "\u25A4 \uD83C\uDF21\uFE0F",
-                HardwareMetricGroup.Storage => "\u25A5 \uD83C\uDF21\uFE0F",
-                _ => "\uD83C\uDF21\uFE0F",
+                HardwareMetricGroup.Cpu => HardwareOverlayIconKind.CpuTemperature,
+                HardwareMetricGroup.Gpu => HardwareOverlayIconKind.GpuTemperature,
+                HardwareMetricGroup.Storage => HardwareOverlayIconKind.StorageTemperature,
+                _ => HardwareOverlayIconKind.Temperature,
             },
-            HardwareMetricKind.FanRpm => "\u25CC",
-            HardwareMetricKind.MemoryAvailable => "\u25A6",
-            HardwareMetricKind.VramAvailable => "\u25A4 \u25A6",
-            HardwareMetricKind.Power => reading.Group == HardwareMetricGroup.Gpu ? "\u25A4 \u26A1" : "\u25A3 \u26A1",
-            _ => "\u25A1",
+            HardwareMetricKind.FanRpm => HardwareOverlayIconKind.Fan,
+            HardwareMetricKind.MemoryAvailable => HardwareOverlayIconKind.Memory,
+            HardwareMetricKind.VramAvailable => HardwareOverlayIconKind.Vram,
+            HardwareMetricKind.Power => reading.Group == HardwareMetricGroup.Gpu
+                ? HardwareOverlayIconKind.GpuPower
+                : HardwareOverlayIconKind.CpuPower,
+            _ => HardwareOverlayIconKind.Generic,
         };
     }
 

@@ -371,14 +371,16 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
-        string text = HardwareOverlayTextRenderer.Render(_hardwareMonitorConfig, snapshot);
+        string text = HardwareOverlayTextRenderer.RenderStaticText(_hardwareMonitorConfig, snapshot);
+        IReadOnlyList<HardwareOverlayMetric> metrics = HardwareOverlayTextRenderer.CreateMetrics(_hardwareMonitorConfig, snapshot);
         foreach ((string monitorId, WallpaperWindow window) in _windows)
         {
             bool isTarget = string.IsNullOrWhiteSpace(_hardwareMonitorConfig.TargetMonitorId)
                 || string.Equals(_hardwareMonitorConfig.TargetMonitorId, monitorId, StringComparison.OrdinalIgnoreCase);
             var state = new HardwareOverlayState(
-                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && !string.IsNullOrWhiteSpace(text),
+                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && (!string.IsNullOrWhiteSpace(text) || metrics.Count > 0),
                 text,
+                metrics,
                 _hardwareMonitorConfig.X,
                 _hardwareMonitorConfig.Y,
                 _hardwareMonitorConfig.FontSize,
@@ -391,7 +393,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     {
         foreach (WallpaperWindow window in _windows.Values)
         {
-            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, 0, 0, 0, 0));
+            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, 0, 0));
         }
     }
 

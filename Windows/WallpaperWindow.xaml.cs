@@ -98,7 +98,7 @@ public sealed partial class WallpaperWindow : Window
         StopVideo();
         ClearImageSources();
         HideError();
-        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, 0, 0, 0, 0));
+        SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, 0, 0));
         _isShowingWallpaper = false;
         NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);
     }
@@ -108,15 +108,50 @@ public sealed partial class WallpaperWindow : Window
         if (!state.IsVisible)
         {
             HardwareOverlay.Visibility = Visibility.Collapsed;
-            HardwareOverlayText.Text = string.Empty;
+            HardwareOverlayContent.Children.Clear();
             return;
         }
 
-        HardwareOverlayText.Text = state.Text;
-        HardwareOverlayText.FontSize = Math.Max(10, state.FontSize);
+        double fontSize = Math.Max(10, state.FontSize);
+        HardwareOverlayContent.Children.Clear();
+        if (!string.IsNullOrWhiteSpace(state.Text))
+        {
+            HardwareOverlayContent.Children.Add(CreateHardwareOverlayText(state.Text, fontSize));
+        }
+
+        foreach (HardwareOverlayMetric metric in state.Metrics)
+        {
+            HardwareOverlayContent.Children.Add(CreateHardwareMetricRow(metric, fontSize));
+        }
+
         HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
         HardwareOverlay.Margin = new Thickness(Math.Max(0, state.X), Math.Max(0, state.Y), 0, 0);
         HardwareOverlay.Visibility = Visibility.Visible;
+    }
+
+    private static TextBlock CreateHardwareOverlayText(string text, double fontSize)
+    {
+        return new TextBlock
+        {
+            Text = text,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = fontSize,
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+            TextWrapping = TextWrapping.NoWrap,
+        };
+    }
+
+    private static StackPanel CreateHardwareMetricRow(HardwareOverlayMetric metric, double fontSize)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(metric.IconKind, Math.Max(17, fontSize + 2)));
+        row.Children.Add(CreateHardwareOverlayText(metric.ValueText, fontSize));
+        return row;
     }
 
     public async Task ShowImageAsync(string path)
@@ -432,7 +467,7 @@ public sealed partial class WallpaperWindow : Window
         ResetMediaPlayerSource(_mediaPlayer);
         VideoPlayer.Visibility = Visibility.Collapsed;
         ErrorTitleText.Text = LocalizedStrings.Get("VideoPlaybackErrorTitle");
-        ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", Path.GetFileName(path), message);
+        ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", System.IO.Path.GetFileName(path), message);
         ErrorOverlay.Visibility = Visibility.Visible;
     }
 

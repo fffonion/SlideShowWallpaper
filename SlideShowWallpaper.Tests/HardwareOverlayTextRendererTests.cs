@@ -26,9 +26,33 @@ public sealed class HardwareOverlayTextRendererTests
         Assert.Contains("Now", text);
         Assert.Contains("61.2", text);
         Assert.Contains("182.5 W", text);
+        Assert.DoesNotContain("\ud83c", text);
         Assert.DoesNotContain("Package", text);
         Assert.DoesNotContain("Board Power", text);
         Assert.DoesNotContain("Fan", text);
+    }
+
+    [Fact]
+    public void CreateMetrics_WithSelectedSensors_UsesVectorIconKindsAndSelectedOrder()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            SelectedSensorIds = ["gpu-power", "cpu-temp"],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("cpu-temp", "CPU", "Package", HardwareMetricKind.Temperature, HardwareMetricGroup.Cpu, 61.2, "C"),
+                new HardwareSensorReading("gpu-power", "GPU", "Board Power", HardwareMetricKind.Power, HardwareMetricGroup.Gpu, 182.5, "W"),
+            ],
+            DateTimeOffset.Now);
+
+        IReadOnlyList<HardwareOverlayMetric> metrics = HardwareOverlayTextRenderer.CreateMetrics(config, snapshot);
+
+        Assert.Equal(2, metrics.Count);
+        Assert.Equal(HardwareOverlayIconKind.CpuTemperature, metrics[0].IconKind);
+        Assert.Equal("61.2 °C", metrics[0].ValueText);
+        Assert.Equal(HardwareOverlayIconKind.GpuPower, metrics[1].IconKind);
+        Assert.Equal("182.5 W", metrics[1].ValueText);
     }
 
     [Fact]
