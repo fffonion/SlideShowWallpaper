@@ -111,7 +111,8 @@
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>ディスプレイ</value></data>
   <data name="HardwareMonitorSensors" xml:space="preserve"><value>センサー</value></data>
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>位置</value></data>
-  <data name="HardwareMonitorStyle" xml:space="preserve"><value>スタイル</value></data>
+  <data name="HardwareMonitorStyle" xml:space="preserve"><value>グローバル</value></data>
+  <data name="HardwareMonitorBackground" xml:space="preserve"><value>背景</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>テンプレート</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>プレビュー</value></data>
   <data name="HardwareMonitorEditor" xml:space="preserve"><value>エディター</value></data>
@@ -121,10 +122,10 @@
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>センサー追加</value></data>
   <data name="DialogClose" xml:space="preserve"><value>閉じる</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>テキスト追加</value></data>
-  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>アイコン画像を読み込み</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>アイコンを置換</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>背景を読み込み</value></data>
   <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>背景をクリア</value></data>
-  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>要素</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>スタイル</value></data>
   <data name="HardwareMonitorElementText" xml:space="preserve"><value>テキスト</value></data>
   <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>ラベル</value></data>
   <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>フォント</value></data>

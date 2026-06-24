@@ -189,6 +189,7 @@ public sealed partial class MainWindow
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value => config.FontSize = Math.Max(10, value), LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateNumberBox(config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1), LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplateActions"), buttonRow));
     }
@@ -220,6 +221,47 @@ public sealed partial class MainWindow
             ScheduleApplySettings();
         };
         return textBox;
+    }
+
+    private FrameworkElement CreateHardwareBackgroundControls(HardwareMonitorConfig config)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+
+        var backgroundButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Pictures),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(backgroundButton, LocalizedStrings.Get("HardwareMonitorImportBackground"));
+        ToolTipService.SetToolTip(backgroundButton, LocalizedStrings.Get("HardwareMonitorImportBackground"));
+        backgroundButton.Click += async (_, _) => await ImportHardwareBackgroundAsync(config);
+
+        var clearBackgroundButton = new Button
+        {
+            Content = new SymbolIcon(Symbol.Clear),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+        };
+        AutomationProperties.SetName(clearBackgroundButton, LocalizedStrings.Get("HardwareMonitorClearBackground"));
+        ToolTipService.SetToolTip(clearBackgroundButton, LocalizedStrings.Get("HardwareMonitorClearBackground"));
+        clearBackgroundButton.Click += (_, _) =>
+        {
+            config.BackgroundImagePath = string.Empty;
+            ScheduleApplySettings();
+            RenderTabs(_selectedMonitorId);
+        };
+
+        panel.Children.Add(backgroundButton);
+        panel.Children.Add(clearBackgroundButton);
+        return panel;
     }
 
     private FrameworkElement CreateHardwareSensorDialogButton(HardwareMonitorConfig config)
@@ -589,49 +631,8 @@ public sealed partial class MainWindow
             RenderTabs(_selectedMonitorId);
         };
 
-        var imageButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.OpenFile),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(imageButton, LocalizedStrings.Get("HardwareMonitorImportIconImage"));
-        ToolTipService.SetToolTip(imageButton, LocalizedStrings.Get("HardwareMonitorImportIconImage"));
-        imageButton.Click += async (_, _) => await ImportHardwareElementImageAsync(config);
-
-        var backgroundButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.Pictures),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(backgroundButton, LocalizedStrings.Get("HardwareMonitorImportBackground"));
-        ToolTipService.SetToolTip(backgroundButton, LocalizedStrings.Get("HardwareMonitorImportBackground"));
-        backgroundButton.Click += async (_, _) => await ImportHardwareBackgroundAsync(config);
-
-        var clearBackgroundButton = new Button
-        {
-            Content = new SymbolIcon(Symbol.Clear),
-            Width = 40,
-            Height = 40,
-            Padding = new Thickness(0),
-        };
-        AutomationProperties.SetName(clearBackgroundButton, LocalizedStrings.Get("HardwareMonitorClearBackground"));
-        ToolTipService.SetToolTip(clearBackgroundButton, LocalizedStrings.Get("HardwareMonitorClearBackground"));
-        clearBackgroundButton.Click += (_, _) =>
-        {
-            config.BackgroundImagePath = string.Empty;
-            ScheduleApplySettings();
-            RenderTabs(_selectedMonitorId);
-        };
-
         panel.Children.Add(addSensorsButton);
         panel.Children.Add(addTextButton);
-        panel.Children.Add(imageButton);
-        panel.Children.Add(backgroundButton);
-        panel.Children.Add(clearBackgroundButton);
         return panel;
     }
 
@@ -764,6 +765,10 @@ public sealed partial class MainWindow
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareFontCombo(string.IsNullOrWhiteSpace(element.FontFamily) ? config.FontFamily : element.FontFamily, value => element.FontFamily = value, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontSize"), CreateNumberBox(element.FontSize, value => element.FontSize = Math.Max(8, value), LocalizedStrings.Get("HardwareMonitorElementFontSize"))));
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareColorPicker(element.Foreground, value => element.Foreground = value, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
+        }
+        else
+        {
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorImportIconImage"), CreateReplaceHardwareElementImageButton(config, element)));
         }
 
         stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwareElementPositionControls(element)));
@@ -1050,7 +1055,23 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private async Task ImportHardwareElementImageAsync(HardwareMonitorConfig config)
+    private FrameworkElement CreateReplaceHardwareElementImageButton(HardwareMonitorConfig config, HardwareOverlayElement element)
+    {
+        var button = new Button
+        {
+            Content = new SymbolIcon(Symbol.OpenFile),
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(button, LocalizedStrings.Get("HardwareMonitorImportIconImage"));
+        ToolTipService.SetToolTip(button, LocalizedStrings.Get("HardwareMonitorImportIconImage"));
+        button.Click += async (_, _) => await ReplaceHardwareElementImageAsync(config, element);
+        return button;
+    }
+
+    private async Task ReplaceHardwareElementImageAsync(HardwareMonitorConfig config, HardwareOverlayElement element)
     {
         string? path = await _folderPickerService.PickOpenFileAsync(_hwnd, [".png", ".jpg", ".jpeg", ".bmp", ".webp"]);
         if (string.IsNullOrWhiteSpace(path))
@@ -1058,11 +1079,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        HardwareOverlayElement element = CreateDefaultHardwareElement(HardwareOverlayElementKind.Image, config.Elements.Count);
         element.ImagePath = path;
-        element.Width = 48;
-        element.Height = 48;
-        config.Elements.Add(element);
         config.SelectedElementId = element.Id;
         ScheduleApplySettings();
         RenderTabs(_selectedMonitorId);

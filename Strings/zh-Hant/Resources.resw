@@ -111,7 +111,8 @@
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>螢幕</value></data>
   <data name="HardwareMonitorSensors" xml:space="preserve"><value>感測器</value></data>
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>位置</value></data>
-  <data name="HardwareMonitorStyle" xml:space="preserve"><value>樣式</value></data>
+  <data name="HardwareMonitorStyle" xml:space="preserve"><value>全域</value></data>
+  <data name="HardwareMonitorBackground" xml:space="preserve"><value>背景</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>範本</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>預覽</value></data>
   <data name="HardwareMonitorEditor" xml:space="preserve"><value>編輯器</value></data>
@@ -121,10 +122,10 @@
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>加入感測器</value></data>
   <data name="DialogClose" xml:space="preserve"><value>關閉</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>加入文字</value></data>
-  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>匯入圖示圖片</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>替換圖示</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>匯入背景</value></data>
   <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>清除背景</value></data>
-  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>元素</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>樣式</value></data>
   <data name="HardwareMonitorElementText" xml:space="preserve"><value>文字</value></data>
   <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>標籤</value></data>
   <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>字型</value></data>

@@ -110,7 +110,8 @@
   <data name="HardwareMonitorTargetDisplay" xml:space="preserve"><value>Display</value></data>
   <data name="HardwareMonitorSensors" xml:space="preserve"><value>Sensors</value></data>
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>Position</value></data>
-  <data name="HardwareMonitorStyle" xml:space="preserve"><value>Style</value></data>
+  <data name="HardwareMonitorStyle" xml:space="preserve"><value>Global</value></data>
+  <data name="HardwareMonitorBackground" xml:space="preserve"><value>Background</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>Template</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>Preview</value></data>
   <data name="HardwareMonitorEditor" xml:space="preserve"><value>Editor</value></data>
@@ -120,10 +121,10 @@
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>Add sensors</value></data>
   <data name="DialogClose" xml:space="preserve"><value>Close</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>Add text</value></data>
-  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>Import icon image</value></data>
+  <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>Replace icon</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>Import background</value></data>
   <data name="HardwareMonitorClearBackground" xml:space="preserve"><value>Clear background</value></data>
-  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>Element</value></data>
+  <data name="HardwareMonitorElementSettings" xml:space="preserve"><value>Style</value></data>
   <data name="HardwareMonitorElementText" xml:space="preserve"><value>Text</value></data>
   <data name="HardwareMonitorTextElementDefault" xml:space="preserve"><value>Label</value></data>
   <data name="HardwareMonitorElementFontFamily" xml:space="preserve"><value>Font</value></data>

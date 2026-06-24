@@ -265,7 +265,25 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
 
         Assert.Contains("CreateHardwareFontCombo(config.FontFamily", method);
+        Assert.Contains("HardwareMonitorBackground", method);
+        Assert.Contains("CreateHardwareBackgroundControls(config)", method);
         Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
+    }
+
+    [Fact]
+    public void CreateHardwareEditorActions_ExcludesImageAndBackgroundButtons()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorActions", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSurface", StringComparison.Ordinal)];
+
+        Assert.Contains("HardwareMonitorAddSensorElements", method);
+        Assert.Contains("HardwareMonitorAddTextElement", method);
+        Assert.DoesNotContain("HardwareMonitorImportIconImage", method);
+        Assert.DoesNotContain("HardwareMonitorImportBackground", method);
+        Assert.DoesNotContain("HardwareMonitorClearBackground", method);
     }
 
     [Fact]
@@ -279,7 +297,23 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("CreateHardwareFontCombo", method);
         Assert.Contains("CreateHardwareColorPicker", method);
+        Assert.Contains("CreateReplaceHardwareElementImageButton(config, element)", method);
         Assert.DoesNotContain("CreateHardwareTextBox(element.Foreground", method);
+    }
+
+    [Fact]
+    public void ReplaceHardwareElementImage_UpdatesSelectedElementWithoutAddingNewElement()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private async Task ReplaceHardwareElementImageAsync", StringComparison.Ordinal)..
+            source.IndexOf("private async Task ImportHardwareBackgroundAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("element.ImagePath = path;", method);
+        Assert.Contains("config.SelectedElementId = element.Id;", method);
+        Assert.DoesNotContain("CreateDefaultHardwareElement", method);
+        Assert.DoesNotContain("config.Elements.Add", method);
     }
 
     [Fact]
