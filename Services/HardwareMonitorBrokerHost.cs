@@ -37,18 +37,15 @@ public static class HardwareMonitorBrokerHost
 
     private static void RunServer(string pipeName, HardwareMonitorReader reader, CancellationToken cancellationToken)
     {
+        using NamedPipeServerStream server = CreateServer(pipeName);
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                using var server = new NamedPipeServerStream(
-                    pipeName,
-                    PipeDirection.InOut,
-                    maxNumberOfServerInstances: 1,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
                 server.WaitForConnectionAsync(cancellationToken).GetAwaiter().GetResult();
-                if (HandleRequest(server, reader, cancellationToken))
+                bool shouldStop = HandleRequest(server, reader, cancellationToken);
+                DisconnectServer(server);
+                if (shouldStop)
                 {
                     return;
                 }
@@ -59,7 +56,37 @@ public static class HardwareMonitorBrokerHost
             }
             catch (IOException)
             {
+                DisconnectServer(server);
             }
+        }
+    }
+
+    private static NamedPipeServerStream CreateServer(string pipeName)
+    {
+        return new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            maxNumberOfServerInstances: 1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+    }
+
+    private static void DisconnectServer(NamedPipeServerStream server)
+    {
+        if (!server.IsConnected)
+        {
+            return;
+        }
+
+        try
+        {
+            server.Disconnect();
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (IOException)
+        {
         }
     }
 

@@ -127,8 +127,11 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.DoesNotContain("IdleExitTimeout", source);
         Assert.DoesNotContain("CancelAfter", method);
         Assert.DoesNotContain("when (!cancellationToken.IsCancellationRequested)", method);
+        Assert.DoesNotContain("using var server = new NamedPipeServerStream", method);
+        Assert.Contains("using NamedPipeServerStream server = CreateServer(pipeName);", method);
         Assert.Contains("server.WaitForConnectionAsync(cancellationToken)", method);
         Assert.Contains("HandleRequest(server, reader, cancellationToken)", method);
+        Assert.Contains("DisconnectServer(server);", method);
     }
 
     [Fact]
