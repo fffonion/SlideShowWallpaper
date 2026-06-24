@@ -2,8 +2,6 @@ namespace SlideShowWallpaper.Services;
 
 public sealed record LaunchOptions(bool StartInTray, bool AllowMultipleInstances, bool DisableCloseToTray, bool SkipElevationDemotion)
 {
-    public const string HardwareMonitorHelperArgument = "/hardware-monitor-helper";
-
     public static LaunchOptions FromArguments(IEnumerable<string> arguments)
     {
         string[] normalizedArguments = arguments.ToArray();

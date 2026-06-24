@@ -42,14 +42,6 @@ public partial class App : Application
         try
         {
             string[] commandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
-            if (ElevatedHardwareMonitorClient.IsHelperMode(commandLineArguments, out string hardwareMonitorPipeName))
-            {
-                ElevatedHardwareMonitorClient.RunHelper(hardwareMonitorPipeName);
-                Exit();
-                Environment.Exit(0);
-                return;
-            }
-
             LaunchOptions launchOptions = LaunchOptions.FromArguments(commandLineArguments);
             if (!launchOptions.SkipElevationDemotion
                 && _unelevatedRestartService.TryRestartIfCurrentProcessIsElevated(commandLineArguments))

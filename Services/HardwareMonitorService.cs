@@ -7,15 +7,8 @@ namespace SlideShowWallpaper.Services;
 public sealed class HardwareMonitorService : IDisposable
 {
     private readonly object _syncRoot = new();
-    private readonly bool _useElevatedHelper;
     private Computer? _computer;
-    private ElevatedHardwareMonitorClient? _elevatedClient;
     private bool _disposed;
-
-    public HardwareMonitorService(bool useElevatedHelper = true)
-    {
-        _useElevatedHelper = useElevatedHelper;
-    }
 
     public HardwareMonitorSnapshot GetSnapshot()
     {
@@ -24,11 +17,6 @@ public sealed class HardwareMonitorService : IDisposable
             if (_disposed)
             {
                 return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
-            }
-
-            if (_useElevatedHelper && _elevatedClient?.GetSnapshot() is HardwareMonitorSnapshot elevatedSnapshot)
-            {
-                return elevatedSnapshot;
             }
 
             Computer computer = EnsureComputer();
@@ -43,25 +31,6 @@ public sealed class HardwareMonitorService : IDisposable
         }
     }
 
-    public bool TryStartElevatedReader()
-    {
-        lock (_syncRoot)
-        {
-            if (_disposed)
-            {
-                return false;
-            }
-
-            if (CurrentProcessPrivilege.IsAdministrator())
-            {
-                return true;
-            }
-
-            _elevatedClient ??= new ElevatedHardwareMonitorClient();
-            return _elevatedClient.Start();
-        }
-    }
-
     public void Dispose()
     {
         lock (_syncRoot)
@@ -73,8 +42,6 @@ public sealed class HardwareMonitorService : IDisposable
 
             _computer?.Close();
             _computer = null;
-            _elevatedClient?.Dispose();
-            _elevatedClient = null;
             _disposed = true;
         }
     }

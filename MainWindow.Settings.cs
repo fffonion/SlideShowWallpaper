@@ -494,14 +494,12 @@ public sealed partial class MainWindow
 
     private void RestartAsAdministrator()
     {
-        if (!_hardwareMonitorService.TryStartElevatedReader())
+        if (!_administratorRestartService.TryRestart())
         {
             return;
         }
 
-        RefreshHardwareSnapshot();
-        ScheduleApplySettings();
-        RenderTabs(_selectedMonitorId);
+        ExitApplication();
     }
 
     private static FrameworkElement CreateHardwareSensorSelectionContent(HardwareSensorReading sensor)

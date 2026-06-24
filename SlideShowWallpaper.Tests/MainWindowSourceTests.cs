@@ -29,22 +29,22 @@ public sealed class MainWindowSourceTests
             source.IndexOf("protected override void OnLaunched", StringComparison.Ordinal)..
             source.IndexOf("private void ShowExistingInstanceWindow", StringComparison.Ordinal)];
 
-        int helperIndex = method.IndexOf("ElevatedHardwareMonitorClient.IsHelperMode", StringComparison.Ordinal);
         int skipCheckIndex = method.IndexOf("!launchOptions.SkipElevationDemotion", StringComparison.Ordinal);
         int demoteIndex = method.IndexOf("TryRestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
         int logIndex = method.IndexOf("AppLog.Write(\"Launch start\")", StringComparison.Ordinal);
         int tempCleanupIndex = method.IndexOf("AppTempPaths.Cleanup();", StringComparison.Ordinal);
 
-        Assert.True(helperIndex >= 0);
         Assert.True(skipCheckIndex >= 0);
-        Assert.True(demoteIndex > helperIndex);
+        Assert.True(demoteIndex > skipCheckIndex);
         Assert.True(logIndex > demoteIndex);
         Assert.True(tempCleanupIndex > demoteIndex);
         Assert.Contains("Environment.Exit(0);", method);
+        Assert.DoesNotContain("ElevatedHardwareMonitorClient", method);
+        Assert.DoesNotContain("HardwareMonitorHelper", method);
     }
 
     [Fact]
-    public void RestartAsAdministrator_StartsElevatedHardwareReaderInsteadOfElevatingMainApp()
+    public void RestartAsAdministrator_RestartsMainAppAsAdministrator()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
@@ -52,10 +52,10 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void RestartAsAdministrator", StringComparison.Ordinal)..
             source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)];
 
-        Assert.Contains("_hardwareMonitorService.TryStartElevatedReader()", method);
-        Assert.Contains("RefreshHardwareSnapshot();", method);
-        Assert.DoesNotContain("_administratorRestartService.TryRestart()", method);
-        Assert.DoesNotContain("ExitApplication();", method);
+        Assert.Contains("_administratorRestartService.TryRestart()", method);
+        Assert.Contains("ExitApplication();", method);
+        Assert.DoesNotContain("_hardwareMonitorService.TryStartElevatedReader()", method);
+        Assert.DoesNotContain("RefreshHardwareSnapshot();", method);
     }
 
     [Fact]
@@ -538,15 +538,16 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorService_UsesElevatedClientOnlyForSnapshots()
+    public void HardwareMonitorService_ReadsHardwareInCurrentProcess()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
 
-        Assert.Contains("_elevatedClient?.GetSnapshot()", source);
-        Assert.Contains("public bool TryStartElevatedReader()", source);
-        Assert.Contains("_elevatedClient ??= new ElevatedHardwareMonitorClient();", source);
-        Assert.Contains("_elevatedClient?.Dispose();", source);
+        Assert.Contains("Computer computer = EnsureComputer();", source);
+        Assert.Contains("CurrentProcessPrivilege.IsAdministrator()", source);
+        Assert.DoesNotContain("ElevatedHardwareMonitorClient", source);
+        Assert.DoesNotContain("TryStartElevatedReader", source);
+        Assert.DoesNotContain("NamedPipe", source);
     }
 
     [Fact]
