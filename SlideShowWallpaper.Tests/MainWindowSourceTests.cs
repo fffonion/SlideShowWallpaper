@@ -201,6 +201,26 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HardwareEditorSnap_UsesOnlyElementEdges()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string guidesMethod = source[
+            source.IndexOf("private static IEnumerable<double> GetHardwareEditorAxisGuides", StringComparison.Ordinal)..
+            source.IndexOf("private static IEnumerable<double> GetHardwareEditorAxisOffsets", StringComparison.Ordinal)];
+        string offsetsMethod = source[
+            source.IndexOf("private static IEnumerable<double> GetHardwareEditorAxisOffsets", StringComparison.Ordinal)..
+            source.IndexOf("private static void UpdateHardwareEditorGuides", StringComparison.Ordinal)];
+
+        Assert.Contains("yield return position;", guidesMethod);
+        Assert.Contains("yield return position + size;", guidesMethod);
+        Assert.DoesNotContain("size / 2", guidesMethod);
+        Assert.Contains("yield return 0;", offsetsMethod);
+        Assert.Contains("yield return size;", offsetsMethod);
+        Assert.DoesNotContain("size / 2", offsetsMethod);
+    }
+
+    [Fact]
     public void HardwareEditorElementVisual_UsesAutoSizeForTextElements()
     {
         string root = FindProjectRoot();

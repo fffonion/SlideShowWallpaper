@@ -1335,14 +1335,12 @@ public sealed partial class MainWindow
     private static IEnumerable<double> GetHardwareEditorAxisGuides(double position, double size)
     {
         yield return position;
-        yield return position + (size / 2);
         yield return position + size;
     }
 
     private static IEnumerable<double> GetHardwareEditorAxisOffsets(double size)
     {
         yield return 0;
-        yield return size / 2;
         yield return size;
     }
 
