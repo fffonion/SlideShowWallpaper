@@ -1,18 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RootNamespace>SlideShowWallpaper</RootNamespace>
+    <RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>
     <AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>
-    <AssemblyTitle>Codex 壁纸大师 Broker</AssemblyTitle>
-    <FileDescription>Codex 壁纸大师 Broker</FileDescription>
-    <Product>Codex 壁纸大师</Product>
+    <AssemblyTitle>SlideShowWallpaper Hardware Broker</AssemblyTitle>
+    <FileDescription>SlideShowWallpaper Hardware Broker</FileDescription>
+    <Product>SlideShowWallpaper</Product>
     <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,5 +27,6 @@
     <Compile Include="..\Services\HardwareMonitorBrokerHost.cs" Link="Services\HardwareMonitorBrokerHost.cs" />
     <Compile Include="..\Services\HardwareMonitorBrokerProtocol.cs" Link="Services\HardwareMonitorBrokerProtocol.cs" />
     <Compile Include="..\Services\HardwareMonitorReader.cs" Link="Services\HardwareMonitorReader.cs" />
+    <Compile Include="..\Services\WorkingSetTrimmer.cs" Link="Services\WorkingSetTrimmer.cs" />
   </ItemGroup>
 </Project>

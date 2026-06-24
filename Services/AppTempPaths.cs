@@ -25,6 +25,7 @@ public static class AppTempPaths
         DeleteOldFiles(NdfCache, cutoffUtc);
         DeleteOldFiles(ThumbnailMedia, cutoffUtc);
         DeleteOldFiles(TransientThumbnails, cutoffUtc);
+        DeleteOldFiles(Broker, cutoffUtc);
         TrimDirectory(NdfCache, MaxCacheBytes);
         TrimDirectory(ThumbnailCache, MaxCacheBytes);
         TrimDirectory(ThumbnailMedia, MaxCacheBytes / 2);

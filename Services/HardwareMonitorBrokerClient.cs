@@ -89,6 +89,12 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         }
 
         string brokerPath = HardwareBrokerExecutableResolver.GetBrokerExecutablePath(processPath);
+        if (string.IsNullOrWhiteSpace(brokerPath))
+        {
+            AppLog.Write("Hardware monitor broker executable is unavailable.");
+            return false;
+        }
+
         var startInfo = new ProcessStartInfo
         {
             FileName = brokerPath,

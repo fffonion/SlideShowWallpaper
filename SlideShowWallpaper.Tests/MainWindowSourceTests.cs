@@ -61,7 +61,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void ProgramMain_RunsHardwareBrokerBeforeStartingWinUi()
+    public void ProgramMain_StartsWinUiWithoutBrokerMode()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Program.cs"));
@@ -69,12 +69,10 @@ public sealed class MainWindowSourceTests
             source.IndexOf("public static int Main", StringComparison.Ordinal)..
             source.LastIndexOf('}')];
 
-        int brokerIndex = method.IndexOf("HardwareMonitorBrokerHost.IsBrokerMode(args)", StringComparison.Ordinal);
         int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
 
-        Assert.True(brokerIndex >= 0);
-        Assert.True(startIndex > brokerIndex);
-        Assert.Contains("return HardwareMonitorBrokerHost.Run(args);", method);
+        Assert.True(startIndex >= 0);
+        Assert.DoesNotContain("HardwareMonitorBrokerHost", method);
         Assert.DoesNotContain("Microsoft.UI", source);
     }
 
@@ -96,13 +94,11 @@ public sealed class MainWindowSourceTests
             source.IndexOf("public static int Main", StringComparison.Ordinal)..
             source.LastIndexOf('}')];
 
-        int brokerIndex = method.IndexOf("HardwareMonitorBrokerHost.IsBrokerMode(args)", StringComparison.Ordinal);
         int skipCheckIndex = method.IndexOf("!launchOptions.SkipElevationDemotion", StringComparison.Ordinal);
         int demoteIndex = method.IndexOf("TryRestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
         int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
 
-        Assert.True(brokerIndex >= 0);
-        Assert.True(skipCheckIndex > brokerIndex);
+        Assert.True(skipCheckIndex >= 0);
         Assert.True(demoteIndex > skipCheckIndex);
         Assert.True(startIndex > demoteIndex);
         Assert.Contains("return 0;", method);

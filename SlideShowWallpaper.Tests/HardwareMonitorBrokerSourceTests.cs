@@ -19,13 +19,22 @@ public sealed class HardwareMonitorBrokerSourceTests
     [Fact]
     public void BrokerExecutableResolver_ExtractsBrokerWithDistinctDescription()
     {
-        string processPath = Environment.ProcessPath ?? "testhost.exe";
-        string brokerPath = Services.HardwareBrokerExecutableResolver.GetBrokerExecutablePath(processPath);
+        using Stream resource = typeof(Services.HardwareBrokerExecutableResolver)
+            .Assembly
+            .GetManifestResourceStream(Services.HardwareBrokerExecutableResolver.BrokerExecutableFileName)
+            ?? throw new InvalidOperationException("Broker resource is missing.");
+        string brokerPath = Path.Combine(
+            Path.GetTempPath(),
+            $"SlideShowWallpaper.HardwareBroker.{Guid.NewGuid():N}.exe");
+        using (var output = File.Create(brokerPath))
+        {
+            resource.CopyTo(output);
+        }
 
-        Assert.EndsWith(Services.HardwareBrokerExecutableResolver.BrokerExecutableFileName, brokerPath);
         Assert.True(File.Exists(brokerPath));
         var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(brokerPath);
-        Assert.Equal("Codex 壁纸大师 Broker", versionInfo.FileDescription);
+        Assert.Equal("SlideShowWallpaper Hardware Broker", versionInfo.FileDescription);
+        File.Delete(brokerPath);
     }
 
     [Fact]
@@ -35,6 +44,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
 
         Assert.Contains("HardwareBrokerExecutableResolver.GetBrokerExecutablePath(processPath)", clientSource);
+        Assert.Contains("string.IsNullOrWhiteSpace(brokerPath)", clientSource);
         Assert.Contains("FileName = brokerPath", clientSource);
         Assert.Contains("WorkingDirectory = Path.GetDirectoryName(brokerPath)", clientSource);
     }
@@ -66,7 +76,7 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void BrokerExecutableResolver_ExtractsEmbeddedBrokerWithoutCopying()
+    public void BrokerExecutableResolver_ExtractsEmbeddedBrokerWithoutCopyingOrFallingBackToMainExe()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareBrokerExecutableResolver.cs"));
@@ -75,6 +85,10 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("GetManifestResourceStream(BrokerResourceName)", source);
         Assert.Contains("AppTempPaths.Broker", source);
         Assert.Contains("File.WriteAllBytes(temporaryPath, brokerBytes)", source);
+        Assert.Contains("TryExtractBrokerExecutable(brokerPath, allowProcessFallbackPath: true)", source);
+        Assert.Contains("Environment.ProcessId.ToString", source);
+        Assert.Contains("return string.Empty;", source);
+        Assert.DoesNotContain("? brokerPath : processPath", source);
         Assert.DoesNotContain("File.Copy", source);
         Assert.DoesNotContain("CreateHardLink", source);
         Assert.DoesNotContain("FileInfo", source);
@@ -82,12 +96,22 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void BrokerHost_DoesNotUseConsoleTitleForTaskManagerName()
+    public void AppTempPaths_CleansOldBrokerFiles()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "AppTempPaths.cs"));
+
+        Assert.Contains("DeleteOldFiles(Broker, cutoffUtc);", source);
+    }
+
+    [Fact]
+    public void BrokerHost_TrimsWorkingSetAfterResponding()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
 
-        Assert.DoesNotContain("Console.Title", source);
+        Assert.Contains("TrimBrokerWorkingSet();", source);
+        Assert.Contains("WorkingSetTrimmer.TrimCurrentProcess();", source);
     }
 
     [Fact]
@@ -107,15 +131,20 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void HardwareBrokerProject_HasDistinctDescriptionAndNoWinUi()
+    public void HardwareBrokerProject_IsConsoleBrokerProjectWithDistinctDescriptionAndNoWinUi()
     {
         string root = FindProjectRoot();
         string projectPath = Path.Combine(root, "HardwareBroker", "SlideShowWallpaper.HardwareBroker.csproj");
         string source = File.ReadAllText(projectPath);
 
+        Assert.Contains("<OutputType>Exe</OutputType>", source);
+        Assert.Contains("<RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>", source);
         Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", source);
-        Assert.Contains("<FileDescription>Codex 壁纸大师 Broker</FileDescription>", source);
+        Assert.Contains("<FileDescription>SlideShowWallpaper Hardware Broker</FileDescription>", source);
+        Assert.Contains("<ServerGarbageCollection>false</ServerGarbageCollection>", source);
         Assert.Contains("LibreHardwareMonitorLib", source);
+        Assert.Contains("WorkingSetTrimmer.cs", source);
+        Assert.DoesNotContain("<OutputType>WinExe</OutputType>", source);
         Assert.DoesNotContain("UseWinUI>true", source);
         Assert.DoesNotContain("Microsoft.WindowsAppSDK", source);
     }
