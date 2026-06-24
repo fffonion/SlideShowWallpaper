@@ -19,11 +19,19 @@ public static partial class NativeMethods
     internal const int GWL_EXSTYLE = -20;
     internal const int GWL_STYLE = -16;
     internal const int GWL_WNDPROC = -4;
+    internal const int SecurityImpersonation = 2;
     internal const int LVM_FIRST = 0x1000;
     internal const int LVM_SETBKCOLOR = LVM_FIRST + 1;
     internal const int LVM_SETTEXTBKCOLOR = LVM_FIRST + 38;
     internal const uint LWA_ALPHA = 0x00000002;
     internal const uint LWA_COLORKEY = 0x00000001;
+    internal const int TokenLinkedToken = 19;
+    internal const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
+    internal const uint TOKEN_ASSIGN_PRIMARY = 0x0001;
+    internal const uint TOKEN_DUPLICATE = 0x0002;
+    internal const uint TOKEN_QUERY = 0x0008;
+    internal const uint TOKEN_ADJUST_DEFAULT = 0x0080;
+    internal const uint TOKEN_ADJUST_SESSIONID = 0x0100;
     internal const int MF_GRAYED = 0x0001;
     internal const int MF_SEPARATOR = 0x0800;
     internal const int MF_STRING = 0x0000;
@@ -108,6 +116,30 @@ public static partial class NativeMethods
 
     [DllImport("kernel32.dll")]
     internal static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    internal static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    internal static extern bool GetTokenInformation(IntPtr tokenHandle, int tokenInformationClass, out TOKEN_LINKED_TOKEN tokenInformation, int tokenInformationLength, out int returnLength);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    internal static extern bool DuplicateTokenEx(IntPtr existingTokenHandle, uint desiredAccess, IntPtr tokenAttributes, int impersonationLevel, int tokenType, out IntPtr newTokenHandle);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool CreateProcessWithTokenW(
+        IntPtr tokenHandle,
+        int logonFlags,
+        string applicationName,
+        StringBuilder commandLine,
+        uint creationFlags,
+        IntPtr environment,
+        string currentDirectory,
+        ref STARTUPINFO startupInfo,
+        out PROCESS_INFORMATION processInformation);
 
     [DllImport("psapi.dll", SetLastError = true)]
     internal static extern bool EmptyWorkingSet(IntPtr hProcess);
@@ -348,6 +380,44 @@ public static partial class NativeMethods
         public POINT ptMinPosition;
         public POINT ptMaxPosition;
         public RECT rcNormalPosition;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct TOKEN_LINKED_TOKEN
+    {
+        public IntPtr LinkedToken;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct STARTUPINFO
+    {
+        public int cb;
+        public string? lpReserved;
+        public string? lpDesktop;
+        public string? lpTitle;
+        public int dwX;
+        public int dwY;
+        public int dwXSize;
+        public int dwYSize;
+        public int dwXCountChars;
+        public int dwYCountChars;
+        public int dwFillAttribute;
+        public int dwFlags;
+        public short wShowWindow;
+        public short cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PROCESS_INFORMATION
+    {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public int dwProcessId;
+        public int dwThreadId;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

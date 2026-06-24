@@ -37,10 +37,28 @@ public sealed class LaunchOptionsTests
     }
 
     [Fact]
+    public void FromArguments_WithMultipleSwitch_SkipsElevationDemotion()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments(["/multiple"]);
+
+        Assert.True(options.SkipElevationDemotion);
+    }
+
+    [Fact]
     public void FromArguments_WithElevatedRestartSwitch_AllowsMultipleWithoutDisablingCloseToTray()
     {
         LaunchOptions options = LaunchOptions.FromArguments([AdministratorRestartService.RestartArgument]);
 
+        Assert.True(options.AllowMultipleInstances);
+        Assert.False(options.DisableCloseToTray);
+    }
+
+    [Fact]
+    public void FromArguments_WithNoDemoteSwitch_SkipsDemotionWithoutDisablingCloseToTray()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments([UnelevatedRestartService.NoDemoteArgument]);
+
+        Assert.True(options.SkipElevationDemotion);
         Assert.True(options.AllowMultipleInstances);
         Assert.False(options.DisableCloseToTray);
     }

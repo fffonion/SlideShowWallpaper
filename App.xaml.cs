@@ -11,6 +11,7 @@ public partial class App : Application
     private readonly SettingsStore _settingsStore = new();
     private readonly AutostartService _autostartService = new();
     private readonly AdministratorRestartService _administratorRestartService = new();
+    private readonly UnelevatedRestartService _unelevatedRestartService = new();
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ImageOrderService _imageOrderService = new();
     private readonly FolderChangeWatcherService _folderChangeWatcherService = new();
@@ -40,9 +41,26 @@ public partial class App : Application
     {
         try
         {
+            string[] commandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
+            if (ElevatedHardwareMonitorClient.IsHelperMode(commandLineArguments, out string hardwareMonitorPipeName))
+            {
+                ElevatedHardwareMonitorClient.RunHelper(hardwareMonitorPipeName);
+                Exit();
+                Environment.Exit(0);
+                return;
+            }
+
+            LaunchOptions launchOptions = LaunchOptions.FromArguments(commandLineArguments);
+            if (!launchOptions.SkipElevationDemotion
+                && _unelevatedRestartService.TryRestartIfCurrentProcessIsElevated(commandLineArguments))
+            {
+                Exit();
+                Environment.Exit(0);
+                return;
+            }
+
             AppLog.Write("Launch start");
             AppTempPaths.Cleanup();
-            LaunchOptions launchOptions = LaunchOptions.FromArguments(Environment.GetCommandLineArgs().Skip(1));
             if (!launchOptions.AllowMultipleInstances)
             {
                 _singleInstanceService = new SingleInstanceService();

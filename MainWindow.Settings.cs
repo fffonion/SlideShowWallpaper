@@ -517,12 +517,14 @@ public sealed partial class MainWindow
 
     private void RestartAsAdministrator()
     {
-        if (!_administratorRestartService.TryRestart())
+        if (!_hardwareMonitorService.TryStartElevatedReader())
         {
             return;
         }
 
-        ExitApplication();
+        RefreshHardwareSnapshot();
+        ScheduleApplySettings();
+        RenderTabs(_selectedMonitorId);
     }
 
     private static FrameworkElement CreateHardwareSensorSelectionContent(HardwareSensorReading sensor)

@@ -21,6 +21,44 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void AppLaunch_DemotesElevatedProcessBeforeFileWrites()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string method = source[
+            source.IndexOf("protected override void OnLaunched", StringComparison.Ordinal)..
+            source.IndexOf("private void ShowExistingInstanceWindow", StringComparison.Ordinal)];
+
+        int helperIndex = method.IndexOf("ElevatedHardwareMonitorClient.IsHelperMode", StringComparison.Ordinal);
+        int skipCheckIndex = method.IndexOf("!launchOptions.SkipElevationDemotion", StringComparison.Ordinal);
+        int demoteIndex = method.IndexOf("TryRestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
+        int logIndex = method.IndexOf("AppLog.Write(\"Launch start\")", StringComparison.Ordinal);
+        int tempCleanupIndex = method.IndexOf("AppTempPaths.Cleanup();", StringComparison.Ordinal);
+
+        Assert.True(helperIndex >= 0);
+        Assert.True(skipCheckIndex >= 0);
+        Assert.True(demoteIndex > helperIndex);
+        Assert.True(logIndex > demoteIndex);
+        Assert.True(tempCleanupIndex > demoteIndex);
+        Assert.Contains("Environment.Exit(0);", method);
+    }
+
+    [Fact]
+    public void RestartAsAdministrator_StartsElevatedHardwareReaderInsteadOfElevatingMainApp()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private void RestartAsAdministrator", StringComparison.Ordinal)..
+            source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)];
+
+        Assert.Contains("_hardwareMonitorService.TryStartElevatedReader()", method);
+        Assert.Contains("RefreshHardwareSnapshot();", method);
+        Assert.DoesNotContain("_administratorRestartService.TryRestart()", method);
+        Assert.DoesNotContain("ExitApplication();", method);
+    }
+
+    [Fact]
     public void CurrentWallpaperChanged_WhenBackgroundStartupTrimIsPending_ReschedulesTrimAfterWallpaperReady()
     {
         string root = FindProjectRoot();
@@ -459,6 +497,18 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("IsControllerEnabled = true", method);
         Assert.Contains("IsPsuEnabled = true", method);
+    }
+
+    [Fact]
+    public void HardwareMonitorService_UsesElevatedClientOnlyForSnapshots()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
+
+        Assert.Contains("_elevatedClient?.GetSnapshot()", source);
+        Assert.Contains("public bool TryStartElevatedReader()", source);
+        Assert.Contains("_elevatedClient ??= new ElevatedHardwareMonitorClient();", source);
+        Assert.Contains("_elevatedClient?.Dispose();", source);
     }
 
     [Fact]
