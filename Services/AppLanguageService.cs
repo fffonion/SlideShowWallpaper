@@ -20,7 +20,13 @@ public static class AppLanguageService
 
     public static void Apply(AppLanguageMode languageMode)
     {
-        ApplyLanguageTag(GetLanguageTag(languageMode));
+        string? languageTag = GetLanguageTag(languageMode);
+        if (string.IsNullOrWhiteSpace(languageTag))
+        {
+            return;
+        }
+
+        ApplyLanguageTag(languageTag);
     }
 
     private static void ApplyLanguageTag(string languageTag)
@@ -35,7 +41,7 @@ public static class AppLanguageService
         }
     }
 
-    internal static string GetLanguageTag(AppLanguageMode languageMode)
+    internal static string? GetLanguageTag(AppLanguageMode languageMode)
     {
         return languageMode switch
         {
@@ -43,7 +49,7 @@ public static class AppLanguageService
             AppLanguageMode.SimplifiedChinese => "zh-Hans",
             AppLanguageMode.TraditionalChinese => "zh-Hant",
             AppLanguageMode.Japanese => "ja-JP",
-            _ => string.Empty,
+            _ => null,
         };
     }
 }

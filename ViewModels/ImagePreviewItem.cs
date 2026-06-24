@@ -18,6 +18,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
     private ImageSource? _thumbnail;
     private CancellationTokenSource? _thumbnailCancellation;
     private int _thumbnailLoadVersion;
+    private bool _thumbnailLoadScheduled;
     private bool _thumbnailLoadStarted;
     private bool _thumbnailLoaded;
     private bool _thumbnailFailed;
@@ -65,7 +66,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         {
             if (_thumbnail is null && !_thumbnailLoaded && File.Exists(Path))
             {
-                StartThumbnailLoad();
+                QueueThumbnailLoad();
             }
 
             return _thumbnail;
@@ -79,28 +80,50 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
             _thumbnailLoadVersion++;
             _thumbnailCancellation?.Cancel();
             _thumbnailCancellation = null;
+            _thumbnailLoadScheduled = false;
             _thumbnailLoadStarted = false;
             _thumbnailLoaded = false;
             _thumbnailFailed = false;
             _thumbnail = null;
-            NotifyThumbnailStateChanged();
+            NotifyThumbnailStateChanged(thumbnailChanged: true);
         });
     }
 
-    private async void StartThumbnailLoad()
+    private void QueueThumbnailLoad()
     {
         _dispatcherQueue ??= TryGetDispatcherQueue();
-        if (_thumbnailLoadStarted)
+        if (_thumbnailLoadStarted || _thumbnailLoadScheduled)
         {
             return;
         }
 
+        _thumbnailLoadScheduled = true;
+        int scheduledVersion = _thumbnailLoadVersion;
+        if (_dispatcherQueue is { } dispatcherQueue)
+        {
+            if (dispatcherQueue.TryEnqueue(async () => await StartThumbnailLoadAsync(scheduledVersion)))
+            {
+                return;
+            }
+        }
+
+        _ = Task.Run(async () => await StartThumbnailLoadAsync(scheduledVersion));
+    }
+
+    private async Task StartThumbnailLoadAsync(int scheduledVersion)
+    {
+        if (scheduledVersion != _thumbnailLoadVersion || !_thumbnailLoadScheduled || _thumbnailLoadStarted)
+        {
+            return;
+        }
+
+        _thumbnailLoadScheduled = false;
         _thumbnailLoadStarted = true;
         int version = ++_thumbnailLoadVersion;
         _thumbnailCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _thumbnailCancellation = cancellation;
-        NotifyThumbnailStateChanged();
+        NotifyThumbnailStateChanged(thumbnailChanged: false);
         try
         {
             string thumbnailPath = await _thumbnailLoader(Metadata, cancellation.Token);
@@ -114,7 +137,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
                 _thumbnail = _thumbnailFactory(thumbnailPath);
                 _thumbnailLoaded = true;
                 _thumbnailFailed = false;
-                NotifyThumbnailStateChanged();
+                NotifyThumbnailStateChanged(thumbnailChanged: true);
             });
         }
         catch (OperationCanceledException)
@@ -134,7 +157,7 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
                 _thumbnailFailed = true;
                 _thumbnailLoaded = false;
                 _thumbnail = null;
-                NotifyThumbnailStateChanged();
+                NotifyThumbnailStateChanged(thumbnailChanged: true);
             });
         }
         finally
@@ -151,9 +174,13 @@ public sealed class ImagePreviewItem : INotifyPropertyChanged
         }
     }
 
-    private void NotifyThumbnailStateChanged()
+    private void NotifyThumbnailStateChanged(bool thumbnailChanged)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+        if (thumbnailChanged)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+        }
+
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageVisibility)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadingVisibility)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsThumbnailLoading)));

@@ -8,16 +8,16 @@ public sealed class AppLanguageServiceTests
     [Fact]
     public void GetLanguageTag_WithSpecificLanguage_ReturnsBcp47Tag()
     {
-        string languageTag = AppLanguageService.GetLanguageTag(AppLanguageMode.Japanese);
+        string? languageTag = AppLanguageService.GetLanguageTag(AppLanguageMode.Japanese);
 
         Assert.Equal("ja-JP", languageTag);
     }
 
     [Fact]
-    public void GetLanguageTag_WithSystemLanguage_ReturnsEmptyTag()
+    public void GetLanguageTag_WithSystemLanguage_ReturnsNull()
     {
-        string languageTag = AppLanguageService.GetLanguageTag(AppLanguageMode.System);
+        string? languageTag = AppLanguageService.GetLanguageTag(AppLanguageMode.System);
 
-        Assert.Equal(string.Empty, languageTag);
+        Assert.Null(languageTag);
     }
 }

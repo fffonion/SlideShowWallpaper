@@ -184,6 +184,42 @@ public sealed class ImagePreviewCollectionUpdaterTests
     }
 
     [Fact]
+    public async Task Thumbnail_Getter_DoesNotRaisePropertyChangedSynchronously()
+    {
+        string videoPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.mp4");
+        string thumbnailPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(videoPath, [1, 2, 3]);
+        await File.WriteAllBytesAsync(thumbnailPath, Convert.FromBase64String(OnePixelPngBase64));
+        var metadata = new ImageMetadata(videoPath, "clip.mp4", DateTime.UnixEpoch, 1, MediaKind.Video);
+        var loaderStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishLoader = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var item = new ImagePreviewItem(
+            metadata,
+            (_, _) =>
+            {
+                loaderStarted.SetResult();
+                return finishLoader.Task;
+            },
+            _ => null);
+        int synchronousChanges = 0;
+        item.PropertyChanged += (_, _) => synchronousChanges++;
+        try
+        {
+            _ = item.Thumbnail;
+
+            Assert.Equal(0, synchronousChanges);
+
+            await loaderStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            finishLoader.SetResult(thumbnailPath);
+        }
+        finally
+        {
+            File.Delete(videoPath);
+            File.Delete(thumbnailPath);
+        }
+    }
+
+    [Fact]
     public async Task Thumbnail_ForNdfImageItem_ShowsSpinnerWhileLoading()
     {
         string ndfPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ndf");
