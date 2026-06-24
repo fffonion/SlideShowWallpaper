@@ -33,17 +33,9 @@ public sealed class FolderPickerService
         return Task.FromResult(PickOpenFileNative(ownerHwnd, fileTypes));
     }
 
-    public async Task<string?> PickSaveFileAsync(IntPtr ownerHwnd, string fileType, string defaultFileName)
+    public Task<string?> PickSaveFileAsync(IntPtr ownerHwnd, string fileType, string defaultFileName)
     {
-        var picker = new FileSavePicker
-        {
-            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = defaultFileName,
-        };
-        picker.FileTypeChoices.Add(fileType.TrimStart('.').ToUpperInvariant(), [fileType]);
-        InitializeWithWindow.Initialize(picker, ownerHwnd);
-        global::Windows.Storage.StorageFile? file = await picker.PickSaveFileAsync();
-        return file?.Path;
+        return Task.FromResult(PickSaveFileNative(ownerHwnd, fileType, defaultFileName));
     }
 
     private static string? PickOpenFileNative(IntPtr ownerHwnd, IReadOnlyList<string> fileTypes)
@@ -89,6 +81,52 @@ public sealed class FolderPickerService
         return null;
     }
 
+    private static string? PickSaveFileNative(IntPtr ownerHwnd, string fileType, string defaultFileName)
+    {
+        try
+        {
+            if (ownerHwnd != IntPtr.Zero)
+            {
+                NativeMethods.SetForegroundWindow(ownerHwnd);
+            }
+
+            string extension = NormalizeDialogExtension(fileType);
+            string suggestedFileName = BuildSuggestedSaveFileName(defaultFileName, extension);
+            var fileName = new StringBuilder(suggestedFileName, OpenFilePathBufferLength);
+            var openFileName = new NativeMethods.OPENFILENAME
+            {
+                lStructSize = Marshal.SizeOf<NativeMethods.OPENFILENAME>(),
+                hwndOwner = ownerHwnd,
+                lpstrFilter = BuildSaveFileFilter(fileType),
+                lpstrFile = fileName,
+                nMaxFile = fileName.Capacity,
+                nFilterIndex = 1,
+                lpstrDefExt = extension,
+                Flags = NativeMethods.OFN_EXPLORER
+                    | NativeMethods.OFN_OVERWRITEPROMPT
+                    | NativeMethods.OFN_PATHMUSTEXIST
+                    | NativeMethods.OFN_NOCHANGEDIR,
+            };
+
+            if (NativeMethods.GetSaveFileName(ref openFileName))
+            {
+                return fileName.ToString();
+            }
+
+            int error = NativeMethods.CommDlgExtendedError();
+            if (error != 0)
+            {
+                AppLog.Write($"GetSaveFileName failed: 0x{error:X}");
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
+        return null;
+    }
+
     private static string BuildOpenFileFilter(IReadOnlyList<string> fileTypes)
     {
         string pattern = string.Join(
@@ -105,5 +143,35 @@ public sealed class FolderPickerService
         }
 
         return $"{pattern}\0{pattern}\0\0";
+    }
+
+    private static string BuildSaveFileFilter(string fileType)
+    {
+        string extension = NormalizeDialogExtension(fileType);
+        string pattern = string.IsNullOrWhiteSpace(extension) ? "*.*" : $"*.{extension}";
+        string label = string.IsNullOrWhiteSpace(extension) ? pattern : $"{extension.ToUpperInvariant()} files ({pattern})";
+        return $"{label}\0{pattern}\0\0";
+    }
+
+    private static string BuildSuggestedSaveFileName(string defaultFileName, string extension)
+    {
+        string fileName = string.IsNullOrWhiteSpace(defaultFileName) ? "untitled" : defaultFileName.Trim();
+        if (string.IsNullOrWhiteSpace(extension) || Path.HasExtension(fileName))
+        {
+            return fileName;
+        }
+
+        return $"{fileName}.{extension}";
+    }
+
+    private static string NormalizeDialogExtension(string fileType)
+    {
+        string extension = fileType.Trim();
+        if (extension.StartsWith('*'))
+        {
+            extension = extension.TrimStart('*');
+        }
+
+        return extension.TrimStart('.');
     }
 }

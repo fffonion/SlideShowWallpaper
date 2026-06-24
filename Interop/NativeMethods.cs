@@ -38,6 +38,7 @@ public static partial class NativeMethods
     internal const int OFN_EXPLORER = 0x00080000;
     internal const int OFN_FILEMUSTEXIST = 0x00001000;
     internal const int OFN_NOCHANGEDIR = 0x00000008;
+    internal const int OFN_OVERWRITEPROMPT = 0x00000002;
     internal const int OFN_PATHMUSTEXIST = 0x00000800;
     internal const int TPM_RIGHTBUTTON = 0x0002;
     internal const int TPM_RETURNCMD = 0x0100;
@@ -195,6 +196,9 @@ public static partial class NativeMethods
 
     [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern bool GetOpenFileName(ref OPENFILENAME openFileName);
+
+    [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool GetSaveFileName(ref OPENFILENAME openFileName);
 
     [DllImport("comdlg32.dll")]
     internal static extern int CommDlgExtendedError();
