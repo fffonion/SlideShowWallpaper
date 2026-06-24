@@ -7,9 +7,10 @@ public sealed class HardwareMonitorReader : IDisposable
 {
     private readonly object _syncRoot = new();
     private Computer? _computer;
+    private CollectorProfile _collectorProfile = CollectorProfile.Full;
     private bool _disposed;
 
-    public HardwareMonitorSnapshot GetSnapshot()
+    public HardwareMonitorSnapshot GetSnapshot(IReadOnlyCollection<string>? sensorIds = null)
     {
         lock (_syncRoot)
         {
@@ -18,12 +19,14 @@ public sealed class HardwareMonitorReader : IDisposable
                 return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
             }
 
-            Computer computer = EnsureComputer();
+            HashSet<string>? requestedSensorIds = CreateRequestedSensorSet(sensorIds);
+            CollectorProfile profile = CollectorProfile.FromSensorIds(requestedSensorIds);
+            Computer computer = EnsureComputer(profile);
             var readings = new List<HardwareSensorReading>();
             var updated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (IHardware hardware in computer.Hardware)
             {
-                CollectHardware(readings, hardware, updated);
+                CollectHardware(readings, hardware, updated, requestedSensorIds);
             }
 
             return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
@@ -45,28 +48,51 @@ public sealed class HardwareMonitorReader : IDisposable
         }
     }
 
-    private Computer EnsureComputer()
+    private Computer EnsureComputer(CollectorProfile profile)
     {
-        if (_computer is not null)
+        if (_computer is not null && _collectorProfile.Equals(profile))
         {
             return _computer;
         }
 
+        _computer?.Close();
+        _collectorProfile = profile;
         _computer = new Computer
         {
-            IsCpuEnabled = true,
-            IsGpuEnabled = true,
-            IsMemoryEnabled = true,
-            IsMotherboardEnabled = true,
-            IsControllerEnabled = true,
-            IsPsuEnabled = true,
-            IsStorageEnabled = true,
+            IsCpuEnabled = profile.Cpu,
+            IsGpuEnabled = profile.Gpu,
+            IsMemoryEnabled = profile.Memory,
+            IsMotherboardEnabled = profile.Motherboard,
+            IsStorageEnabled = profile.Storage,
         };
         _computer.Open();
         return _computer;
     }
 
-    private static void CollectHardware(List<HardwareSensorReading> readings, IHardware hardware, HashSet<string> updated)
+    private static HashSet<string>? CreateRequestedSensorSet(IReadOnlyCollection<string>? sensorIds)
+    {
+        if (sensorIds is null || sensorIds.Count == 0)
+        {
+            return null;
+        }
+
+        var requested = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string sensorId in sensorIds)
+        {
+            if (!string.IsNullOrWhiteSpace(sensorId))
+            {
+                requested.Add(sensorId);
+            }
+        }
+
+        return requested.Count == 0 ? null : requested;
+    }
+
+    private static void CollectHardware(
+        List<HardwareSensorReading> readings,
+        IHardware hardware,
+        HashSet<string> updated,
+        IReadOnlySet<string>? requestedSensorIds)
     {
         UpdateHardwareOnce(hardware, updated);
         foreach (ISensor sensor in hardware.Sensors)
@@ -79,13 +105,16 @@ public sealed class HardwareMonitorReader : IDisposable
             HardwareSensorReading? reading = CreateReading(hardware, sensor, sensor.Value.Value);
             if (reading is not null)
             {
-                readings.Add(reading);
+                if (requestedSensorIds is null || requestedSensorIds.Contains(reading.Id))
+                {
+                    readings.Add(reading);
+                }
             }
         }
 
         foreach (IHardware subHardware in hardware.SubHardware)
         {
-            CollectHardware(readings, subHardware, updated);
+            CollectHardware(readings, subHardware, updated, requestedSensorIds);
         }
     }
 
@@ -163,5 +192,103 @@ public sealed class HardwareMonitorReader : IDisposable
             HardwareType.Motherboard or HardwareType.SuperIO => HardwareMetricGroup.Motherboard,
             _ => HardwareMetricGroup.Other,
         };
+    }
+
+    private sealed record CollectorProfile(bool Cpu, bool Gpu, bool Memory, bool Motherboard, bool Storage)
+    {
+        public static CollectorProfile Full { get; } = new(Cpu: true, Gpu: true, Memory: true, Motherboard: true, Storage: true);
+
+        public static CollectorProfile FromSensorIds(IReadOnlySet<string>? sensorIds)
+        {
+            if (sensorIds is null || sensorIds.Count == 0)
+            {
+                return Full;
+            }
+
+            bool cpu = false;
+            bool gpu = false;
+            bool memory = false;
+            bool motherboard = false;
+            bool storage = false;
+            foreach (string sensorId in sensorIds)
+            {
+                CollectorGroup group = InferGroup(sensorId);
+                switch (group)
+                {
+                    case CollectorGroup.Cpu:
+                        cpu = true;
+                        break;
+                    case CollectorGroup.Gpu:
+                        gpu = true;
+                        break;
+                    case CollectorGroup.Memory:
+                        memory = true;
+                        break;
+                    case CollectorGroup.Motherboard:
+                        motherboard = true;
+                        break;
+                    case CollectorGroup.Storage:
+                        storage = true;
+                        break;
+                    default:
+                        return Full;
+                }
+            }
+
+            return new CollectorProfile(cpu, gpu, memory, motherboard, storage);
+        }
+
+        private static CollectorGroup InferGroup(string sensorId)
+        {
+            string id = sensorId.Trim();
+            if (id.StartsWith("/intelcpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/amdcpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/genericcpu/", StringComparison.OrdinalIgnoreCase))
+            {
+                return CollectorGroup.Cpu;
+            }
+
+            if (id.StartsWith("/nvidiagpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/atigpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/adlgpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/intelgpu/", StringComparison.OrdinalIgnoreCase))
+            {
+                return CollectorGroup.Gpu;
+            }
+
+            if (id.StartsWith("/ram/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/memory/", StringComparison.OrdinalIgnoreCase))
+            {
+                return CollectorGroup.Memory;
+            }
+
+            if (id.StartsWith("/hdd/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/ssd/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/nvme/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/storage/", StringComparison.OrdinalIgnoreCase))
+            {
+                return CollectorGroup.Storage;
+            }
+
+            if (id.StartsWith("/lpc/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/mainboard/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/motherboard/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/superio/", StringComparison.OrdinalIgnoreCase))
+            {
+                return CollectorGroup.Motherboard;
+            }
+
+            return CollectorGroup.Unknown;
+        }
+    }
+
+    private enum CollectorGroup
+    {
+        Unknown,
+        Cpu,
+        Gpu,
+        Memory,
+        Motherboard,
+        Storage
     }
 }

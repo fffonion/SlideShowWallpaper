@@ -34,6 +34,8 @@ public static class HardwareMonitorBrokerProtocol
 public sealed class HardwareMonitorBrokerRequest
 {
     public string Command { get; set; } = HardwareMonitorBrokerProtocol.SnapshotCommand;
+
+    public List<string> SensorIds { get; set; } = [];
 }
 
 public sealed class HardwareMonitorBrokerResponse

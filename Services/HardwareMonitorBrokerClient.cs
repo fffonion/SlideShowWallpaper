@@ -12,6 +12,8 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private readonly object _syncRoot = new();
     private readonly string _pipeName = HardwareMonitorBrokerProtocol.CreatePipeName();
     private Process? _brokerProcess;
+    private string[] _lastSnapshotSensorIds = [];
+    private bool _hasSnapshotSensorIds;
     private bool _startElevated;
     private bool _disposed;
 
@@ -39,10 +41,12 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         {
             TrySendShutdown();
             DisposeBrokerProcess();
+            _lastSnapshotSensorIds = [];
+            _hasSnapshotSensorIds = false;
         }
     }
 
-    public HardwareMonitorSnapshot GetSnapshot()
+    public HardwareMonitorSnapshot GetSnapshot(HardwareMonitorConfig? config = null)
     {
         lock (_syncRoot)
         {
@@ -51,7 +55,9 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
                 return EmptySnapshot();
             }
 
-            return TryGetSnapshot(restartBroker: false) ?? TryGetSnapshot(restartBroker: true) ?? EmptySnapshot();
+            IReadOnlyList<string> sensorIds = CreateRuntimeSensorIds(config);
+            RestartBrokerWhenSensorFilterChanged(sensorIds);
+            return TryGetSnapshot(sensorIds, restartBroker: false) ?? TryGetSnapshot(sensorIds, restartBroker: true) ?? EmptySnapshot();
         }
     }
 
@@ -69,7 +75,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         }
     }
 
-    private HardwareMonitorSnapshot? TryGetSnapshot(bool restartBroker)
+    private HardwareMonitorSnapshot? TryGetSnapshot(IReadOnlyList<string> sensorIds, bool restartBroker)
     {
         try
         {
@@ -78,7 +84,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
                 return null;
             }
 
-            HardwareMonitorBrokerResponse response = SendRequest(HardwareMonitorBrokerProtocol.SnapshotCommand);
+            HardwareMonitorBrokerResponse response = SendRequest(HardwareMonitorBrokerProtocol.SnapshotCommand, sensorIds);
             if (!string.IsNullOrWhiteSpace(response.Error))
             {
                 AppLog.Write(response.Error);
@@ -155,13 +161,19 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             ]);
     }
 
-    private HardwareMonitorBrokerResponse SendRequest(string command)
+    private HardwareMonitorBrokerResponse SendRequest(string command, IReadOnlyList<string>? sensorIds = null)
     {
         using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.None);
         client.Connect((int)ConnectTimeout.TotalMilliseconds);
         using var input = new StreamReader(client, leaveOpen: true);
         using var output = new StreamWriter(client, leaveOpen: true) { AutoFlush = true };
-        output.WriteLine(JsonSerializer.Serialize(new HardwareMonitorBrokerRequest { Command = command }, JsonOptions));
+        output.WriteLine(JsonSerializer.Serialize(
+            new HardwareMonitorBrokerRequest
+            {
+                Command = command,
+                SensorIds = sensorIds?.ToList() ?? [],
+            },
+            JsonOptions));
         string? responseJson = input.ReadLine();
         return string.IsNullOrWhiteSpace(responseJson)
             ? new HardwareMonitorBrokerResponse { Error = "Hardware monitor broker returned an empty response." }
@@ -193,6 +205,48 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private static HardwareMonitorSnapshot EmptySnapshot()
     {
         return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
+    }
+
+    private static IReadOnlyList<string> CreateRuntimeSensorIds(HardwareMonitorConfig? config)
+    {
+        if (config is null)
+        {
+            return [];
+        }
+
+        var sensorIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string sensorId in config.SelectedSensorIds)
+        {
+            if (!string.IsNullOrWhiteSpace(sensorId))
+            {
+                sensorIds.Add(sensorId);
+            }
+        }
+
+        foreach (HardwareOverlayElement element in config.Elements)
+        {
+            if (element.Kind == HardwareOverlayElementKind.Sensor && !string.IsNullOrWhiteSpace(element.SensorId))
+            {
+                sensorIds.Add(element.SensorId);
+            }
+        }
+
+        return sensorIds
+            .OrderBy(sensorId => sensorId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private void RestartBrokerWhenSensorFilterChanged(IReadOnlyList<string> sensorIds)
+    {
+        string[] normalizedSensorIds = sensorIds.ToArray();
+        if (_hasSnapshotSensorIds && !normalizedSensorIds.SequenceEqual(_lastSnapshotSensorIds, StringComparer.OrdinalIgnoreCase))
+        {
+            TrySendShutdown();
+            DisposeBrokerProcess();
+        }
+
+        _lastSnapshotSensorIds = normalizedSensorIds;
+        _hasSnapshotSensorIds = true;
     }
 
     private static string QuoteArgument(string argument)

@@ -388,7 +388,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _hardwareOverlayRefreshInProgress = true;
         try
         {
-            snapshot = await Task.Run(_hardwareMonitorService.GetSnapshot);
+            snapshot = await Task.Run(() => _hardwareMonitorService.GetSnapshot(_hardwareMonitorConfig));
         }
         catch (Exception exception)
         {

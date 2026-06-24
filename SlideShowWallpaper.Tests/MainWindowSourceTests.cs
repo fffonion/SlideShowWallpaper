@@ -1036,7 +1036,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorReader_EnablesControllerAndPsuCollectors()
+    public void HardwareMonitorReader_AvoidsControllerAndPsuCollectors()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
@@ -1044,8 +1044,13 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private Computer EnsureComputer", StringComparison.Ordinal)..
             source.IndexOf("private static void CollectHardware", StringComparison.Ordinal)];
 
-        Assert.Contains("IsControllerEnabled = true", method);
-        Assert.Contains("IsPsuEnabled = true", method);
+        Assert.Contains("IsCpuEnabled = profile.Cpu", method);
+        Assert.Contains("IsGpuEnabled = profile.Gpu", method);
+        Assert.Contains("IsMemoryEnabled = profile.Memory", method);
+        Assert.Contains("IsMotherboardEnabled = profile.Motherboard", method);
+        Assert.Contains("IsStorageEnabled = profile.Storage", method);
+        Assert.DoesNotContain("IsControllerEnabled = true", method);
+        Assert.DoesNotContain("IsPsuEnabled = true", method);
     }
 
     [Fact]
@@ -1059,13 +1064,13 @@ public sealed class MainWindowSourceTests
         Assert.Contains("HardwareMonitorBrokerClient", source);
         Assert.Contains("_brokerClient.StartBroker()", source);
         Assert.Contains("_brokerClient.StopBroker()", source);
-        Assert.Contains("_brokerClient.GetSnapshot()", source);
+        Assert.Contains("_brokerClient.GetSnapshot(config)", source);
         Assert.Contains("public bool StartBroker()", clientSource);
         Assert.Contains("public void StopBroker()", clientSource);
         Assert.Contains("public void SetBrokerElevation(bool startElevated)", source);
         Assert.Contains("public void SetStartElevated(bool startElevated)", clientSource);
         Assert.Contains("startInfo.Verb = \"runas\";", clientSource);
-        Assert.Contains("TryGetSnapshot(restartBroker: true)", clientSource);
+        Assert.Contains("TryGetSnapshot(sensorIds, restartBroker: true)", clientSource);
         Assert.DoesNotContain("LibreHardwareMonitor", source);
         Assert.DoesNotContain("new Computer", source);
         Assert.DoesNotContain("new HardwareMonitorReader", appSource);

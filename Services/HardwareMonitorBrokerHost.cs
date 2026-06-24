@@ -108,7 +108,7 @@ public static class HardwareMonitorBrokerHost
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        HardwareMonitorSnapshot snapshot = reader.GetSnapshot();
+        HardwareMonitorSnapshot snapshot = reader.GetSnapshot(request?.SensorIds);
         WriteResponse(output, new HardwareMonitorBrokerResponse
         {
             Sensors = snapshot.Sensors.ToList(),

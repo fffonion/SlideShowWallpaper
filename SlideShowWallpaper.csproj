@@ -109,7 +109,7 @@
     <MSBuild
       Projects="$(HardwareBrokerProject)"
       Targets="Publish"
-      Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(HardwareBrokerTargetFramework);RuntimeIdentifier=$(HardwareBrokerRuntimeIdentifier);PublishDir=$(HardwareBrokerPublishDir);SelfContained=false;PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;EnableCompressionInSingleFile=false;PublishTrimmed=false;DebugSymbols=false;DebugType=None;SkipHardwareBrokerBuild=true" />
+      Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(HardwareBrokerTargetFramework);RuntimeIdentifier=$(HardwareBrokerRuntimeIdentifier);PublishDir=$(HardwareBrokerPublishDir);SelfContained=false;PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;EnableCompressionInSingleFile=false;PublishTrimmed=false;InvariantGlobalization=true;DebugSymbols=false;DebugType=None;SkipHardwareBrokerBuild=true" />
     <ItemGroup>
       <EmbeddedResource Include="$(HardwareBrokerEmbeddedExecutable)" LogicalName="$(HardwareBrokerExecutableName)" />
     </ItemGroup>

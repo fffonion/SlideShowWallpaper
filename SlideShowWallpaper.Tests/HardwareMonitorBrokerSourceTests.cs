@@ -150,6 +150,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("<FileDescription>SlideShowWallpaper Broker</FileDescription>", source);
         Assert.Contains("<Product>SlideShowWallpaper Broker</Product>", source);
         Assert.Contains("<ServerGarbageCollection>false</ServerGarbageCollection>", source);
+        Assert.Contains("<InvariantGlobalization>true</InvariantGlobalization>", source);
         Assert.Contains("LibreHardwareMonitorLib", source);
         Assert.DoesNotContain("WorkingSetTrimmer.cs", source);
         Assert.DoesNotContain("<OutputType>WinExe</OutputType>", source);
@@ -169,10 +170,59 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("HardwareBrokerTargetFramework", source);
         Assert.Contains("TargetFramework=$(HardwareBrokerTargetFramework)", source);
         Assert.Contains("IncludeNativeLibrariesForSelfExtract=true", source);
+        Assert.Contains("InvariantGlobalization=true", source);
         Assert.Contains("BuildHardwareBroker", source);
         Assert.Contains("EmbeddedResource", source);
         Assert.Contains("SlideShowWallpaper.HardwareBroker.exe", source);
         Assert.DoesNotContain("PublishHardwareBrokerSingleFile", source);
+    }
+
+    [Fact]
+    public void BrokerProtocol_AllowsRuntimeSensorFiltering()
+    {
+        string root = FindProjectRoot();
+        string protocolSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerProtocol.cs"));
+        string hostSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
+        string coordinatorSource = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+
+        Assert.Contains("public List<string> SensorIds { get; set; } = [];", protocolSource);
+        Assert.Contains("reader.GetSnapshot(request?.SensorIds)", hostSource);
+        Assert.Contains("CreateRuntimeSensorIds(config)", clientSource);
+        Assert.Contains("RestartBrokerWhenSensorFilterChanged(sensorIds)", clientSource);
+        Assert.Contains("SensorIds = sensorIds?.ToList() ?? []", clientSource);
+        Assert.Contains("OrderBy(sensorId => sensorId, StringComparer.OrdinalIgnoreCase)", clientSource);
+        Assert.Contains("_hardwareMonitorService.GetSnapshot(_hardwareMonitorConfig)", coordinatorSource);
+    }
+
+    [Fact]
+    public void BrokerClient_RestartsBrokerWhenRuntimeSensorFilterChanges()
+    {
+        string root = FindProjectRoot();
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
+
+        Assert.Contains("private string[] _lastSnapshotSensorIds = [];", clientSource);
+        Assert.Contains("private bool _hasSnapshotSensorIds;", clientSource);
+        Assert.Contains("!normalizedSensorIds.SequenceEqual(_lastSnapshotSensorIds, StringComparer.OrdinalIgnoreCase)", clientSource);
+        Assert.Contains("TrySendShutdown();", clientSource);
+        Assert.Contains("DisposeBrokerProcess();", clientSource);
+        Assert.Contains("_lastSnapshotSensorIds = normalizedSensorIds;", clientSource);
+    }
+
+    [Fact]
+    public void HardwareMonitorReader_NarrowsCollectorsFromRequestedSensors()
+    {
+        string root = FindProjectRoot();
+        string readerSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
+
+        Assert.Contains("CollectorProfile.FromSensorIds(requestedSensorIds)", readerSource);
+        Assert.Contains("return Full;", readerSource);
+        Assert.Contains("id.StartsWith(\"/intelcpu/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/nvidiagpu/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/ram/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/hdd/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/lpc/\"", readerSource);
+        Assert.Contains("requestedSensorIds is null || requestedSensorIds.Contains(reading.Id)", readerSource);
     }
 
     private static string FindProjectRoot()

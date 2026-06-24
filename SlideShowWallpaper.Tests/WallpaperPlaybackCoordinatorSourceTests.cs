@@ -79,7 +79,7 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string refreshMethod = ExtractMethod(source, "private async Task RefreshHardwareOverlayAsync", "private void ClearHardwareOverlay");
         int targetIndex = refreshMethod.IndexOf("string? targetMonitorId = GetHardwareOverlayTargetMonitorId();", StringComparison.Ordinal);
         int pauseIndex = refreshMethod.IndexOf("ShouldPauseHardwareOverlayRefresh(targetMonitorId, monitorRect)", StringComparison.Ordinal);
-        int snapshotIndex = refreshMethod.IndexOf("_hardwareMonitorService.GetSnapshot", StringComparison.Ordinal);
+        int snapshotIndex = refreshMethod.IndexOf("_hardwareMonitorService.GetSnapshot(_hardwareMonitorConfig)", StringComparison.Ordinal);
 
         Assert.True(targetIndex >= 0);
         Assert.True(pauseIndex > targetIndex);

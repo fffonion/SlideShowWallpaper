@@ -35,9 +35,9 @@ public sealed class HardwareMonitorService : IDisposable
         _brokerClient.StopBroker();
     }
 
-    public HardwareMonitorSnapshot GetSnapshot()
+    public HardwareMonitorSnapshot GetSnapshot(HardwareMonitorConfig? config = null)
     {
-        return _brokerClient.GetSnapshot();
+        return _brokerClient.GetSnapshot(config);
     }
 
     public void Dispose()
