@@ -321,6 +321,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _folderChangeWatcherService.Clear();
         _videoCoverageTimer.Stop();
         _hardwareOverlayTimer.Stop();
+        _ = Task.Run(_hardwareMonitorService.StopBroker);
     }
 
     private void ConfigureHardwareOverlayTimer()
@@ -328,6 +329,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         bool shouldRun = _playbackEnabled
             && _hardwareMonitorConfig.IsEnabled
             && GetHardwareOverlayTargetMonitorId() is not null;
+        ConfigureHardwareBroker();
         TimeSpan interval = TimeSpan.FromSeconds(Math.Max(1, _hardwareMonitorConfig.RefreshIntervalSeconds));
         if (_hardwareOverlayTimer.Interval != interval)
         {
@@ -343,6 +345,17 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         _hardwareOverlayTimer.Stop();
         ClearHardwareOverlay();
+    }
+
+    private void ConfigureHardwareBroker()
+    {
+        if (_playbackEnabled && _hardwareMonitorConfig.IsEnabled)
+        {
+            _ = Task.Run(_hardwareMonitorService.StartBroker);
+            return;
+        }
+
+        _ = Task.Run(_hardwareMonitorService.StopBroker);
     }
 
     private async Task RefreshHardwareOverlayAsync()

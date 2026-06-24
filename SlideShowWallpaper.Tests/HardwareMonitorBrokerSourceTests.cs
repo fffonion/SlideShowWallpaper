@@ -33,7 +33,7 @@ public sealed class HardwareMonitorBrokerSourceTests
 
         Assert.True(File.Exists(brokerPath));
         var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(brokerPath);
-        Assert.Equal("SlideShowWallpaper Hardware Broker", versionInfo.FileDescription);
+        Assert.Equal("SlideShowWallpaper Broker", versionInfo.FileDescription);
         File.Delete(brokerPath);
     }
 
@@ -47,6 +47,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("string.IsNullOrWhiteSpace(brokerPath)", clientSource);
         Assert.Contains("FileName = brokerPath", clientSource);
         Assert.Contains("WorkingDirectory = Path.GetDirectoryName(brokerPath)", clientSource);
+        Assert.DoesNotContain("Verb = \"runas\"", clientSource);
     }
 
     [Fact]
@@ -140,7 +141,9 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("<OutputType>Exe</OutputType>", source);
         Assert.Contains("<RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>", source);
         Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", source);
-        Assert.Contains("<FileDescription>SlideShowWallpaper Hardware Broker</FileDescription>", source);
+        Assert.Contains("<AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>", source);
+        Assert.Contains("<FileDescription>SlideShowWallpaper Broker</FileDescription>", source);
+        Assert.Contains("<Product>SlideShowWallpaper Broker</Product>", source);
         Assert.Contains("<ServerGarbageCollection>false</ServerGarbageCollection>", source);
         Assert.Contains("LibreHardwareMonitorLib", source);
         Assert.Contains("WorkingSetTrimmer.cs", source);

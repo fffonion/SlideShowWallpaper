@@ -648,6 +648,9 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("HardwareMonitorRefreshInterval", method);
         Assert.Contains("config.RefreshIntervalSeconds", method);
+        Assert.Contains("CreateHardwareMonitorEnabledCheckBox(config)", method);
+        Assert.Contains("private void SetHardwareMonitorEnabled", method);
+        Assert.Contains("ApplySettings();", method);
     }
 
     [Fact]
@@ -1024,17 +1027,41 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorService_ReadsHardwareThroughElevatedBroker()
+    public void HardwareMonitorService_ReadsHardwareThroughBroker()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorService.cs"));
         string appSource = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
 
         Assert.Contains("HardwareMonitorBrokerClient", source);
+        Assert.Contains("_brokerClient.StartBroker()", source);
+        Assert.Contains("_brokerClient.StopBroker()", source);
         Assert.Contains("_brokerClient.GetSnapshot()", source);
+        Assert.Contains("public bool StartBroker()", clientSource);
+        Assert.Contains("public void StopBroker()", clientSource);
+        Assert.Contains("TryGetSnapshot(restartBroker: true)", clientSource);
+        Assert.DoesNotContain("Verb = \"runas\"", clientSource);
         Assert.DoesNotContain("LibreHardwareMonitor", source);
         Assert.DoesNotContain("new Computer", source);
         Assert.DoesNotContain("new HardwareMonitorReader", appSource);
+    }
+
+    [Fact]
+    public void HardwareMonitorBroker_IsSingleFileEmbeddedWithSeparateTitle()
+    {
+        string root = FindProjectRoot();
+        string project = File.ReadAllText(Path.Combine(root, "SlideShowWallpaper.csproj"));
+        string brokerProject = File.ReadAllText(Path.Combine(root, "HardwareBroker", "SlideShowWallpaper.HardwareBroker.csproj"));
+        string brokerProgram = File.ReadAllText(Path.Combine(root, "HardwareBroker", "Program.cs"));
+
+        Assert.Contains("PublishSingleFile=true", project);
+        Assert.Contains("<EmbeddedResource Include=\"$(HardwareBrokerEmbeddedExecutable)\"", project);
+        Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", brokerProject);
+        Assert.Contains("<AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>", brokerProject);
+        Assert.Contains("<FileDescription>SlideShowWallpaper Broker</FileDescription>", brokerProject);
+        Assert.Contains("<Product>SlideShowWallpaper Broker</Product>", brokerProject);
+        Assert.Contains("Console.Title = \"SlideShowWallpaper Broker\";", brokerProgram);
     }
 
     [Fact]

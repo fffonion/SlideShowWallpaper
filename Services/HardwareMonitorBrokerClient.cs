@@ -16,6 +16,23 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
 
     public event EventHandler? BrokerProcessStarted;
 
+    public bool StartBroker()
+    {
+        lock (_syncRoot)
+        {
+            return !_disposed && EnsureBroker(forceRestart: false);
+        }
+    }
+
+    public void StopBroker()
+    {
+        lock (_syncRoot)
+        {
+            TrySendShutdown();
+            DisposeBrokerProcess();
+        }
+    }
+
     public HardwareMonitorSnapshot GetSnapshot()
     {
         lock (_syncRoot)
@@ -38,9 +55,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
                 return;
             }
 
-            TrySendShutdown();
-            _brokerProcess?.Dispose();
-            _brokerProcess = null;
+            StopBroker();
             _disposed = true;
         }
     }
@@ -103,10 +118,6 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Hidden,
         };
-        if (!CurrentProcessPrivilege.IsAdministrator())
-        {
-            startInfo.Verb = "runas";
-        }
 
         _brokerProcess = Process.Start(startInfo);
         if (_brokerProcess is null)

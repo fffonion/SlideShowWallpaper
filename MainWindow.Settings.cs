@@ -181,9 +181,32 @@ public sealed partial class MainWindow
 
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorSettingsGroup"),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateCheckBox(config.IsEnabled, value => config.IsEnabled = value, LocalizedStrings.Get("HardwareMonitorEnabled"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorEnabled"), CreateHardwareMonitorEnabledCheckBox(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorRefreshInterval"), CreateNumberBox(config.RefreshIntervalSeconds, value => config.RefreshIntervalSeconds = Math.Max(1, (int)Math.Round(value)), LocalizedStrings.Get("HardwareMonitorRefreshInterval"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTargetDisplay"), CreateChoiceCombo(CreateHardwareMonitorTargetChoices(), config.TargetMonitorId, value => config.TargetMonitorId = value, LocalizedStrings.Get("HardwareMonitorTargetDisplay"))));
+    }
+
+    private CheckBox CreateHardwareMonitorEnabledCheckBox(HardwareMonitorConfig config)
+    {
+        var checkBox = new CheckBox
+        {
+            IsChecked = config.IsEnabled,
+        };
+        AutomationProperties.SetName(checkBox, LocalizedStrings.Get("HardwareMonitorEnabled"));
+        checkBox.Checked += (_, _) => SetHardwareMonitorEnabled(config, true);
+        checkBox.Unchecked += (_, _) => SetHardwareMonitorEnabled(config, false);
+        return checkBox;
+    }
+
+    private void SetHardwareMonitorEnabled(HardwareMonitorConfig config, bool isEnabled)
+    {
+        if (config.IsEnabled == isEnabled)
+        {
+            return;
+        }
+
+        config.IsEnabled = isEnabled;
+        ApplySettings();
     }
 
     private Border CreateHardwareOverlayFormatSection(HardwareMonitorConfig config)

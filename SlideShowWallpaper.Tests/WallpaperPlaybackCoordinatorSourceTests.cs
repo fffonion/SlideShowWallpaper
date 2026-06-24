@@ -56,6 +56,22 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
+    public void HardwareOverlayTimer_StartsAndStopsBrokerWithHardwareMonitor()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string configureMethod = ExtractMethod(source, "private void ConfigureHardwareOverlayTimer", "private async Task RefreshHardwareOverlayAsync");
+        string brokerMethod = ExtractMethod(source, "private void ConfigureHardwareBroker", "private async Task RefreshHardwareOverlayAsync");
+        string stopMethod = ExtractMethod(source, "public void StopPlayback", "private void ConfigureHardwareOverlayTimer");
+
+        Assert.Contains("ConfigureHardwareBroker();", configureMethod);
+        Assert.Contains("_playbackEnabled && _hardwareMonitorConfig.IsEnabled", brokerMethod);
+        Assert.Contains("_ = Task.Run(_hardwareMonitorService.StartBroker);", brokerMethod);
+        Assert.Contains("_ = Task.Run(_hardwareMonitorService.StopBroker);", brokerMethod);
+        Assert.Contains("_ = Task.Run(_hardwareMonitorService.StopBroker);", stopMethod);
+    }
+
+    [Fact]
     public void RefreshHardwareOverlayAsync_SkipsSensorRefreshWhenTargetMonitorIsCovered()
     {
         string root = FindProjectRoot();

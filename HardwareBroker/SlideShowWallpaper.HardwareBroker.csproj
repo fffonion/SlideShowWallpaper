@@ -5,9 +5,9 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>
     <AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>
-    <AssemblyTitle>SlideShowWallpaper Hardware Broker</AssemblyTitle>
-    <FileDescription>SlideShowWallpaper Hardware Broker</FileDescription>
-    <Product>SlideShowWallpaper</Product>
+    <AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>
+    <FileDescription>SlideShowWallpaper Broker</FileDescription>
+    <Product>SlideShowWallpaper Broker</Product>
     <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
