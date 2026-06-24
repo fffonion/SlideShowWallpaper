@@ -47,6 +47,19 @@ public sealed class HardwareOverlayWindowSourceTests
         Assert.Contains("_isVisible = false;", source);
     }
 
+    [Fact]
+    public void HardwareOverlayWindow_UsesSharedVisualFactory()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml.cs"));
+
+        Assert.Contains("HardwareOverlayVisualFactory.CreateText", source);
+        Assert.Contains("HardwareOverlayVisualFactory.CreateMetricRow", source);
+        Assert.Contains("HardwareOverlayVisualFactory.CreateElement(element)", source);
+        Assert.DoesNotContain("private static UIElement CreateHardwareOverlayElement", source);
+        Assert.DoesNotContain("private static UIElement CreateHardwareOverlaySensorElement", source);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

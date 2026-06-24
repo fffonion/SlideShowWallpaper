@@ -190,8 +190,16 @@ public sealed partial class MainWindow
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorStyle"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value => config.FontSize = Math.Max(10, value), LocalizedStrings.Get("HardwareMonitorFontSize"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value =>
+            {
+                config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value;
+                RenderTabs(_selectedMonitorId);
+            }, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value =>
+            {
+                config.FontSize = Math.Max(10, value);
+                RenderTabs(_selectedMonitorId);
+            }, LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateOpacitySlider(config.Opacity, value => config.Opacity = value, LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
@@ -1153,36 +1161,14 @@ public sealed partial class MainWindow
 
     private FrameworkElement CreateHardwareEditorElementVisual(HardwareOverlayElementState element, bool isSelected)
     {
-        FrameworkElement child;
-        if (element.Kind == HardwareOverlayElementKind.Image && TryCreateSettingsBitmapImage(element.ImagePath, out BitmapImage? bitmap))
+        var host = new Grid
         {
-            child = new Microsoft.UI.Xaml.Controls.Image
-            {
-                Source = bitmap,
-                Stretch = Stretch.UniformToFill,
-            };
-        }
-        else if (element.Kind == HardwareOverlayElementKind.Sensor)
+            Width = element.Width,
+            Height = element.Height,
+        };
+        host.Children.Add(HardwareOverlayVisualFactory.CreateElement(element));
+        host.Children.Add(new Border
         {
-            child = CreateHardwareEditorSensorVisual(element);
-        }
-        else
-        {
-            child = new TextBlock
-            {
-                Text = element.Text,
-                FontFamily = new FontFamily(element.FontFamily),
-                FontSize = Math.Max(8, element.FontSize),
-                Foreground = CreateSettingsColorBrush(element.Foreground),
-                TextWrapping = TextWrapping.WrapWholeWords,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-        }
-
-        var host = new Border
-        {
-            Opacity = element.Opacity,
             Background = isSelected
                 ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(36, 255, 255, 255))
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
@@ -1190,15 +1176,8 @@ public sealed partial class MainWindow
                 ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 96, 205, 255))
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderThickness = new Thickness(isSelected ? 2 : 0),
-            Padding = element.Kind == HardwareOverlayElementKind.Image ? new Thickness(0) : new Thickness(4, 1, 4, 1),
-            Child = child,
-        };
-        if (element.Kind == HardwareOverlayElementKind.Image)
-        {
-            host.Width = element.Width;
-            host.Height = element.Height;
-        }
-
+            IsHitTestVisible = false,
+        });
         AutomationProperties.SetName(host, element.Text);
         return host;
     }
@@ -1212,28 +1191,6 @@ public sealed partial class MainWindow
 
         visual.Measure(new global::Windows.Foundation.Size(Math.Max(1, availableWidth), Math.Max(1, availableHeight)));
         return (Math.Max(1, visual.DesiredSize.Width), Math.Max(1, visual.DesiredSize.Height));
-    }
-
-    private static FrameworkElement CreateHardwareEditorSensorVisual(HardwareOverlayElementState element)
-    {
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, Math.Max(18, element.FontSize + 2), CreateSettingsColorBrush(element.Foreground)));
-        row.Children.Add(new TextBlock
-        {
-            Text = element.Text,
-            FontFamily = new FontFamily(element.FontFamily),
-            FontSize = Math.Max(8, element.FontSize),
-            Foreground = CreateSettingsColorBrush(element.Foreground),
-            TextWrapping = TextWrapping.NoWrap,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-        });
-        return row;
     }
 
     private static Line CreateHardwareEditorGuideLine(bool isVertical, double canvasWidth, double canvasHeight)
@@ -1468,11 +1425,6 @@ public sealed partial class MainWindow
             bitmap = null;
             return false;
         }
-    }
-
-    private static SolidColorBrush CreateSettingsColorBrush(string value)
-    {
-        return new SolidColorBrush(ParseSettingsColor(value));
     }
 
     private static global::Windows.UI.Color ParseSettingsColor(string value)

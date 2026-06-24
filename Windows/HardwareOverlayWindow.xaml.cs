@@ -2,8 +2,6 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
@@ -191,12 +189,12 @@ public sealed partial class HardwareOverlayWindow : Window
         HardwareOverlayContent.Children.Clear();
         if (!string.IsNullOrWhiteSpace(state.Text))
         {
-            HardwareOverlayContent.Children.Add(CreateHardwareOverlayText(state.Text, fontFamily, fontSize));
+            HardwareOverlayContent.Children.Add(HardwareOverlayVisualFactory.CreateText(state.Text, fontFamily, fontSize));
         }
 
         foreach (HardwareOverlayMetric metric in state.Metrics)
         {
-            HardwareOverlayContent.Children.Add(CreateHardwareMetricRow(metric, fontFamily, fontSize));
+            HardwareOverlayContent.Children.Add(HardwareOverlayVisualFactory.CreateMetricRow(metric, fontFamily, fontSize));
         }
     }
 
@@ -223,7 +221,7 @@ public sealed partial class HardwareOverlayWindow : Window
         HardwareOverlayCanvas.Height = height;
         HardwareOverlayCanvas.Visibility = Visibility.Visible;
 
-        if (TryCreateBitmapImage(state.BackgroundImagePath, out BitmapImage? background))
+        if (HardwareOverlayVisualFactory.TryCreateBitmapImage(state.BackgroundImagePath, out var background))
         {
             HardwareOverlayBackground.Source = background;
             HardwareOverlayBackground.Width = width;
@@ -245,12 +243,12 @@ public sealed partial class HardwareOverlayWindow : Window
             };
             if (!string.IsNullOrWhiteSpace(state.Text))
             {
-                legacyContent.Children.Add(CreateHardwareOverlayText(state.Text, fontFamily, fontSize));
+                legacyContent.Children.Add(HardwareOverlayVisualFactory.CreateText(state.Text, fontFamily, fontSize));
             }
 
             foreach (HardwareOverlayMetric metric in state.Metrics)
             {
-                legacyContent.Children.Add(CreateHardwareMetricRow(metric, fontFamily, fontSize));
+                legacyContent.Children.Add(HardwareOverlayVisualFactory.CreateMetricRow(metric, fontFamily, fontSize));
             }
 
             Canvas.SetLeft(legacyContent, 0);
@@ -260,7 +258,7 @@ public sealed partial class HardwareOverlayWindow : Window
 
         foreach (HardwareOverlayElementState element in state.Elements)
         {
-            UIElement visual = CreateHardwareOverlayElement(element, fontFamily, fontSize);
+            UIElement visual = HardwareOverlayVisualFactory.CreateElement(element);
             Canvas.SetLeft(visual, element.X);
             Canvas.SetTop(visual, element.Y);
             HardwareOverlayCanvas.Children.Add(visual);
@@ -331,143 +329,4 @@ public sealed partial class HardwareOverlayWindow : Window
         return dpi > 0 ? dpi / 96.0 : 1;
     }
 
-    private static TextBlock CreateHardwareOverlayText(string text, string fontFamily, double fontSize)
-    {
-        return new TextBlock
-        {
-            Text = text,
-            FontFamily = new FontFamily(fontFamily),
-            FontSize = fontSize,
-            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
-            TextWrapping = TextWrapping.NoWrap,
-        };
-    }
-
-    private static StackPanel CreateHardwareMetricRow(HardwareOverlayMetric metric, string fontFamily, double fontSize)
-    {
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(metric.IconKind, Math.Max(17, fontSize + 2)));
-        row.Children.Add(CreateHardwareOverlayText(metric.ValueText, fontFamily, fontSize));
-        return row;
-    }
-
-    private static UIElement CreateHardwareOverlayElement(HardwareOverlayElementState element, string fallbackFontFamily, double fallbackFontSize)
-    {
-        if (element.Kind == HardwareOverlayElementKind.Image && TryCreateBitmapImage(element.ImagePath, out BitmapImage? bitmap))
-        {
-            return new Microsoft.UI.Xaml.Controls.Image
-            {
-                Source = bitmap,
-                Width = element.Width,
-                Height = element.Height,
-                Stretch = Stretch.UniformToFill,
-                Opacity = element.Opacity,
-            };
-        }
-
-        if (element.Kind == HardwareOverlayElementKind.Sensor)
-        {
-            return CreateHardwareOverlaySensorElement(element, fallbackFontFamily, fallbackFontSize);
-        }
-
-        string fontFamily = string.IsNullOrWhiteSpace(element.FontFamily) ? fallbackFontFamily : element.FontFamily;
-        return new TextBlock
-        {
-            Text = element.Text,
-            FontFamily = new FontFamily(fontFamily),
-            FontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize),
-            Foreground = CreateElementBrush(element.Foreground),
-            Width = element.Width,
-            Height = element.Height,
-            TextWrapping = TextWrapping.WrapWholeWords,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Opacity = element.Opacity,
-        };
-    }
-
-    private static UIElement CreateHardwareOverlaySensorElement(HardwareOverlayElementState element, string fallbackFontFamily, double fallbackFontSize)
-    {
-        string fontFamily = string.IsNullOrWhiteSpace(element.FontFamily) ? fallbackFontFamily : element.FontFamily;
-        double fontSize = Math.Max(8, element.FontSize > 0 ? element.FontSize : fallbackFontSize);
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Width = element.Width,
-            Height = element.Height,
-            Opacity = element.Opacity,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Brush brush = CreateElementBrush(element.Foreground);
-        row.Children.Add(HardwareOverlayIconFactory.CreateIcon(element.IconKind, Math.Max(17, fontSize + 2), brush));
-        row.Children.Add(new TextBlock
-        {
-            Text = element.Text,
-            FontFamily = new FontFamily(fontFamily),
-            FontSize = fontSize,
-            Foreground = brush,
-            TextWrapping = TextWrapping.NoWrap,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-        });
-        return row;
-    }
-
-    private static bool TryCreateBitmapImage(string path, out BitmapImage? bitmap)
-    {
-        bitmap = null;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-        {
-            return false;
-        }
-
-        try
-        {
-            bitmap = new BitmapImage(new Uri(path));
-            return true;
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-            bitmap = null;
-            return false;
-        }
-    }
-
-    private static SolidColorBrush CreateElementBrush(string value)
-    {
-        if (TryParseColor(value, out global::Windows.UI.Color color))
-        {
-            return new SolidColorBrush(color);
-        }
-
-        return new SolidColorBrush(Microsoft.UI.Colors.White);
-    }
-
-    private static bool TryParseColor(string value, out global::Windows.UI.Color color)
-    {
-        color = Microsoft.UI.Colors.White;
-        string hex = value.Trim().TrimStart('#');
-        if (hex.Length == 6)
-        {
-            hex = "FF" + hex;
-        }
-
-        if (hex.Length != 8 || !uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out uint argb))
-        {
-            return false;
-        }
-
-        color = Microsoft.UI.ColorHelper.FromArgb(
-            (byte)((argb >> 24) & 0xFF),
-            (byte)((argb >> 16) & 0xFF),
-            (byte)((argb >> 8) & 0xFF),
-            (byte)(argb & 0xFF));
-        return true;
-    }
 }

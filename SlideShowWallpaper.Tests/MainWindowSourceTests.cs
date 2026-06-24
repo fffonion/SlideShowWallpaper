@@ -230,19 +230,19 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareEditorElementVisual_UsesAutoSizeForTextElements()
+    public void HardwareEditorElementVisual_UsesSharedOverlayFactory()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
             source.IndexOf("private FrameworkElement CreateHardwareEditorElementVisual", StringComparison.Ordinal)..
-            source.IndexOf("private static FrameworkElement CreateHardwareEditorSensorVisual", StringComparison.Ordinal)];
+            source.IndexOf("private static (double Width, double Height) GetHardwareEditorVisualSize", StringComparison.Ordinal)];
 
-        Assert.Contains("if (element.Kind == HardwareOverlayElementKind.Image)", method);
-        Assert.Contains("host.Width = element.Width;", method);
-        Assert.Contains("host.Height = element.Height;", method);
-        Assert.DoesNotContain("Width = element.Width,", method);
-        Assert.DoesNotContain("Height = element.Height,", method);
+        Assert.Contains("HardwareOverlayVisualFactory.CreateElement(element)", method);
+        Assert.Contains("Width = element.Width", method);
+        Assert.Contains("Height = element.Height", method);
+        Assert.Contains("IsHitTestVisible = false", method);
+        Assert.DoesNotContain("CreateHardwareEditorSensorVisual", source);
     }
 
     [Fact]
@@ -268,6 +268,7 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
 
         Assert.Contains("CreateHardwareFontCombo(config.FontFamily", method);
+        Assert.Contains("RenderTabs(_selectedMonitorId);", method);
         Assert.Contains("HardwareMonitorBackground", method);
         Assert.Contains("CreateHardwareBackgroundControls(config)", method);
         Assert.Contains("CreateOpacitySlider(config.Opacity", method);
