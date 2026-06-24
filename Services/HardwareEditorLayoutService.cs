@@ -45,17 +45,18 @@ public static class HardwareEditorLayoutService
         double horizontalGap = Math.Max(0, right.X - (anchor.X + anchor.Width));
         double verticalGap = Math.Max(0, down.Y - (anchor.Y + anchor.Height));
         List<List<HardwareOverlayElement>> rows = GroupRows(elements);
+        double[] columnPositions = BuildColumnPositions(rows, anchor.X, horizontalGap);
         double y = anchor.Y;
         foreach (List<HardwareOverlayElement> row in rows)
         {
-            double x = anchor.X;
             double rowHeight = 0;
+            int column = 0;
             foreach (HardwareOverlayElement element in row.OrderBy(element => element.X).ThenBy(element => element.Y))
             {
-                element.X = x;
+                element.X = columnPositions[Math.Min(column, columnPositions.Length - 1)];
                 element.Y = y;
-                x += Math.Max(0, element.Width) + horizontalGap;
                 rowHeight = Math.Max(rowHeight, Math.Max(0, element.Height));
+                column++;
             }
 
             y += rowHeight + verticalGap;
@@ -81,6 +82,36 @@ public static class HardwareEditorLayoutService
         }
 
         return rows;
+    }
+
+    private static double[] BuildColumnPositions(IReadOnlyList<List<HardwareOverlayElement>> rows, double startX, double horizontalGap)
+    {
+        int columnCount = rows.Count == 0 ? 0 : rows.Max(row => row.Count);
+        if (columnCount == 0)
+        {
+            return [];
+        }
+
+        List<HardwareOverlayElement> referenceRow = rows[0].OrderBy(element => element.X).ThenBy(element => element.Y).ToList();
+        var positions = new double[columnCount];
+        positions[0] = startX;
+        for (int column = 1; column < columnCount; column++)
+        {
+            double previousWidth = column - 1 < referenceRow.Count
+                ? Math.Max(0, referenceRow[column - 1].Width)
+                : GetMaxColumnWidth(rows, column - 1);
+            positions[column] = positions[column - 1] + previousWidth + horizontalGap;
+        }
+
+        return positions;
+    }
+
+    private static double GetMaxColumnWidth(IEnumerable<List<HardwareOverlayElement>> rows, int column)
+    {
+        return rows
+            .Select(row => row.OrderBy(element => element.X).ThenBy(element => element.Y).ElementAtOrDefault(column))
+            .Where(element => element is not null)
+            .Max(element => Math.Max(0, element!.Width));
     }
 
     private static Rect CreateRect(HardwareOverlayElement element)

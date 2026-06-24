@@ -384,6 +384,8 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareEditorGuideLine(isVertical: false", method);
         Assert.Contains("CreateHardwareEditorSelectionRectangle()", method);
         Assert.Contains("AttachHardwareEditorMarqueeSelection(canvas, config, selectionRectangle)", method);
+        Assert.Contains("AttachHardwareEditorKeyboardNudge(canvas, config, visualsById)", method);
+        Assert.Contains("IsTabStop = true", method);
         Assert.Contains("visualsById[element.Id] = visual;", method);
         Assert.Contains("AttachHardwareEditorDrag(canvas, visual, element, config, visual", method);
         Assert.Contains("GetHardwareEditorVisualSize(visual, canvas.Width, canvas.Height)", method);
@@ -431,6 +433,29 @@ public sealed class MainWindowSourceTests
         Assert.Contains("_hardwareEditorSelectedElementIds.Add(id);", method);
         Assert.Contains("config.SelectedElementId = selectedIds.FirstOrDefault() ?? string.Empty;", method);
         Assert.Contains("RefreshHardwareEditorPreview(config);", method);
+    }
+
+    [Fact]
+    public void HardwareEditorKeyboardNudge_MovesSelectionWithoutSnap()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private void AttachHardwareEditorKeyboardNudge", StringComparison.Ordinal)..
+            source.IndexOf("private bool MoveHardwareEditorSelection", StringComparison.Ordinal)];
+        string moveMethod = source[
+            source.IndexOf("private bool MoveHardwareEditorSelection", StringComparison.Ordinal)..
+            source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)];
+
+        Assert.Contains("canvas.KeyDown +=", method);
+        Assert.Contains("global::Windows.System.VirtualKey.Left", method);
+        Assert.Contains("MoveHardwareEditorSelection(config, visualsById, canvas.Width, canvas.Height", method);
+        Assert.Contains("args.Handled = true;", method);
+        Assert.Contains("GetHardwareEditorDragElements(config, selectedElement)", moveMethod);
+        Assert.Contains("Canvas.SetLeft(visual", moveMethod);
+        Assert.Contains("ScheduleApplySettings();", moveMethod);
+        Assert.DoesNotContain("ApplyHardwareEditorSnap", method);
+        Assert.DoesNotContain("ApplyHardwareEditorSnap", moveMethod);
     }
 
     [Fact]

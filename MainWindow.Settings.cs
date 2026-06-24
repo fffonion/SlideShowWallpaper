@@ -708,7 +708,9 @@ public sealed partial class MainWindow
             Width = layout.Width,
             Height = layout.Height,
             Background = HardwareOverlayVisualFactory.CreateBrush(GetHardwareBackgroundColor(config), Microsoft.UI.ColorHelper.FromArgb(255, 18, 22, 26)),
+            IsTabStop = true,
         };
+        _hardwareEditorKeyboardCanvas = canvas;
         AutomationProperties.SetName(canvas, LocalizedStrings.Get("HardwareMonitorPreview"));
         if (TryCreateSettingsBitmapImage(config.BackgroundImagePath, out BitmapImage? background))
         {
@@ -758,6 +760,7 @@ public sealed partial class MainWindow
         }
 
         AttachHardwareEditorMarqueeSelection(canvas, config, selectionRectangle);
+        AttachHardwareEditorKeyboardNudge(canvas, config, visualsById);
         canvas.Children.Add(verticalGuide);
         canvas.Children.Add(horizontalGuide);
         canvas.Children.Add(selectionRectangle);
@@ -1546,6 +1549,7 @@ public sealed partial class MainWindow
 
         canvas.PointerPressed += (_, args) =>
         {
+            canvas.Focus(FocusState.Programmatic);
             isSelecting = true;
             start = ClampHardwareEditorPoint(args.GetCurrentPoint(canvas).Position, canvas.Width, canvas.Height);
             _hardwareEditorSelectedElementIds.Clear();
@@ -1604,6 +1608,66 @@ public sealed partial class MainWindow
         };
     }
 
+    private void AttachHardwareEditorKeyboardNudge(
+        Canvas canvas,
+        HardwareMonitorConfig config,
+        IReadOnlyDictionary<string, FrameworkElement> visualsById)
+    {
+        canvas.KeyDown += (_, args) =>
+        {
+            (double deltaX, double deltaY) = args.Key switch
+            {
+                global::Windows.System.VirtualKey.Left => (-1, 0),
+                global::Windows.System.VirtualKey.Right => (1, 0),
+                global::Windows.System.VirtualKey.Up => (0, -1),
+                global::Windows.System.VirtualKey.Down => (0, 1),
+                _ => (0, 0),
+            };
+            if (deltaX == 0 && deltaY == 0)
+            {
+                return;
+            }
+
+            if (MoveHardwareEditorSelection(config, visualsById, canvas.Width, canvas.Height, deltaX, deltaY))
+            {
+                args.Handled = true;
+            }
+        };
+    }
+
+    private bool MoveHardwareEditorSelection(
+        HardwareMonitorConfig config,
+        IReadOnlyDictionary<string, FrameworkElement> visualsById,
+        double canvasWidth,
+        double canvasHeight,
+        double deltaX,
+        double deltaY)
+    {
+        HardwareOverlayElement? selectedElement = config.Elements.FirstOrDefault(element => _hardwareEditorSelectedElementIds.Contains(element.Id))
+            ?? config.Elements.FirstOrDefault(element => string.Equals(element.Id, config.SelectedElementId, StringComparison.OrdinalIgnoreCase));
+        if (selectedElement is null)
+        {
+            return false;
+        }
+
+        List<HardwareOverlayElement> dragElements = GetHardwareEditorDragElements(config, selectedElement);
+        foreach (HardwareOverlayElement element in dragElements)
+        {
+            double maxLeft = Math.Max(0, canvasWidth - Math.Max(1, element.Width));
+            double maxTop = Math.Max(0, canvasHeight - Math.Max(1, element.Height));
+            element.X = Math.Clamp(element.X + deltaX, 0, maxLeft);
+            element.Y = Math.Clamp(element.Y + deltaY, 0, maxTop);
+            if (visualsById.TryGetValue(element.Id, out FrameworkElement? visual))
+            {
+                Canvas.SetLeft(visual, element.X);
+                Canvas.SetTop(visual, element.Y);
+            }
+        }
+
+        ScheduleApplySettings();
+        return true;
+    }
+
     private static Rect CreateHardwareSelectionRect(Point start, Point end)
     {
         double x = Math.Min(start.X, end.X);
@@ -1649,9 +1713,11 @@ public sealed partial class MainWindow
             _hardwareEditorSelectedElementIds.Add(element.Id);
             config.SelectedElementId = element.Id;
             RenderTabs(_selectedMonitorId);
+            DispatcherQueue.TryEnqueue(() => _hardwareEditorKeyboardCanvas?.Focus(FocusState.Programmatic));
         };
         visual.PointerPressed += (_, args) =>
         {
+            canvas.Focus(FocusState.Programmatic);
             isDragging = true;
             if (!_hardwareEditorSelectedElementIds.Contains(element.Id))
             {

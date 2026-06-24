@@ -73,4 +73,24 @@ public sealed class HardwareEditorLayoutServiceTests
         Assert.Equal(45, elements[4].X);
         Assert.Equal(35, elements[4].Y);
     }
+
+    [Fact]
+    public void ApplyGridSpacing_WithDifferentWidths_AlignsColumnsAcrossRows()
+    {
+        var elements = new List<HardwareOverlayElement>
+        {
+            new() { Id = "top-left", X = 10, Y = 10, Width = 20, Height = 10 },
+            new() { Id = "top-right", X = 45, Y = 10, Width = 30, Height = 10 },
+            new() { Id = "down-left-wide", X = 10, Y = 35, Width = 60, Height = 12 },
+            new() { Id = "down-right", X = 120, Y = 35, Width = 30, Height = 12 },
+        };
+
+        bool arranged = HardwareEditorLayoutService.ApplyGridSpacing(elements);
+
+        Assert.True(arranged);
+        Assert.Equal(10, elements[0].X);
+        Assert.Equal(45, elements[1].X);
+        Assert.Equal(10, elements[2].X);
+        Assert.Equal(45, elements[3].X);
+    }
 }
