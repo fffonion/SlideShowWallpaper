@@ -635,8 +635,24 @@ public sealed partial class MainWindow
             RenderTabs(_selectedMonitorId);
         };
 
+        var importTemplateButton = new Button
+        {
+            Content = LocalizedStrings.Get("ImportHardwareTemplate"),
+        };
+        AutomationProperties.SetName(importTemplateButton, LocalizedStrings.Get("ImportHardwareTemplate"));
+        importTemplateButton.Click += async (_, _) => await ImportHardwareTemplateAsync(config);
+
+        var exportTemplateButton = new Button
+        {
+            Content = LocalizedStrings.Get("ExportHardwareTemplate"),
+        };
+        AutomationProperties.SetName(exportTemplateButton, LocalizedStrings.Get("ExportHardwareTemplate"));
+        exportTemplateButton.Click += async (_, _) => await ExportHardwareTemplateAsync(config);
+
         panel.Children.Add(addSensorsButton);
         panel.Children.Add(addTextButton);
+        panel.Children.Add(importTemplateButton);
+        panel.Children.Add(exportTemplateButton);
         return panel;
     }
 
@@ -1133,6 +1149,46 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(button, LocalizedStrings.Get("HardwareMonitorImportIconImage"));
         button.Click += async (_, _) => await ReplaceHardwareElementImageAsync(config, element);
         return button;
+    }
+
+    private async Task ImportHardwareTemplateAsync(HardwareMonitorConfig config)
+    {
+        string? path = await _folderPickerService.PickOpenFileAsync(_hwnd, ".json");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            HardwareOverlayTemplate template = await HardwareOverlayTemplateService.ImportAsync(path);
+            HardwareOverlayTemplateService.ApplyToConfig(template, config);
+            ScheduleApplySettings();
+            RenderTabs(_selectedMonitorId);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private async Task ExportHardwareTemplateAsync(HardwareMonitorConfig config)
+    {
+        string? path = await _folderPickerService.PickSaveFileAsync(_hwnd, ".json", "hardware-overlay-template");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            HardwareOverlayTemplate template = HardwareOverlayTemplateService.FromConfig(config);
+            await HardwareOverlayTemplateService.ExportAsync(template, path);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private async Task ReplaceHardwareElementImageAsync(HardwareMonitorConfig config, HardwareOverlayElement element)

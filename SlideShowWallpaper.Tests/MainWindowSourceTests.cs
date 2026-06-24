@@ -431,9 +431,6 @@ public sealed class MainWindowSourceTests
         Assert.DoesNotContain("CreateNumberBox(config.Opacity", method);
         Assert.DoesNotContain("HardwareMonitorTemplate", method);
         Assert.DoesNotContain("HardwareMonitorTemplateActions", method);
-        Assert.DoesNotContain("CreateHardwareTemplate", source);
-        Assert.DoesNotContain("ImportHardwareTemplateAsync", source);
-        Assert.DoesNotContain("ExportHardwareTemplateAsync", source);
         Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
     }
 
@@ -497,9 +494,37 @@ public sealed class MainWindowSourceTests
         Assert.Contains("ShowHardwareSensorSelectionDialogAsync(config)", method);
         Assert.Contains("AddSelectedHardwareSensorsToEditor(config)", method);
         Assert.Contains("AutomationProperties.SetName(addSensorsButton", method);
+        Assert.Contains("ImportHardwareTemplate", method);
+        Assert.Contains("ExportHardwareTemplate", method);
+        Assert.Contains("ImportHardwareTemplateAsync(config)", method);
+        Assert.Contains("ExportHardwareTemplateAsync(config)", method);
+        Assert.Contains("AutomationProperties.SetName(importTemplateButton", method);
+        Assert.Contains("AutomationProperties.SetName(exportTemplateButton", method);
         Assert.DoesNotContain("HardwareMonitorImportIconImage", method);
         Assert.DoesNotContain("HardwareMonitorImportBackground", method);
         Assert.DoesNotContain("HardwareMonitorClearBackground", method);
+    }
+
+    [Fact]
+    public void HardwareTemplateMethods_UseTemplateServiceAndFilePickers()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string importMethod = source[
+            source.IndexOf("private async Task ImportHardwareTemplateAsync", StringComparison.Ordinal)..
+            source.IndexOf("private async Task ExportHardwareTemplateAsync", StringComparison.Ordinal)];
+        string exportMethod = source[
+            source.IndexOf("private async Task ExportHardwareTemplateAsync", StringComparison.Ordinal)..
+            source.IndexOf("private async Task ReplaceHardwareElementImageAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("PickOpenFileAsync(_hwnd, \".json\")", importMethod);
+        Assert.Contains("HardwareOverlayTemplateService.ImportAsync(path)", importMethod);
+        Assert.Contains("HardwareOverlayTemplateService.ApplyToConfig(template, config)", importMethod);
+        Assert.Contains("ScheduleApplySettings();", importMethod);
+        Assert.Contains("RenderTabs(_selectedMonitorId);", importMethod);
+        Assert.Contains("PickSaveFileAsync(_hwnd, \".json\", \"hardware-overlay-template\")", exportMethod);
+        Assert.Contains("HardwareOverlayTemplateService.FromConfig(config)", exportMethod);
+        Assert.Contains("HardwareOverlayTemplateService.ExportAsync", exportMethod);
     }
 
     [Fact]
