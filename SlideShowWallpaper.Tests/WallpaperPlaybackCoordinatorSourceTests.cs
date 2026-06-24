@@ -35,8 +35,22 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string method = ExtractMethod(source, "private void EnsureWindow", "private async Task<bool> TryShowSelectedImageAsync");
 
         Assert.Contains("_windows[profile.Id] = window;", method);
-        Assert.Contains("window.HardwareOverlayMoved += Window_HardwareOverlayMoved;", method);
+        Assert.DoesNotContain("window.HardwareOverlayMoved += Window_HardwareOverlayMoved;", method);
         Assert.Contains("ConfigureVideoCoverageTimer();", method);
+    }
+
+    [Fact]
+    public void HardwareOverlay_UsesSeparateOverlayWindow()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string refreshMethod = ExtractMethod(source, "private async Task RefreshHardwareOverlayAsync", "private void ClearHardwareOverlay");
+
+        Assert.Contains("HardwareOverlayWindow? _hardwareOverlayWindow", source);
+        Assert.Contains("EnsureHardwareOverlayWindow()", refreshMethod);
+        Assert.Contains("overlayWindow.SetHardwareOverlay(state, monitorRect)", refreshMethod);
+        Assert.DoesNotContain("window.SetHardwareOverlay(state)", refreshMethod);
+        Assert.Contains("_hardwareOverlayWindow?.HideOverlay();", source);
     }
 
     [Fact]

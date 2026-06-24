@@ -22,6 +22,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private readonly Dictionary<string, MonitorProfile> _profiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly MonitorProfileChangeTracker _profileChanges = new();
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
+    private HardwareOverlayWindow? _hardwareOverlayWindow;
     private bool _playbackEnabled = true;
     private bool _autoTrackNewFiles = true;
     private bool _globalMute = true;
@@ -304,6 +305,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             CloseTrackedWindowSafely(window);
         }
 
+        CloseHardwareOverlayWindow();
         _windows.Clear();
         _timers.Clear();
         _queues.Clear();
@@ -319,7 +321,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     {
         bool shouldRun = _playbackEnabled
             && _hardwareMonitorConfig.IsEnabled
-            && _windows.Values.Any(window => window.IsShowingWallpaper);
+            && GetHardwareOverlayTargetMonitorId() is not null;
         TimeSpan interval = TimeSpan.FromSeconds(Math.Max(1, _hardwareMonitorConfig.RefreshIntervalSeconds));
         if (_hardwareOverlayTimer.Interval != interval)
         {
@@ -380,33 +382,80 @@ public sealed partial class WallpaperPlaybackCoordinator
             || metrics.Count > 0
             || elements.Count > 0
             || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundImagePath);
-        foreach ((string monitorId, WallpaperWindow window) in _windows)
+        string? targetMonitorId = GetHardwareOverlayTargetMonitorId();
+        if (!hasVisualOverlay
+            || targetMonitorId is null
+            || !_monitorRects.TryGetValue(targetMonitorId, out Interop.NativeMethods.RECT monitorRect))
         {
-            bool isTarget = string.IsNullOrWhiteSpace(_hardwareMonitorConfig.TargetMonitorId)
-                || string.Equals(_hardwareMonitorConfig.TargetMonitorId, monitorId, StringComparison.OrdinalIgnoreCase);
-            var state = new HardwareOverlayState(
-                _hardwareMonitorConfig.IsEnabled && isTarget && window.IsShowingWallpaper && hasVisualOverlay,
-                text,
-                metrics,
-                _hardwareMonitorConfig.X,
-                _hardwareMonitorConfig.Y,
-                string.IsNullOrWhiteSpace(_hardwareMonitorConfig.FontFamily) ? "Segoe UI" : _hardwareMonitorConfig.FontFamily,
-                _hardwareMonitorConfig.FontSize,
-                _hardwareMonitorConfig.Opacity)
-            {
-                BackgroundImagePath = _hardwareMonitorConfig.BackgroundImagePath,
-                Elements = elements,
-            };
-            window.SetHardwareOverlay(state);
+            ClearHardwareOverlay();
+            return;
         }
+
+        var state = new HardwareOverlayState(
+            true,
+            text,
+            metrics,
+            _hardwareMonitorConfig.X,
+            _hardwareMonitorConfig.Y,
+            string.IsNullOrWhiteSpace(_hardwareMonitorConfig.FontFamily) ? "Segoe UI" : _hardwareMonitorConfig.FontFamily,
+            _hardwareMonitorConfig.FontSize,
+            _hardwareMonitorConfig.Opacity)
+        {
+            BackgroundImagePath = _hardwareMonitorConfig.BackgroundImagePath,
+            Elements = elements,
+        };
+        HardwareOverlayWindow overlayWindow = EnsureHardwareOverlayWindow();
+        overlayWindow.SetHardwareOverlay(state, monitorRect);
     }
 
     private void ClearHardwareOverlay()
     {
-        foreach (WallpaperWindow window in _windows.Values)
+        _hardwareOverlayWindow?.HideOverlay();
+    }
+
+    private string? GetHardwareOverlayTargetMonitorId()
+    {
+        if (!string.IsNullOrWhiteSpace(_hardwareMonitorConfig.TargetMonitorId)
+            && _profiles.TryGetValue(_hardwareMonitorConfig.TargetMonitorId, out MonitorProfile? targetProfile)
+            && !targetProfile.IsStopped)
         {
-            window.SetHardwareOverlay(new HardwareOverlayState(false, string.Empty, [], 0, 0, "Segoe UI", 0, 0));
+            return targetProfile.Id;
         }
+
+        return _profiles.Values.FirstOrDefault(profile => !profile.IsStopped)?.Id;
+    }
+
+    private HardwareOverlayWindow EnsureHardwareOverlayWindow()
+    {
+        if (_hardwareOverlayWindow is HardwareOverlayWindow existingWindow)
+        {
+            return existingWindow;
+        }
+
+        _hardwareOverlayWindow = new HardwareOverlayWindow();
+        _hardwareOverlayWindow.HardwareOverlayMoved += Window_HardwareOverlayMoved;
+        _hardwareOverlayWindow.Activate();
+        return _hardwareOverlayWindow;
+    }
+
+    private void CloseHardwareOverlayWindow()
+    {
+        if (_hardwareOverlayWindow is null)
+        {
+            return;
+        }
+
+        _hardwareOverlayWindow.HardwareOverlayMoved -= Window_HardwareOverlayMoved;
+        try
+        {
+            _hardwareOverlayWindow.Close();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
+        _hardwareOverlayWindow = null;
     }
 
     private void Window_HardwareOverlayMoved(object? sender, HardwareOverlayMovedEventArgs args)

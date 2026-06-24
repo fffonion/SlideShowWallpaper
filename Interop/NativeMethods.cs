@@ -12,7 +12,10 @@ public static partial class NativeMethods
     public static readonly nint WS_SYSMENU = 0x00080000;
     public static readonly nint WS_THICKFRAME = 0x00040000;
     public static readonly nint WS_VISIBLE = 0x10000000;
+    public static readonly nint WS_EX_APPWINDOW = 0x00040000;
+    public static readonly nint WS_EX_TOOLWINDOW = 0x00000080;
 
+    internal const int GWL_EXSTYLE = -20;
     internal const int GWL_STYLE = -16;
     internal const int GWL_WNDPROC = -4;
     internal const int LVM_FIRST = 0x1000;
@@ -24,6 +27,7 @@ public static partial class NativeMethods
     internal const int TPM_RIGHTBUTTON = 0x0002;
     internal const int TPM_RETURNCMD = 0x0100;
     internal const int SW_HIDE = 0;
+    internal const int SW_SHOWNA = 8;
     internal const int SW_SHOWMAXIMIZED = 3;
     internal const int SW_MINIMIZE = 6;
     internal const int SW_RESTORE = 9;
@@ -192,6 +196,20 @@ public static partial class NativeMethods
     {
         nint style = GetWindowLongPtr(hWnd, GWL_STYLE);
         SetWindowStyleLongPtr(hWnd, GWL_STYLE, ToBorderlessWindowStyle(style));
+        SetWindowPos(
+            hWnd,
+            IntPtr.Zero,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
+    internal static void SetToolWindow(IntPtr hWnd)
+    {
+        nint extendedStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+        SetWindowStyleLongPtr(hWnd, GWL_EXSTYLE, (extendedStyle & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW);
         SetWindowPos(
             hWnd,
             IntPtr.Zero,
