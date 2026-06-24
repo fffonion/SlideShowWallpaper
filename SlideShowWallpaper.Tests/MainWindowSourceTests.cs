@@ -179,6 +179,7 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareEditorGuideLine(isVertical: true", method);
         Assert.Contains("CreateHardwareEditorGuideLine(isVertical: false", method);
         Assert.Contains("AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide)", method);
+        Assert.Contains("GetHardwareEditorVisualSize(visual, canvas.Width, canvas.Height)", method);
         Assert.Contains("canvas.Children.Add(verticalGuide);", method);
         Assert.Contains("canvas.Children.Add(horizontalGuide);", method);
     }
@@ -193,9 +194,26 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private static bool TryCreateSettingsBitmapImage", StringComparison.Ordinal)];
 
         Assert.Contains("ApplyHardwareEditorSnap", method);
+        Assert.Contains("GetHardwareEditorVisualSize(visual", method);
         Assert.Contains("UpdateHardwareEditorGuides", method);
         Assert.Contains("HideHardwareEditorGuides", method);
         Assert.Contains("HardwareEditorSnapThreshold", source);
+    }
+
+    [Fact]
+    public void HardwareEditorElementVisual_UsesAutoSizeForTextElements()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorElementVisual", StringComparison.Ordinal)..
+            source.IndexOf("private static FrameworkElement CreateHardwareEditorSensorVisual", StringComparison.Ordinal)];
+
+        Assert.Contains("if (element.Kind == HardwareOverlayElementKind.Image)", method);
+        Assert.Contains("host.Width = element.Width;", method);
+        Assert.Contains("host.Height = element.Height;", method);
+        Assert.DoesNotContain("Width = element.Width,", method);
+        Assert.DoesNotContain("Height = element.Height,", method);
     }
 
     [Fact]

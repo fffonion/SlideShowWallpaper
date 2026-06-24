@@ -639,8 +639,9 @@ public sealed partial class MainWindow
                     element.Opacity);
             FrameworkElement visual = CreateHardwareEditorElementVisual(state, string.Equals(config.SelectedElementId, element.Id, StringComparison.OrdinalIgnoreCase));
             AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide);
-            Canvas.SetLeft(visual, Math.Clamp(element.X, 0, canvas.Width - Math.Min(element.Width, canvas.Width)));
-            Canvas.SetTop(visual, Math.Clamp(element.Y, 0, canvas.Height - Math.Min(element.Height, canvas.Height)));
+            (double visualWidth, double visualHeight) = GetHardwareEditorVisualSize(visual, canvas.Width, canvas.Height);
+            Canvas.SetLeft(visual, Math.Clamp(element.X, 0, Math.Max(0, canvas.Width - visualWidth)));
+            Canvas.SetTop(visual, Math.Clamp(element.Y, 0, Math.Max(0, canvas.Height - visualHeight)));
             canvas.Children.Add(visual);
         }
 
@@ -1117,8 +1118,6 @@ public sealed partial class MainWindow
 
         var host = new Border
         {
-            Width = element.Width,
-            Height = element.Height,
             Opacity = element.Opacity,
             Background = isSelected
                 ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(36, 255, 255, 255))
@@ -1130,8 +1129,25 @@ public sealed partial class MainWindow
             Padding = element.Kind == HardwareOverlayElementKind.Image ? new Thickness(0) : new Thickness(4, 1, 4, 1),
             Child = child,
         };
+        if (element.Kind == HardwareOverlayElementKind.Image)
+        {
+            host.Width = element.Width;
+            host.Height = element.Height;
+        }
+
         AutomationProperties.SetName(host, element.Text);
         return host;
+    }
+
+    private static (double Width, double Height) GetHardwareEditorVisualSize(FrameworkElement visual, double availableWidth, double availableHeight)
+    {
+        if (visual.ActualWidth > 0 && visual.ActualHeight > 0)
+        {
+            return (visual.ActualWidth, visual.ActualHeight);
+        }
+
+        visual.Measure(new global::Windows.Foundation.Size(Math.Max(1, availableWidth), Math.Max(1, availableHeight)));
+        return (Math.Max(1, visual.DesiredSize.Width), Math.Max(1, visual.DesiredSize.Height));
     }
 
     private static FrameworkElement CreateHardwareEditorSensorVisual(HardwareOverlayElementState element)
@@ -1219,9 +1235,10 @@ public sealed partial class MainWindow
             }
 
             global::Windows.Foundation.Point point = args.GetCurrentPoint(canvas).Position;
-            double left = Math.Clamp(startLeft + point.X - dragStartX, 0, Math.Max(0, canvas.Width - visual.Width));
-            double top = Math.Clamp(startTop + point.Y - dragStartY, 0, Math.Max(0, canvas.Height - visual.Height));
-            HardwareEditorSnapResult snap = ApplyHardwareEditorSnap(config.Elements, element, left, top, visual.Width, visual.Height, canvas.Width, canvas.Height);
+            (double visualWidth, double visualHeight) = GetHardwareEditorVisualSize(visual, canvas.Width, canvas.Height);
+            double left = Math.Clamp(startLeft + point.X - dragStartX, 0, Math.Max(0, canvas.Width - visualWidth));
+            double top = Math.Clamp(startTop + point.Y - dragStartY, 0, Math.Max(0, canvas.Height - visualHeight));
+            HardwareEditorSnapResult snap = ApplyHardwareEditorSnap(config.Elements, element, left, top, visualWidth, visualHeight, canvas.Width, canvas.Height);
             left = snap.Left;
             top = snap.Top;
             Canvas.SetLeft(visual, left);
