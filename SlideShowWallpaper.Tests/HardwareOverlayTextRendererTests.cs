@@ -56,6 +56,23 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
+    public void FormatReading_WithVramAvailableInMegabytes_DisplaysGigabytes()
+    {
+        var reading = new HardwareSensorReading(
+            "gpu-memory-free",
+            "GPU",
+            "GPU Memory Free",
+            HardwareMetricKind.VramAvailable,
+            HardwareMetricGroup.Gpu,
+            17470,
+            "MB");
+
+        string text = HardwareOverlayTextRenderer.FormatReading(reading);
+
+        Assert.Equal("17.1 GB", text);
+    }
+
+    [Fact]
     public void SelectSensors_WithNoSelection_UsesFirstEightSensors()
     {
         var config = new HardwareMonitorConfig();

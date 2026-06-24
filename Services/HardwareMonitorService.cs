@@ -118,6 +118,7 @@ public sealed class HardwareMonitorService : IDisposable
             HardwareMetricKind.Temperature => "C",
             HardwareMetricKind.FanRpm => "RPM",
             HardwareMetricKind.Power => "W",
+            HardwareMetricKind.VramAvailable => "MB",
             _ => "GB",
         };
         return new HardwareSensorReading(
@@ -209,15 +210,15 @@ public static class HardwareOverlayTextRenderer
 
     public static string FormatReading(HardwareSensorReading reading)
     {
+        (double displayValue, string displayUnit) = NormalizeDisplayUnit(reading);
         string value = reading.Kind switch
         {
-            HardwareMetricKind.FanRpm => reading.Value.ToString("0", CultureInfo.CurrentCulture),
-            HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable => reading.Value.ToString("0.0", CultureInfo.CurrentCulture),
-            _ => reading.Value.ToString("0.#", CultureInfo.CurrentCulture),
+            HardwareMetricKind.FanRpm => displayValue.ToString("0", CultureInfo.CurrentCulture),
+            HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable => displayValue.ToString("0.0", CultureInfo.CurrentCulture),
+            _ => displayValue.ToString("0.#", CultureInfo.CurrentCulture),
         };
-        string unit = reading.Unit == "C" ? "\u00B0C" : reading.Unit;
 
-        return $"{value} {unit}";
+        return $"{value} {displayUnit}";
     }
 
     public static HardwareOverlayIconKind GetIconKind(HardwareSensorReading reading)
@@ -244,5 +245,26 @@ public static class HardwareOverlayTextRenderer
     private static bool IsVisibleReading(HardwareSensorReading reading)
     {
         return !string.Equals(reading.SensorName, "Virtual Memory Available", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (double Value, string Unit) NormalizeDisplayUnit(HardwareSensorReading reading)
+    {
+        if (reading.Unit == "C")
+        {
+            return (reading.Value, "\u00B0C");
+        }
+
+        if (reading.Kind is not HardwareMetricKind.MemoryAvailable and not HardwareMetricKind.VramAvailable)
+        {
+            return (reading.Value, reading.Unit);
+        }
+
+        return reading.Unit.ToUpperInvariant() switch
+        {
+            "B" => (reading.Value / 1024 / 1024 / 1024, "GB"),
+            "KB" => (reading.Value / 1024 / 1024, "GB"),
+            "MB" => (reading.Value / 1024, "GB"),
+            _ => (reading.Value, reading.Unit),
+        };
     }
 }
