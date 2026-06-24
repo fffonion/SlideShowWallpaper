@@ -89,7 +89,9 @@
     <SelfContainedSingleFilePublishDir Condition="'$(SelfContainedSingleFilePublishDir)' == ''">$(MSBuildProjectDirectory)\artifacts\release\$(SingleFileRuntimeIdentifier)-self-contained\</SelfContainedSingleFilePublishDir>
     <HardwareBrokerProject>$(MSBuildProjectDirectory)\HardwareBroker\SlideShowWallpaper.HardwareBroker.csproj</HardwareBrokerProject>
     <HardwareBrokerExecutableName>SlideShowWallpaper.HardwareBroker.exe</HardwareBrokerExecutableName>
-    <HardwareBrokerPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\hardware-broker\</HardwareBrokerPublishDir>
+    <HardwareBrokerTargetFramework>net10.0-windows</HardwareBrokerTargetFramework>
+    <HardwareBrokerRuntimeIdentifier Condition="'$(HardwareBrokerRuntimeIdentifier)' == ''">$(RuntimeIdentifier)</HardwareBrokerRuntimeIdentifier>
+    <HardwareBrokerPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\$(HardwareBrokerTargetFramework)\$(HardwareBrokerRuntimeIdentifier)\hardware-broker\</HardwareBrokerPublishDir>
     <HardwareBrokerEmbeddedExecutable>$(HardwareBrokerPublishDir)$(HardwareBrokerExecutableName)</HardwareBrokerEmbeddedExecutable>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
@@ -102,11 +104,11 @@
     <MSBuild
       Projects="$(HardwareBrokerProject)"
       Targets="Restore"
-      Properties="Configuration=$(Configuration);Platform=$(Platform);RuntimeIdentifier=$(RuntimeIdentifier);SkipHardwareBrokerBuild=true" />
+      Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(HardwareBrokerTargetFramework);RuntimeIdentifier=$(HardwareBrokerRuntimeIdentifier);SkipHardwareBrokerBuild=true" />
     <MSBuild
       Projects="$(HardwareBrokerProject)"
       Targets="Publish"
-      Properties="Configuration=$(Configuration);Platform=$(Platform);RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(HardwareBrokerPublishDir);SelfContained=false;PublishSingleFile=true;EnableCompressionInSingleFile=false;PublishTrimmed=false;DebugSymbols=false;DebugType=None;SkipHardwareBrokerBuild=true" />
+      Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(HardwareBrokerTargetFramework);RuntimeIdentifier=$(HardwareBrokerRuntimeIdentifier);PublishDir=$(HardwareBrokerPublishDir);SelfContained=false;PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;EnableCompressionInSingleFile=false;PublishTrimmed=false;DebugSymbols=false;DebugType=None;SkipHardwareBrokerBuild=true" />
     <ItemGroup>
       <EmbeddedResource Include="$(HardwareBrokerEmbeddedExecutable)" LogicalName="$(HardwareBrokerExecutableName)" />
     </ItemGroup>

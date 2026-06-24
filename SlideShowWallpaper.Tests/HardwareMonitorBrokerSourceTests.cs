@@ -142,6 +142,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         string source = File.ReadAllText(projectPath);
 
         Assert.Contains("<OutputType>Exe</OutputType>", source);
+        Assert.Contains("<TargetFramework>net10.0-windows</TargetFramework>", source);
         Assert.Contains("<RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>", source);
         Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", source);
         Assert.Contains("<AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>", source);
@@ -151,6 +152,8 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("LibreHardwareMonitorLib", source);
         Assert.DoesNotContain("WorkingSetTrimmer.cs", source);
         Assert.DoesNotContain("<OutputType>WinExe</OutputType>", source);
+        Assert.DoesNotContain("windows10.0", source);
+        Assert.DoesNotContain("Microsoft.Windows.SDK.NET", source);
         Assert.DoesNotContain("UseWinUI>true", source);
         Assert.DoesNotContain("Microsoft.WindowsAppSDK", source);
     }
@@ -162,6 +165,9 @@ public sealed class HardwareMonitorBrokerSourceTests
         string source = File.ReadAllText(Path.Combine(root, "SlideShowWallpaper.csproj"));
 
         Assert.Contains("HardwareBrokerProject", source);
+        Assert.Contains("HardwareBrokerTargetFramework", source);
+        Assert.Contains("TargetFramework=$(HardwareBrokerTargetFramework)", source);
+        Assert.Contains("IncludeNativeLibrariesForSelfExtract=true", source);
         Assert.Contains("BuildHardwareBroker", source);
         Assert.Contains("EmbeddedResource", source);
         Assert.Contains("SlideShowWallpaper.HardwareBroker.exe", source);
