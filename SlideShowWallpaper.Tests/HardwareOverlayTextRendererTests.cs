@@ -49,9 +49,9 @@ public sealed class HardwareOverlayTextRendererTests
         IReadOnlyList<HardwareOverlayMetric> metrics = HardwareOverlayTextRenderer.CreateMetrics(config, snapshot);
 
         Assert.Equal(2, metrics.Count);
-        Assert.Equal(HardwareOverlayIconKind.CpuTemperature, metrics[0].IconKind);
+        Assert.Equal(HardwareOverlayIconKind.Cpu, metrics[0].IconKind);
         Assert.Equal("61.2 °C", metrics[0].ValueText);
-        Assert.Equal(HardwareOverlayIconKind.GpuPower, metrics[1].IconKind);
+        Assert.Equal(HardwareOverlayIconKind.Gpu, metrics[1].IconKind);
         Assert.Equal("182.5 W", metrics[1].ValueText);
     }
 

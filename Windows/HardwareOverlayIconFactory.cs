@@ -20,17 +20,14 @@ internal static class HardwareOverlayIconFactory
         double scale = size / 20;
         switch (kind)
         {
-            case HardwareOverlayIconKind.CpuTemperature:
+            case HardwareOverlayIconKind.Cpu:
                 DrawChip(canvas, brush, scale);
-                DrawMiniThermometer(canvas, brush, scale);
                 break;
-            case HardwareOverlayIconKind.GpuTemperature:
+            case HardwareOverlayIconKind.Gpu:
                 DrawGpu(canvas, brush, scale);
-                DrawMiniThermometer(canvas, brush, scale);
                 break;
-            case HardwareOverlayIconKind.StorageTemperature:
+            case HardwareOverlayIconKind.Storage:
                 DrawStorage(canvas, brush, scale);
-                DrawMiniThermometer(canvas, brush, scale);
                 break;
             case HardwareOverlayIconKind.Temperature:
                 DrawThermometer(canvas, brush, scale);
@@ -44,14 +41,6 @@ internal static class HardwareOverlayIconFactory
             case HardwareOverlayIconKind.Vram:
                 DrawGpu(canvas, brush, scale);
                 DrawMemoryCells(canvas, brush, scale, 11, 12);
-                break;
-            case HardwareOverlayIconKind.CpuPower:
-                DrawChip(canvas, brush, scale);
-                DrawBolt(canvas, brush, scale);
-                break;
-            case HardwareOverlayIconKind.GpuPower:
-                DrawGpu(canvas, brush, scale);
-                DrawBolt(canvas, brush, scale);
                 break;
             case HardwareOverlayIconKind.Power:
                 DrawBolt(canvas, brush, scale);
@@ -98,12 +87,6 @@ internal static class HardwareOverlayIconFactory
         AddRoundedRect(canvas, 8, 3, 4, 11, brush, scale, strokeOnly: true);
         AddEllipse(canvas, 6.5, 12, 7, 7, brush, scale, strokeOnly: true);
         AddLine(canvas, 10, 6, 10, 13, brush, scale);
-    }
-
-    private static void DrawMiniThermometer(Canvas canvas, Brush brush, double scale)
-    {
-        AddRoundedRect(canvas, 13, 4, 2.4, 7.5, brush, scale, strokeOnly: true);
-        AddEllipse(canvas, 11.8, 10.3, 4.8, 4.8, brush, scale, strokeOnly: true);
     }
 
     private static void DrawFan(Canvas canvas, Brush brush, double scale)

@@ -21,15 +21,13 @@ public enum HardwareMetricGroup
 
 public enum HardwareOverlayIconKind
 {
-    CpuTemperature,
-    GpuTemperature,
-    StorageTemperature,
+    Cpu,
+    Gpu,
+    Storage,
     Temperature,
     Fan,
     Memory,
     Vram,
-    CpuPower,
-    GpuPower,
     Power,
     Generic
 }

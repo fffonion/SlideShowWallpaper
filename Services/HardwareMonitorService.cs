@@ -262,17 +262,17 @@ public static class HardwareOverlayTextRenderer
         {
             HardwareMetricKind.Temperature => reading.Group switch
             {
-                HardwareMetricGroup.Cpu => HardwareOverlayIconKind.CpuTemperature,
-                HardwareMetricGroup.Gpu => HardwareOverlayIconKind.GpuTemperature,
-                HardwareMetricGroup.Storage => HardwareOverlayIconKind.StorageTemperature,
+                HardwareMetricGroup.Cpu => HardwareOverlayIconKind.Cpu,
+                HardwareMetricGroup.Gpu => HardwareOverlayIconKind.Gpu,
+                HardwareMetricGroup.Storage => HardwareOverlayIconKind.Storage,
                 _ => HardwareOverlayIconKind.Temperature,
             },
             HardwareMetricKind.FanRpm => HardwareOverlayIconKind.Fan,
             HardwareMetricKind.MemoryAvailable => HardwareOverlayIconKind.Memory,
             HardwareMetricKind.VramAvailable => HardwareOverlayIconKind.Vram,
             HardwareMetricKind.Power => reading.Group == HardwareMetricGroup.Gpu
-                ? HardwareOverlayIconKind.GpuPower
-                : HardwareOverlayIconKind.CpuPower,
+                ? HardwareOverlayIconKind.Gpu
+                : HardwareOverlayIconKind.Cpu,
             _ => HardwareOverlayIconKind.Generic,
         };
     }
