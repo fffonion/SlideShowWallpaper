@@ -13,12 +13,13 @@ public sealed class FolderPickerServiceSourceTests
         int methodEnd = FindPickSaveFileAsyncStart(source);
         string method = source[methodStart..methodEnd];
 
-        Assert.Contains("PickOpenFileNative(ownerHwnd, fileTypes)", method);
-        Assert.Contains("NativeMethods.GetOpenFileName", source);
-        Assert.Contains("NativeMethods.CommDlgExtendedError", source);
-        Assert.Contains("NativeMethods.OFN_FILEMUSTEXIST", source);
-        Assert.Contains("BuildOpenFileFilter(fileTypes)", source);
+        Assert.Contains("ShowOpenFileDialog(ownerHwnd, fileTypes)", method);
+        Assert.Contains("IFileDialog", source);
+        Assert.Contains("FOS_FILEMUSTEXIST", source);
+        Assert.Contains("BuildFileTypeFilters(fileTypes)", source);
         Assert.DoesNotContain("FileOpenPicker", method);
+        Assert.DoesNotContain("OPENFILENAME", source);
+        Assert.DoesNotContain("GetOpenFileName", source);
     }
 
     [Fact]
@@ -28,17 +29,48 @@ public sealed class FolderPickerServiceSourceTests
         string source = File.ReadAllText(Path.Combine(root, "Services", "FolderPickerService.cs"));
         int methodStart = FindPickSaveFileAsyncStart(source);
         int methodEnd = source.IndexOf(
-            "private static string? PickOpenFileNative",
+            "private static string? ShowFolderDialog",
             StringComparison.Ordinal);
         string method = source[methodStart..methodEnd];
 
-        Assert.Contains("PickSaveFileNative(ownerHwnd, fileType, defaultFileName)", method);
-        Assert.Contains("NativeMethods.GetSaveFileName", source);
-        Assert.Contains("NativeMethods.OFN_OVERWRITEPROMPT", source);
-        Assert.Contains("NativeMethods.CommDlgExtendedError", source);
-        Assert.Contains("BuildSaveFileFilter(fileType)", source);
+        Assert.Contains("ShowSaveFileDialog(ownerHwnd, fileType, defaultFileName)", method);
+        Assert.Contains("IFileDialog", source);
+        Assert.Contains("FOS_OVERWRITEPROMPT", source);
+        Assert.Contains("BuildFileTypeFilters([fileType])", source);
         Assert.Contains("NormalizeDialogExtension(fileType)", source);
         Assert.DoesNotContain("FileSavePicker", method);
+        Assert.DoesNotContain("OPENFILENAME", source);
+        Assert.DoesNotContain("GetSaveFileName", source);
+    }
+
+    [Fact]
+    public void PickFolderAsync_UsesNativeFolderDialog()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "FolderPickerService.cs"));
+        string method = source[
+            FindPickFolderAsyncStart(source)..
+            source.IndexOf("public async Task<string?> PickOpenFileAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("ShowFolderDialog(ownerHwnd)", method);
+        Assert.Contains("FOS_PICKFOLDERS", source);
+        Assert.Contains("FOS_FORCEFILESYSTEM", source);
+        Assert.DoesNotContain("FolderPicker", method);
+    }
+
+    private static int FindPickFolderAsyncStart(string source)
+    {
+        int methodStart = source.IndexOf(
+            "public Task<string?> PickFolderAsync(IntPtr ownerHwnd)",
+            StringComparison.Ordinal);
+        if (methodStart >= 0)
+        {
+            return methodStart;
+        }
+
+        return source.IndexOf(
+            "public async Task<string?> PickFolderAsync(IntPtr ownerHwnd)",
+            StringComparison.Ordinal);
     }
 
     private static int FindPickSaveFileAsyncStart(string source)

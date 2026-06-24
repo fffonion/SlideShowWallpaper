@@ -35,11 +35,6 @@ public static partial class NativeMethods
     internal const int MF_GRAYED = 0x0001;
     internal const int MF_SEPARATOR = 0x0800;
     internal const int MF_STRING = 0x0000;
-    internal const int OFN_EXPLORER = 0x00080000;
-    internal const int OFN_FILEMUSTEXIST = 0x00001000;
-    internal const int OFN_NOCHANGEDIR = 0x00000008;
-    internal const int OFN_OVERWRITEPROMPT = 0x00000002;
-    internal const int OFN_PATHMUSTEXIST = 0x00000800;
     internal const int TPM_RIGHTBUTTON = 0x0002;
     internal const int TPM_RETURNCMD = 0x0100;
     internal const int SW_HIDE = 0;
@@ -193,15 +188,6 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
-
-    [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    internal static extern bool GetOpenFileName(ref OPENFILENAME openFileName);
-
-    [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    internal static extern bool GetSaveFileName(ref OPENFILENAME openFileName);
-
-    [DllImport("comdlg32.dll")]
-    internal static extern int CommDlgExtendedError();
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr RegisterPowerSettingNotification(IntPtr hRecipient, ref Guid powerSettingGuid, int flags);
@@ -422,34 +408,6 @@ public static partial class NativeMethods
         public IntPtr hThread;
         public int dwProcessId;
         public int dwThreadId;
-    }
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    internal struct OPENFILENAME
-    {
-        public int lStructSize;
-        public IntPtr hwndOwner;
-        public IntPtr hInstance;
-        public string? lpstrFilter;
-        public IntPtr lpstrCustomFilter;
-        public int nMaxCustFilter;
-        public int nFilterIndex;
-        public StringBuilder lpstrFile;
-        public int nMaxFile;
-        public IntPtr lpstrFileTitle;
-        public int nMaxFileTitle;
-        public string? lpstrInitialDir;
-        public string? lpstrTitle;
-        public int Flags;
-        public short nFileOffset;
-        public short nFileExtension;
-        public string? lpstrDefExt;
-        public IntPtr lCustData;
-        public IntPtr lpfnHook;
-        public IntPtr lpTemplateName;
-        public IntPtr pvReserved;
-        public int dwReserved;
-        public int FlagsEx;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

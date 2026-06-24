@@ -1,26 +1,23 @@
 using System.Runtime.InteropServices;
-using System.Text;
-
-using SlideShowWallpaper.Interop;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
 
 namespace SlideShowWallpaper.Services;
 
 public sealed class FolderPickerService
 {
-    private const int OpenFilePathBufferLength = 32768;
+    private const int S_OK = 0;
+    private const int ERROR_CANCELLED = unchecked((int)0x800704C7);
+    private const uint FOS_OVERWRITEPROMPT = 0x00000002;
+    private const uint FOS_PICKFOLDERS = 0x00000020;
+    private const uint FOS_FORCEFILESYSTEM = 0x00000040;
+    private const uint FOS_PATHMUSTEXIST = 0x00000800;
+    private const uint FOS_FILEMUSTEXIST = 0x00001000;
+    private const uint FOS_NOCHANGEDIR = 0x00000008;
+    private const uint FOS_NOREADONLYRETURN = 0x00008000;
+    private const uint SIGDN_FILESYSPATH = 0x80058000;
 
-    public async Task<string?> PickFolderAsync(IntPtr ownerHwnd)
+    public Task<string?> PickFolderAsync(IntPtr ownerHwnd)
     {
-        var picker = new FolderPicker
-        {
-            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-        };
-        picker.FileTypeFilter.Add("*");
-        InitializeWithWindow.Initialize(picker, ownerHwnd);
-        global::Windows.Storage.StorageFolder? folder = await picker.PickSingleFolderAsync();
-        return folder?.Path;
+        return Task.FromResult(ShowFolderDialog(ownerHwnd));
     }
 
     public async Task<string?> PickOpenFileAsync(IntPtr ownerHwnd, string fileType)
@@ -30,104 +27,100 @@ public sealed class FolderPickerService
 
     public Task<string?> PickOpenFileAsync(IntPtr ownerHwnd, IReadOnlyList<string> fileTypes)
     {
-        return Task.FromResult(PickOpenFileNative(ownerHwnd, fileTypes));
+        return Task.FromResult(ShowOpenFileDialog(ownerHwnd, fileTypes));
     }
 
     public Task<string?> PickSaveFileAsync(IntPtr ownerHwnd, string fileType, string defaultFileName)
     {
-        return Task.FromResult(PickSaveFileNative(ownerHwnd, fileType, defaultFileName));
+        return Task.FromResult(ShowSaveFileDialog(ownerHwnd, fileType, defaultFileName));
     }
 
-    private static string? PickOpenFileNative(IntPtr ownerHwnd, IReadOnlyList<string> fileTypes)
+    private static string? ShowFolderDialog(IntPtr ownerHwnd)
     {
+        return ShowFileDialog(
+            createDialog: () => new FileOpenDialog(),
+            ownerHwnd,
+            optionsToAdd: FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR,
+            configureDialog: null);
+    }
+
+    private static string? ShowOpenFileDialog(IntPtr ownerHwnd, IReadOnlyList<string> fileTypes)
+    {
+        return ShowFileDialog(
+            createDialog: () => new FileOpenDialog(),
+            ownerHwnd,
+            optionsToAdd: FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST | FOS_NOCHANGEDIR,
+            configureDialog: dialog =>
+            {
+                COMDLG_FILTERSPEC[] filters = BuildFileTypeFilters(fileTypes);
+                dialog.SetFileTypes((uint)filters.Length, filters);
+                dialog.SetFileTypeIndex(1);
+            });
+    }
+
+    private static string? ShowSaveFileDialog(IntPtr ownerHwnd, string fileType, string defaultFileName)
+    {
+        return ShowFileDialog(
+            createDialog: () => new FileSaveDialog(),
+            ownerHwnd,
+            optionsToAdd: FOS_OVERWRITEPROMPT | FOS_NOREADONLYRETURN | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR,
+            configureDialog: dialog =>
+            {
+                string extension = NormalizeDialogExtension(fileType);
+                COMDLG_FILTERSPEC[] filters = BuildFileTypeFilters([fileType]);
+                dialog.SetFileTypes((uint)filters.Length, filters);
+                dialog.SetFileTypeIndex(1);
+                if (!string.IsNullOrWhiteSpace(extension))
+                {
+                    dialog.SetDefaultExtension(extension);
+                }
+
+                dialog.SetFileName(BuildSuggestedSaveFileName(defaultFileName, extension));
+            });
+    }
+
+    private static string? ShowFileDialog(Func<object> createDialog, IntPtr ownerHwnd, uint optionsToAdd, Action<IFileDialog>? configureDialog)
+    {
+        object? dialogObject = null;
+        IShellItem? result = null;
         try
         {
-            if (ownerHwnd != IntPtr.Zero)
+            dialogObject = createDialog();
+            var dialog = (IFileDialog)dialogObject;
+            ThrowIfFailed(dialog.GetOptions(out uint options));
+            ThrowIfFailed(dialog.SetOptions(options | optionsToAdd));
+            configureDialog?.Invoke(dialog);
+
+            int showResult = dialog.Show(ownerHwnd);
+            if (showResult == ERROR_CANCELLED)
             {
-                NativeMethods.SetForegroundWindow(ownerHwnd);
+                return null;
             }
 
-            var fileName = new StringBuilder(OpenFilePathBufferLength);
-            var openFileName = new NativeMethods.OPENFILENAME
-            {
-                lStructSize = Marshal.SizeOf<NativeMethods.OPENFILENAME>(),
-                hwndOwner = ownerHwnd,
-                lpstrFilter = BuildOpenFileFilter(fileTypes),
-                lpstrFile = fileName,
-                nMaxFile = fileName.Capacity,
-                nFilterIndex = 1,
-                Flags = NativeMethods.OFN_EXPLORER
-                    | NativeMethods.OFN_FILEMUSTEXIST
-                    | NativeMethods.OFN_PATHMUSTEXIST
-                    | NativeMethods.OFN_NOCHANGEDIR,
-            };
-
-            if (NativeMethods.GetOpenFileName(ref openFileName))
-            {
-                return fileName.ToString();
-            }
-
-            int error = NativeMethods.CommDlgExtendedError();
-            if (error != 0)
-            {
-                AppLog.Write($"GetOpenFileName failed: 0x{error:X}");
-            }
+            ThrowIfFailed(showResult);
+            ThrowIfFailed(dialog.GetResult(out result));
+            return GetShellItemPath(result);
         }
         catch (Exception exception)
         {
             AppLog.Write(exception);
+            return null;
         }
+        finally
+        {
+            if (result is not null)
+            {
+                Marshal.FinalReleaseComObject(result);
+            }
 
-        return null;
+            if (dialogObject is not null)
+            {
+                Marshal.FinalReleaseComObject(dialogObject);
+            }
+        }
     }
 
-    private static string? PickSaveFileNative(IntPtr ownerHwnd, string fileType, string defaultFileName)
-    {
-        try
-        {
-            if (ownerHwnd != IntPtr.Zero)
-            {
-                NativeMethods.SetForegroundWindow(ownerHwnd);
-            }
-
-            string extension = NormalizeDialogExtension(fileType);
-            string suggestedFileName = BuildSuggestedSaveFileName(defaultFileName, extension);
-            var fileName = new StringBuilder(suggestedFileName, OpenFilePathBufferLength);
-            var openFileName = new NativeMethods.OPENFILENAME
-            {
-                lStructSize = Marshal.SizeOf<NativeMethods.OPENFILENAME>(),
-                hwndOwner = ownerHwnd,
-                lpstrFilter = BuildSaveFileFilter(fileType),
-                lpstrFile = fileName,
-                nMaxFile = fileName.Capacity,
-                nFilterIndex = 1,
-                lpstrDefExt = extension,
-                Flags = NativeMethods.OFN_EXPLORER
-                    | NativeMethods.OFN_OVERWRITEPROMPT
-                    | NativeMethods.OFN_PATHMUSTEXIST
-                    | NativeMethods.OFN_NOCHANGEDIR,
-            };
-
-            if (NativeMethods.GetSaveFileName(ref openFileName))
-            {
-                return fileName.ToString();
-            }
-
-            int error = NativeMethods.CommDlgExtendedError();
-            if (error != 0)
-            {
-                AppLog.Write($"GetSaveFileName failed: 0x{error:X}");
-            }
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-        }
-
-        return null;
-    }
-
-    private static string BuildOpenFileFilter(IReadOnlyList<string> fileTypes)
+    private static COMDLG_FILTERSPEC[] BuildFileTypeFilters(IReadOnlyList<string> fileTypes)
     {
         string pattern = string.Join(
             ';',
@@ -142,15 +135,11 @@ public sealed class FolderPickerService
             pattern = "*.*";
         }
 
-        return $"{pattern}\0{pattern}\0\0";
-    }
-
-    private static string BuildSaveFileFilter(string fileType)
-    {
-        string extension = NormalizeDialogExtension(fileType);
-        string pattern = string.IsNullOrWhiteSpace(extension) ? "*.*" : $"*.{extension}";
-        string label = string.IsNullOrWhiteSpace(extension) ? pattern : $"{extension.ToUpperInvariant()} files ({pattern})";
-        return $"{label}\0{pattern}\0\0";
+        return
+        [
+            new COMDLG_FILTERSPEC(pattern, pattern),
+            new COMDLG_FILTERSPEC("All files (*.*)", "*.*"),
+        ];
     }
 
     private static string BuildSuggestedSaveFileName(string defaultFileName, string extension)
@@ -173,5 +162,143 @@ public sealed class FolderPickerService
         }
 
         return extension.TrimStart('.');
+    }
+
+    private static string? GetShellItemPath(IShellItem item)
+    {
+        ThrowIfFailed(item.GetDisplayName(SIGDN_FILESYSPATH, out IntPtr pathPointer));
+        try
+        {
+            return Marshal.PtrToStringUni(pathPointer);
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(pathPointer);
+        }
+    }
+
+    private static void ThrowIfFailed(int hresult)
+    {
+        if (hresult != S_OK)
+        {
+            Marshal.ThrowExceptionForHR(hresult);
+        }
+    }
+
+    [ComImport]
+    [Guid("DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7")]
+    private sealed class FileOpenDialog;
+
+    [ComImport]
+    [Guid("C0B4E2F3-BA21-4773-8DBA-335EC946EB8B")]
+    private sealed class FileSaveDialog;
+
+    [ComImport]
+    [Guid("42F85136-DB7E-439C-85F1-E4075D135FC8")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IFileDialog
+    {
+        [PreserveSig]
+        int Show(IntPtr hwndOwner);
+
+        [PreserveSig]
+        int SetFileTypes(uint cFileTypes, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)] COMDLG_FILTERSPEC[] rgFilterSpec);
+
+        [PreserveSig]
+        int SetFileTypeIndex(uint iFileType);
+
+        [PreserveSig]
+        int GetFileTypeIndex(out uint piFileType);
+
+        [PreserveSig]
+        int Advise(IntPtr pfde, out uint pdwCookie);
+
+        [PreserveSig]
+        int Unadvise(uint dwCookie);
+
+        [PreserveSig]
+        int SetOptions(uint fos);
+
+        [PreserveSig]
+        int GetOptions(out uint pfos);
+
+        [PreserveSig]
+        int SetDefaultFolder(IShellItem psi);
+
+        [PreserveSig]
+        int SetFolder(IShellItem psi);
+
+        [PreserveSig]
+        int GetFolder(out IShellItem ppsi);
+
+        [PreserveSig]
+        int GetCurrentSelection(out IShellItem ppsi);
+
+        [PreserveSig]
+        int SetFileName([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+
+        [PreserveSig]
+        int GetFileName(out IntPtr pszName);
+
+        [PreserveSig]
+        int SetTitle([MarshalAs(UnmanagedType.LPWStr)] string pszTitle);
+
+        [PreserveSig]
+        int SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string pszText);
+
+        [PreserveSig]
+        int SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string pszLabel);
+
+        [PreserveSig]
+        int GetResult(out IShellItem ppsi);
+
+        [PreserveSig]
+        int AddPlace(IShellItem psi, int fdap);
+
+        [PreserveSig]
+        int SetDefaultExtension([MarshalAs(UnmanagedType.LPWStr)] string pszDefaultExtension);
+
+        [PreserveSig]
+        int Close(int hr);
+
+        [PreserveSig]
+        int SetClientGuid(ref Guid guid);
+
+        [PreserveSig]
+        int ClearClientData();
+
+        [PreserveSig]
+        int SetFilter(IntPtr pFilter);
+    }
+
+    [ComImport]
+    [Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItem
+    {
+        [PreserveSig]
+        int BindToHandler(IntPtr pbc, ref Guid bhid, ref Guid riid, out IntPtr ppv);
+
+        [PreserveSig]
+        int GetParent(out IShellItem ppsi);
+
+        [PreserveSig]
+        int GetDisplayName(uint sigdnName, out IntPtr ppszName);
+
+        [PreserveSig]
+        int GetAttributes(uint sfgaoMask, out uint psfgaoAttribs);
+
+        [PreserveSig]
+        int Compare(IShellItem psi, uint hint, out int piOrder);
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private readonly struct COMDLG_FILTERSPEC(string name, string spec)
+    {
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public readonly string Name = name;
+
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public readonly string Spec = spec;
     }
 }
