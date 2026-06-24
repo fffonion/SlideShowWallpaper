@@ -56,6 +56,34 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
+    public void RefreshHardwareOverlayAsync_SkipsSensorRefreshWhenTargetMonitorIsCovered()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string refreshMethod = ExtractMethod(source, "private async Task RefreshHardwareOverlayAsync", "private void ClearHardwareOverlay");
+        int targetIndex = refreshMethod.IndexOf("string? targetMonitorId = GetHardwareOverlayTargetMonitorId();", StringComparison.Ordinal);
+        int pauseIndex = refreshMethod.IndexOf("ShouldPauseHardwareOverlayRefresh(targetMonitorId, monitorRect)", StringComparison.Ordinal);
+        int snapshotIndex = refreshMethod.IndexOf("_hardwareMonitorService.GetSnapshot", StringComparison.Ordinal);
+
+        Assert.True(targetIndex >= 0);
+        Assert.True(pauseIndex > targetIndex);
+        Assert.True(snapshotIndex > pauseIndex);
+        Assert.Contains("return;", refreshMethod[pauseIndex..snapshotIndex]);
+    }
+
+    [Fact]
+    public void ShouldPauseHardwareOverlayRefresh_UsesForegroundCoveragePolicy()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private bool ShouldPauseHardwareOverlayRefresh", "private void ClearHardwareOverlay");
+
+        Assert.Contains("_foregroundWindowService.GetForegroundWindowInfo()", method);
+        Assert.Contains("profile.PauseVideoWhenOtherAppMaximized", method);
+        Assert.Contains("WindowCoveragePolicy.ShouldPauseVideo", method);
+    }
+
+    [Fact]
     public void HardwareOverlayMoved_UpdatesConfigAndPublishesPosition()
     {
         string root = FindProjectRoot();

@@ -352,6 +352,19 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
+        string? targetMonitorId = GetHardwareOverlayTargetMonitorId();
+        if (targetMonitorId is null
+            || !_monitorRects.TryGetValue(targetMonitorId, out Interop.NativeMethods.RECT monitorRect))
+        {
+            ClearHardwareOverlay();
+            return;
+        }
+
+        if (ShouldPauseHardwareOverlayRefresh(targetMonitorId, monitorRect))
+        {
+            return;
+        }
+
         if (_hardwareOverlayRefreshInProgress)
         {
             return;
@@ -388,10 +401,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             || elements.Count > 0
             || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundImagePath)
             || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundColor);
-        string? targetMonitorId = GetHardwareOverlayTargetMonitorId();
-        if (!hasVisualOverlay
-            || targetMonitorId is null
-            || !_monitorRects.TryGetValue(targetMonitorId, out Interop.NativeMethods.RECT monitorRect))
+        if (!hasVisualOverlay)
         {
             ClearHardwareOverlay();
             return;
@@ -415,6 +425,21 @@ public sealed partial class WallpaperPlaybackCoordinator
         };
         HardwareOverlayWindow overlayWindow = EnsureHardwareOverlayWindow();
         overlayWindow.SetHardwareOverlay(state, monitorRect);
+    }
+
+    private bool ShouldPauseHardwareOverlayRefresh(string targetMonitorId, Interop.NativeMethods.RECT monitorRect)
+    {
+        if (!_profiles.TryGetValue(targetMonitorId, out MonitorProfile? profile)
+            || !profile.PauseVideoWhenOtherAppMaximized)
+        {
+            return false;
+        }
+
+        ForegroundWindowInfo? foregroundWindow = _foregroundWindowService.GetForegroundWindowInfo();
+        return WindowCoveragePolicy.ShouldPauseVideo(
+            foregroundWindow,
+            monitorRect,
+            Environment.ProcessId);
     }
 
     private void ClearHardwareOverlay()
