@@ -380,6 +380,35 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareOverlayFormatSection_SyncsGlobalFontStyleToAllTextElements()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string formatMethod = source[
+            source.IndexOf("private Border CreateHardwareOverlayFormatSection", StringComparison.Ordinal)..
+            source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
+
+        Assert.Contains("ApplyHardwareGlobalFontFamily(config, nextFontFamily);", formatMethod);
+        Assert.Contains("ApplyHardwareGlobalFontSize(config, nextFontSize);", formatMethod);
+
+        string familyMethod = source[
+            source.IndexOf("private static void ApplyHardwareGlobalFontFamily", StringComparison.Ordinal)..
+            source.IndexOf("private static void ApplyHardwareGlobalFontSize", StringComparison.Ordinal)];
+        Assert.Contains("element.Kind != HardwareOverlayElementKind.Image", familyMethod);
+        Assert.Contains("element.FontFamily = newFontFamily;", familyMethod);
+        Assert.DoesNotContain("string.IsNullOrWhiteSpace(element.FontFamily)", familyMethod);
+        Assert.DoesNotContain("string.Equals(element.FontFamily, oldFontFamily", familyMethod);
+
+        string sizeMethod = source[
+            source.IndexOf("private static void ApplyHardwareGlobalFontSize", StringComparison.Ordinal)..
+            source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
+        Assert.Contains("element.Kind != HardwareOverlayElementKind.Image", sizeMethod);
+        Assert.Contains("element.FontSize = newFontSize;", sizeMethod);
+        Assert.DoesNotContain("element.FontSize <= 0", sizeMethod);
+        Assert.DoesNotContain("Math.Abs(element.FontSize - oldFontSize)", sizeMethod);
+    }
+
+    [Fact]
     public void CreateOpacitySlider_UsesPercentRangeForStoredOpacity()
     {
         string root = FindProjectRoot();

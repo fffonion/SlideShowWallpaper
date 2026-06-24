@@ -192,16 +192,38 @@ public sealed partial class MainWindow
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value =>
             {
-                config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value;
+                string nextFontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value;
+                ApplyHardwareGlobalFontFamily(config, nextFontFamily);
+                config.FontFamily = nextFontFamily;
                 RenderTabs(_selectedMonitorId);
             }, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value =>
             {
-                config.FontSize = Math.Max(10, value);
+                double nextFontSize = Math.Max(10, value);
+                ApplyHardwareGlobalFontSize(config, nextFontSize);
+                config.FontSize = nextFontSize;
                 RenderTabs(_selectedMonitorId);
             }, LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateOpacitySlider(config.Opacity, value => config.Opacity = value, LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)));
+    }
+
+    private static void ApplyHardwareGlobalFontFamily(HardwareMonitorConfig config, string newFontFamily)
+    {
+        newFontFamily = string.IsNullOrWhiteSpace(newFontFamily) ? "Segoe UI" : newFontFamily;
+        foreach (HardwareOverlayElement element in config.Elements.Where(element => element.Kind != HardwareOverlayElementKind.Image))
+        {
+            element.FontFamily = newFontFamily;
+        }
+    }
+
+    private static void ApplyHardwareGlobalFontSize(HardwareMonitorConfig config, double newFontSize)
+    {
+        newFontSize = Math.Max(10, newFontSize);
+        foreach (HardwareOverlayElement element in config.Elements.Where(element => element.Kind != HardwareOverlayElementKind.Image))
+        {
+            element.FontSize = newFontSize;
+        }
     }
 
     private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices()
