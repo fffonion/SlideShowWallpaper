@@ -128,6 +128,7 @@
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>加入感測器</value></data>
   <data name="DialogClose" xml:space="preserve"><value>關閉</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>加入文字</value></data>
+  <data name="HardwareMonitorArrangeGrid" xml:space="preserve"><value>網格排列</value></data>
   <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>替換圖示</value></data>
   <data name="HardwareMonitorResetIconImage" xml:space="preserve"><value>還原圖示</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>匯入背景</value></data>

@@ -279,6 +279,7 @@ public sealed class MainWindowSourceTests
         Assert.Contains("HardwareEditorPreviewResizeMaxWidth = 900", source);
         Assert.Contains("_hardwareEditorPreviewWidth = HardwareEditorPreviewMaxWidth", source);
         Assert.Contains("_hardwareEditorPreviewHeight = HardwareEditorPreviewDefaultHeight", source);
+        Assert.Contains("_hardwareEditorSelectedElementIds", source);
         Assert.DoesNotContain("MinimumHardwareEditorPaneWidth = 560", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 520", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 1100", source);
@@ -377,10 +378,14 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("CreateHardwareEditorGuideLine(isVertical: true", method);
         Assert.Contains("CreateHardwareEditorGuideLine(isVertical: false", method);
-        Assert.Contains("AttachHardwareEditorDrag(canvas, visual, element, config, verticalGuide, horizontalGuide)", method);
+        Assert.Contains("CreateHardwareEditorSelectionRectangle()", method);
+        Assert.Contains("AttachHardwareEditorMarqueeSelection(canvas, config, selectionRectangle)", method);
+        Assert.Contains("visualsById[element.Id] = visual;", method);
+        Assert.Contains("AttachHardwareEditorDrag(canvas, visual, element, config, visual", method);
         Assert.Contains("GetHardwareEditorVisualSize(visual, canvas.Width, canvas.Height)", method);
         Assert.Contains("canvas.Children.Add(verticalGuide);", method);
         Assert.Contains("canvas.Children.Add(horizontalGuide);", method);
+        Assert.Contains("canvas.Children.Add(selectionRectangle);", method);
     }
 
     [Fact]
@@ -394,9 +399,48 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("ApplyHardwareEditorSnap", method);
         Assert.Contains("GetHardwareEditorVisualSize(visual", method);
+        Assert.Contains("GetHardwareEditorDragElements(config, element)", method);
+        Assert.Contains("startPositions", method);
+        Assert.Contains("snapElements = dragElements.Count > 1", method);
+        Assert.Contains("!dragElements.Contains(item)", method);
+        Assert.Contains("foreach (HardwareOverlayElement dragElement in dragElements)", method);
+        Assert.Contains("visualsById.TryGetValue(dragElement.Id", method);
         Assert.Contains("UpdateHardwareEditorGuides", method);
         Assert.Contains("HideHardwareEditorGuides", method);
         Assert.Contains("HardwareEditorSnapThreshold", source);
+    }
+
+    [Fact]
+    public void HardwareEditorMarqueeSelection_SelectsIntersectingElements()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private void AttachHardwareEditorMarqueeSelection", StringComparison.Ordinal)..
+            source.IndexOf("private static Rect CreateHardwareSelectionRect", StringComparison.Ordinal)];
+
+        Assert.Contains("canvas.PointerPressed", method);
+        Assert.Contains("canvas.CapturePointer(args.Pointer);", method);
+        Assert.Contains("UpdateHardwareSelectionRectangle(selectionRectangle", method);
+        Assert.Contains("HardwareEditorLayoutService.SelectIntersectingElementIds(config.Elements", method);
+        Assert.Contains("_hardwareEditorSelectedElementIds.Clear();", method);
+        Assert.Contains("_hardwareEditorSelectedElementIds.Add(id);", method);
+        Assert.Contains("config.SelectedElementId = selectedIds.FirstOrDefault() ?? string.Empty;", method);
+        Assert.Contains("RefreshHardwareEditorPreview(config);", method);
+    }
+
+    [Fact]
+    public void HardwareEditorActions_AddsArrangeGridButton()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorActions", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSurface", StringComparison.Ordinal)];
+
+        Assert.Contains("HardwareMonitorArrangeGrid", method);
+        Assert.Contains("ApplyHardwareEditorGridSpacing(config)", method);
+        Assert.Contains("panel.Children.Add(arrangeGridButton);", method);
     }
 
     [Fact]

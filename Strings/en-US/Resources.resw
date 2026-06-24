@@ -127,6 +127,7 @@
   <data name="HardwareMonitorAddSensorElements" xml:space="preserve"><value>Add sensors</value></data>
   <data name="DialogClose" xml:space="preserve"><value>Close</value></data>
   <data name="HardwareMonitorAddTextElement" xml:space="preserve"><value>Add text</value></data>
+  <data name="HardwareMonitorArrangeGrid" xml:space="preserve"><value>Arrange grid</value></data>
   <data name="HardwareMonitorImportIconImage" xml:space="preserve"><value>Replace icon</value></data>
   <data name="HardwareMonitorResetIconImage" xml:space="preserve"><value>Reset icon</value></data>
   <data name="HardwareMonitorImportBackground" xml:space="preserve"><value>Import background</value></data>

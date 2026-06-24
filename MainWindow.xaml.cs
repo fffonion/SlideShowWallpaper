@@ -125,6 +125,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _hardwareEditorSelectedElementIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherQueueTimer _currentImageCheckpointTimer;
     private readonly DispatcherQueueTimer _playbackStatusTimer;
     private readonly DispatcherQueueTimer _settingsApplyTimer;
