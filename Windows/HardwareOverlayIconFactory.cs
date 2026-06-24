@@ -8,7 +8,7 @@ namespace SlideShowWallpaper.Windows;
 
 internal static class HardwareOverlayIconFactory
 {
-    public static Canvas CreateIcon(HardwareOverlayIconKind kind, double size)
+    public static Canvas CreateIcon(HardwareOverlayIconKind kind, double size, Brush? brush = null)
     {
         var canvas = new Canvas
         {
@@ -16,7 +16,7 @@ internal static class HardwareOverlayIconFactory
             Height = size,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var brush = new SolidColorBrush(Microsoft.UI.Colors.White);
+        brush ??= new SolidColorBrush(Microsoft.UI.Colors.White);
         double scale = size / 20;
         switch (kind)
         {

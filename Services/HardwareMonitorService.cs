@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Principal;
 using LibreHardwareMonitor.Hardware;
 using SlideShowWallpaper.Models;
 
@@ -17,7 +16,7 @@ public sealed class HardwareMonitorService : IDisposable
         {
             if (_disposed)
             {
-                return new HardwareMonitorSnapshot([], DateTimeOffset.Now, IsProcessElevated());
+            return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
             }
 
             Computer computer = EnsureComputer();
@@ -28,7 +27,7 @@ public sealed class HardwareMonitorService : IDisposable
                 CollectHardware(readings, hardware, updated);
             }
 
-            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, IsProcessElevated());
+            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
         }
     }
 
@@ -167,12 +166,6 @@ public sealed class HardwareMonitorService : IDisposable
         };
     }
 
-    private static bool IsProcessElevated()
-    {
-        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
-        return principal.IsInRole(WindowsBuiltInRole.Administrator);
-    }
 }
 
 public static class HardwareOverlayTextRenderer

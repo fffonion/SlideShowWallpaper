@@ -47,6 +47,7 @@ public sealed partial class MainWindow
         return new WallpaperConfig
         {
             StartWithWindows = _viewModel.StartWithWindows,
+            StartWithWindowsAsAdministrator = _viewModel.StartWithWindowsAsAdministrator,
             CloseToTray = _disableCloseToTray ? existingConfig.CloseToTray : _viewModel.CloseToTray,
             ThemeMode = _viewModel.ThemeMode,
             LanguageMode = _viewModel.LanguageMode,

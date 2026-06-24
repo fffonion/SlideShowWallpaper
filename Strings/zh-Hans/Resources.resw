@@ -17,6 +17,7 @@
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>主题</value></data>
   <data name="Settings" xml:space="preserve"><value>设置</value></data>
   <data name="AppSettingAutostart" xml:space="preserve"><value>开机启动</value></data>
+  <data name="AppSettingAutostartAsAdministrator" xml:space="preserve"><value>以管理员身份启动</value></data>
   <data name="AppSettingCloseToTray" xml:space="preserve"><value>关闭到托盘</value></data>
   <data name="AppSettingTheme" xml:space="preserve"><value>主题</value></data>
   <data name="AppSettingLanguage" xml:space="preserve"><value>语言</value></data>
@@ -135,6 +136,7 @@
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>全部屏幕</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>未发现传感器。部分传感器可能需要管理员权限。</value></data>
   <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>当前不是管理员权限。CPU、主板风扇和硬盘温度可能不可用。</value></data>
+  <data name="HardwareMonitorRestartAsAdministrator" xml:space="preserve"><value>以管理员身份重启</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>字号</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>刷新硬件传感器</value></data>
@@ -146,4 +148,10 @@
   <data name="HardwareMetricGroupMemory" xml:space="preserve"><value>内存</value></data>
   <data name="HardwareMetricGroupMotherboard" xml:space="preserve"><value>主板</value></data>
   <data name="HardwareMetricGroupOther" xml:space="preserve"><value>其他</value></data>
+  <data name="HardwareMetricKindTemperature" xml:space="preserve"><value>温度</value></data>
+  <data name="HardwareMetricKindFanRpm" xml:space="preserve"><value>风扇</value></data>
+  <data name="HardwareMetricKindMemoryAvailable" xml:space="preserve"><value>内存</value></data>
+  <data name="HardwareMetricKindVramAvailable" xml:space="preserve"><value>显存</value></data>
+  <data name="HardwareMetricKindPower" xml:space="preserve"><value>功率</value></data>
+  <data name="HardwareMetricKindOther" xml:space="preserve"><value>其他</value></data>
 </root>

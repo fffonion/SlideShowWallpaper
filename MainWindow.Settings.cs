@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
+using SlideShowWallpaper.Windows;
 
 namespace SlideShowWallpaper;
 
@@ -30,11 +31,7 @@ public sealed partial class MainWindow
         };
         form.Children.Add(CreateSettingsSection(
             LocalizedStrings.Get("Settings"),
-            new SettingsRow(LocalizedStrings.Get("AppSettingAutostart"), CreateCheckBox(_viewModel.StartWithWindows, value =>
-            {
-                _viewModel.StartWithWindows = value;
-                _autostartService.SetEnabled(value);
-            }, LocalizedStrings.Get("AppSettingAutostart"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingAutostart"), CreateAutostartControls()),
             new SettingsRow(LocalizedStrings.Get("AppSettingCloseToTray"), closeToTrayCheckBox),
             new SettingsRow(LocalizedStrings.Get("AppSettingTheme"), CreateChoiceCombo(ThemeModeChoices, _viewModel.ThemeMode, SetTheme, LocalizedStrings.Get("AppSettingTheme"))),
             new SettingsRow(LocalizedStrings.Get("AppSettingLanguage"), CreateChoiceCombo(LanguageModeChoices, _viewModel.LanguageMode, SetLanguage, LocalizedStrings.Get("AppSettingLanguage"))),
@@ -62,6 +59,56 @@ public sealed partial class MainWindow
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
+    }
+
+    private FrameworkElement CreateAutostartControls()
+    {
+        var panel = new StackPanel
+        {
+            Spacing = 6,
+        };
+        var autostartCheckBox = new CheckBox
+        {
+            Content = LocalizedStrings.Get("AppSettingAutostart"),
+            IsChecked = _viewModel.StartWithWindows,
+        };
+        var adminCheckBox = new CheckBox
+        {
+            Content = LocalizedStrings.Get("AppSettingAutostartAsAdministrator"),
+            IsChecked = _viewModel.StartWithWindowsAsAdministrator,
+            IsEnabled = _viewModel.StartWithWindows,
+        };
+        AutomationProperties.SetName(autostartCheckBox, LocalizedStrings.Get("AppSettingAutostart"));
+        AutomationProperties.SetName(adminCheckBox, LocalizedStrings.Get("AppSettingAutostartAsAdministrator"));
+
+        void ApplyAutostart()
+        {
+            bool startWithWindows = autostartCheckBox.IsChecked == true;
+            bool runAsAdministrator = adminCheckBox.IsChecked == true;
+            try
+            {
+                _viewModel.StartWithWindows = startWithWindows;
+                _viewModel.StartWithWindowsAsAdministrator = runAsAdministrator;
+                _autostartService.SetEnabled(startWithWindows, runAsAdministrator);
+                adminCheckBox.IsEnabled = startWithWindows;
+                ApplySettings();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Write(exception);
+                _viewModel.StartWithWindows = _autostartService.IsEnabled();
+                _viewModel.StartWithWindowsAsAdministrator = _autostartService.IsRunAsAdministratorEnabled();
+                RenderTabs(_selectedMonitorId);
+            }
+        }
+
+        autostartCheckBox.Checked += (_, _) => ApplyAutostart();
+        autostartCheckBox.Unchecked += (_, _) => ApplyAutostart();
+        adminCheckBox.Checked += (_, _) => ApplyAutostart();
+        adminCheckBox.Unchecked += (_, _) => ApplyAutostart();
+        panel.Children.Add(autostartCheckBox);
+        panel.Children.Add(adminCheckBox);
+        return panel;
     }
 
     private UIElement BuildHardwareMonitorSettingsPage()
@@ -238,7 +285,7 @@ public sealed partial class MainWindow
                     Content = $"{GetHardwareMetricGroupLabel(sensor.Group)} · {sensor.DisplayName}",
                     IsChecked = config.SelectedSensorIds.Contains(sensor.Id, StringComparer.OrdinalIgnoreCase),
                 };
-                checkBox.Content = $"{GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}";
+                checkBox.Content = CreateHardwareSensorSelectionContent(sensor);
                 AutomationProperties.SetName(checkBox, sensor.DisplayName);
                 checkBox.Checked += (_, _) =>
                 {
@@ -297,14 +344,110 @@ public sealed partial class MainWindow
         return root;
     }
 
-    private static TextBlock CreateHardwareSensorNotice()
+    private FrameworkElement CreateHardwareSensorNotice()
     {
-        return new TextBlock
+        var grid = new Grid
+        {
+            ColumnSpacing = 12,
+            Margin = new Thickness(0, 0, 0, 6),
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var text = new TextBlock
         {
             Text = LocalizedStrings.Get("HardwareMonitorLimitedAccess"),
             TextWrapping = TextWrapping.Wrap,
             Foreground = GetThemeBrush("TextFillColorSecondaryBrush"),
-            Margin = new Thickness(0, 0, 0, 6),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(text, 0);
+        grid.Children.Add(text);
+
+        var restartButton = new Button
+        {
+            Content = LocalizedStrings.Get("HardwareMonitorRestartAsAdministrator"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(restartButton, LocalizedStrings.Get("HardwareMonitorRestartAsAdministrator"));
+        restartButton.Click += (_, _) => RestartAsAdministrator();
+        Grid.SetColumn(restartButton, 1);
+        grid.Children.Add(restartButton);
+        return grid;
+    }
+
+    private void RestartAsAdministrator()
+    {
+        if (!_administratorRestartService.TryRestart())
+        {
+            return;
+        }
+
+        ExitApplication();
+    }
+
+    private static FrameworkElement CreateHardwareSensorSelectionContent(HardwareSensorReading sensor)
+    {
+        var row = new Grid
+        {
+            ColumnSpacing = 8,
+        };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        Canvas icon = HardwareOverlayIconFactory.CreateIcon(
+            GetHardwareMetricKindIcon(sensor.Kind),
+            18,
+            GetThemeBrush("TextFillColorPrimaryBrush"));
+        icon.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(icon, 0);
+        row.Children.Add(icon);
+
+        var kindText = new TextBlock
+        {
+            Text = GetHardwareMetricKindLabel(sensor.Kind),
+            MinWidth = 58,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = GetThemeBrush("TextFillColorSecondaryBrush"),
+        };
+        Grid.SetColumn(kindText, 1);
+        row.Children.Add(kindText);
+
+        var sensorText = new TextBlock
+        {
+            Text = $"{GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}",
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        Grid.SetColumn(sensorText, 2);
+        row.Children.Add(sensorText);
+        return row;
+    }
+
+    private static HardwareOverlayIconKind GetHardwareMetricKindIcon(HardwareMetricKind kind)
+    {
+        return kind switch
+        {
+            HardwareMetricKind.Temperature => HardwareOverlayIconKind.Temperature,
+            HardwareMetricKind.FanRpm => HardwareOverlayIconKind.Fan,
+            HardwareMetricKind.MemoryAvailable => HardwareOverlayIconKind.Memory,
+            HardwareMetricKind.VramAvailable => HardwareOverlayIconKind.Vram,
+            HardwareMetricKind.Power => HardwareOverlayIconKind.Power,
+            _ => HardwareOverlayIconKind.Generic,
+        };
+    }
+
+    private static string GetHardwareMetricKindLabel(HardwareMetricKind kind)
+    {
+        return kind switch
+        {
+            HardwareMetricKind.Temperature => LocalizedStrings.Get("HardwareMetricKindTemperature"),
+            HardwareMetricKind.FanRpm => LocalizedStrings.Get("HardwareMetricKindFanRpm"),
+            HardwareMetricKind.MemoryAvailable => LocalizedStrings.Get("HardwareMetricKindMemoryAvailable"),
+            HardwareMetricKind.VramAvailable => LocalizedStrings.Get("HardwareMetricKindVramAvailable"),
+            HardwareMetricKind.Power => LocalizedStrings.Get("HardwareMetricKindPower"),
+            _ => LocalizedStrings.Get("HardwareMetricKindOther"),
         };
     }
 

@@ -102,6 +102,7 @@ public sealed partial class MainWindow : Window
     private readonly WallpaperPlaybackCoordinator _coordinator;
     private readonly SettingsStore _settingsStore;
     private readonly AutostartService _autostartService;
+    private readonly AdministratorRestartService _administratorRestartService;
     private readonly FolderPickerService _folderPickerService;
     private readonly ThumbnailCacheService _thumbnailCacheService = new();
     private readonly TrayIconService _trayIconService;
@@ -153,6 +154,7 @@ public sealed partial class MainWindow : Window
         WallpaperPlaybackCoordinator coordinator,
         SettingsStore settingsStore,
         AutostartService autostartService,
+        AdministratorRestartService administratorRestartService,
         FolderPickerService folderPickerService,
         ImageOrderService imageOrderService,
         HardwareMonitorService hardwareMonitorService,
@@ -163,6 +165,7 @@ public sealed partial class MainWindow : Window
         _coordinator = coordinator;
         _settingsStore = settingsStore;
         _autostartService = autostartService;
+        _administratorRestartService = administratorRestartService;
         _folderPickerService = folderPickerService;
         _imageOrderService = imageOrderService;
         _hardwareMonitorService = hardwareMonitorService;
@@ -258,6 +261,7 @@ public sealed partial class MainWindow : Window
         }
 
         _viewModel.StartWithWindows = _autostartService.IsEnabled();
+        _viewModel.StartWithWindowsAsAdministrator = _autostartService.IsRunAsAdministratorEnabled() || config.StartWithWindowsAsAdministrator;
         _viewModel.CloseToTray = _disableCloseToTray ? false : config.CloseToTray;
         _viewModel.ThemeMode = config.ThemeMode;
         _viewModel.LanguageMode = config.LanguageMode;

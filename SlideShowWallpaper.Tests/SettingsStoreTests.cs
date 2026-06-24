@@ -26,6 +26,7 @@ public sealed class SettingsStoreTests
         var config = new WallpaperConfig
         {
             StartWithWindows = true,
+            StartWithWindowsAsAdministrator = true,
             CloseToTray = false,
             ThemeMode = AppThemeMode.Dark,
             LanguageMode = AppLanguageMode.Japanese,
@@ -102,6 +103,7 @@ public sealed class SettingsStoreTests
         Assert.Contains("[Settings]", File.ReadAllText(path));
         MonitorProfile monitor = Assert.Single(loaded.Monitors);
         Assert.True(loaded.StartWithWindows);
+        Assert.True(loaded.StartWithWindowsAsAdministrator);
         Assert.False(loaded.CloseToTray);
         Assert.Equal(AppThemeMode.Dark, loaded.ThemeMode);
         Assert.Equal(AppLanguageMode.Japanese, loaded.LanguageMode);

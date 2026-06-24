@@ -17,6 +17,7 @@
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>テーマ</value></data>
   <data name="Settings" xml:space="preserve"><value>設定</value></data>
   <data name="AppSettingAutostart" xml:space="preserve"><value>自動起動</value></data>
+  <data name="AppSettingAutostartAsAdministrator" xml:space="preserve"><value>管理者として起動</value></data>
   <data name="AppSettingCloseToTray" xml:space="preserve"><value>トレイに閉じる</value></data>
   <data name="AppSettingTheme" xml:space="preserve"><value>テーマ</value></data>
   <data name="AppSettingLanguage" xml:space="preserve"><value>言語</value></data>
@@ -135,6 +136,7 @@
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>すべてのディスプレイ</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>センサーが見つかりません。一部のセンサーには管理者権限が必要です。</value></data>
   <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>管理者権限なしで実行中です。CPU、マザーボードファン、ストレージ温度センサーは利用できない場合があります。</value></data>
+  <data name="HardwareMonitorRestartAsAdministrator" xml:space="preserve"><value>管理者として再起動</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>フォント</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>不透明度</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>ハードウェア センサーを更新</value></data>
@@ -146,4 +148,10 @@
   <data name="HardwareMetricGroupMemory" xml:space="preserve"><value>メモリ</value></data>
   <data name="HardwareMetricGroupMotherboard" xml:space="preserve"><value>マザーボード</value></data>
   <data name="HardwareMetricGroupOther" xml:space="preserve"><value>その他</value></data>
+  <data name="HardwareMetricKindTemperature" xml:space="preserve"><value>温度</value></data>
+  <data name="HardwareMetricKindFanRpm" xml:space="preserve"><value>ファン</value></data>
+  <data name="HardwareMetricKindMemoryAvailable" xml:space="preserve"><value>メモリ</value></data>
+  <data name="HardwareMetricKindVramAvailable" xml:space="preserve"><value>VRAM</value></data>
+  <data name="HardwareMetricKindPower" xml:space="preserve"><value>電力</value></data>
+  <data name="HardwareMetricKindOther" xml:space="preserve"><value>その他</value></data>
 </root>

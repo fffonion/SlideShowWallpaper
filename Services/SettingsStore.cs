@@ -34,6 +34,7 @@ public sealed class SettingsStore
             var config = new WallpaperConfig
             {
                 StartWithWindows = GetBool(sections, "Settings", nameof(WallpaperConfig.StartWithWindows), false),
+                StartWithWindowsAsAdministrator = GetBool(sections, "Settings", nameof(WallpaperConfig.StartWithWindowsAsAdministrator), false),
                 CloseToTray = GetBool(sections, "Settings", nameof(WallpaperConfig.CloseToTray), true),
                 ThemeMode = GetEnum(sections, "Settings", nameof(WallpaperConfig.ThemeMode), AppThemeMode.System),
                 LanguageMode = GetEnum(sections, "Settings", nameof(WallpaperConfig.LanguageMode), AppLanguageMode.System),
@@ -99,6 +100,7 @@ public sealed class SettingsStore
         var builder = new StringBuilder();
         AppendSection(builder, "Settings");
         AppendValue(builder, nameof(WallpaperConfig.StartWithWindows), config.StartWithWindows);
+        AppendValue(builder, nameof(WallpaperConfig.StartWithWindowsAsAdministrator), config.StartWithWindowsAsAdministrator);
         AppendValue(builder, nameof(WallpaperConfig.CloseToTray), config.CloseToTray);
         AppendValue(builder, nameof(WallpaperConfig.ThemeMode), config.ThemeMode);
         AppendValue(builder, nameof(WallpaperConfig.LanguageMode), config.LanguageMode);

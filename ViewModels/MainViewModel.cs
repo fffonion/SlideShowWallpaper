@@ -9,6 +9,8 @@ public sealed class MainViewModel
 
     public bool StartWithWindows { get; set; }
 
+    public bool StartWithWindowsAsAdministrator { get; set; }
+
     public bool CloseToTray { get; set; } = true;
 
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;

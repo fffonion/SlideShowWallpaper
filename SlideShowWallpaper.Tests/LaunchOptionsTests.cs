@@ -35,4 +35,13 @@ public sealed class LaunchOptionsTests
 
         Assert.True(options.DisableCloseToTray);
     }
+
+    [Fact]
+    public void FromArguments_WithElevatedRestartSwitch_AllowsMultipleWithoutDisablingCloseToTray()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments([AdministratorRestartService.RestartArgument]);
+
+        Assert.True(options.AllowMultipleInstances);
+        Assert.False(options.DisableCloseToTray);
+    }
 }

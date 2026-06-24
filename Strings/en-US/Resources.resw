@@ -17,6 +17,7 @@
   <data name="ThemeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Theme</value></data>
   <data name="Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="AppSettingAutostart" xml:space="preserve"><value>Autostart</value></data>
+  <data name="AppSettingAutostartAsAdministrator" xml:space="preserve"><value>Run as administrator</value></data>
   <data name="AppSettingCloseToTray" xml:space="preserve"><value>Close to tray</value></data>
   <data name="AppSettingTheme" xml:space="preserve"><value>Theme</value></data>
   <data name="AppSettingLanguage" xml:space="preserve"><value>Language</value></data>
@@ -134,6 +135,7 @@
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>All displays</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>No sensors detected. Some sensors may require administrator access.</value></data>
   <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>Running without administrator access. CPU, motherboard fan, and storage temperature sensors may be unavailable.</value></data>
+  <data name="HardwareMonitorRestartAsAdministrator" xml:space="preserve"><value>Restart as administrator</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>Font</value></data>
   <data name="HardwareMonitorOpacityShort" xml:space="preserve"><value>Opacity</value></data>
   <data name="RefreshHardwareSensors" xml:space="preserve"><value>Refresh hardware sensors</value></data>
@@ -145,5 +147,11 @@
   <data name="HardwareMetricGroupMemory" xml:space="preserve"><value>Memory</value></data>
   <data name="HardwareMetricGroupMotherboard" xml:space="preserve"><value>Motherboard</value></data>
   <data name="HardwareMetricGroupOther" xml:space="preserve"><value>Other</value></data>
+  <data name="HardwareMetricKindTemperature" xml:space="preserve"><value>Temp</value></data>
+  <data name="HardwareMetricKindFanRpm" xml:space="preserve"><value>Fan</value></data>
+  <data name="HardwareMetricKindMemoryAvailable" xml:space="preserve"><value>Memory</value></data>
+  <data name="HardwareMetricKindVramAvailable" xml:space="preserve"><value>VRAM</value></data>
+  <data name="HardwareMetricKindPower" xml:space="preserve"><value>Power</value></data>
+  <data name="HardwareMetricKindOther" xml:space="preserve"><value>Other</value></data>
   <data name="PreviewResizeHandle" xml:space="preserve"><value>Resize preview pane</value></data>
 </root>

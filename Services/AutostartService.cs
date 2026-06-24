@@ -1,6 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Security;
+using System.Security.Principal;
 using System.Text;
+using System.Xml.Linq;
 
 namespace SlideShowWallpaper.Services;
 
@@ -8,7 +11,9 @@ public sealed class AutostartService
 {
     private const string QuietArgument = "/q";
     private const string StartupFileName = "SlideShowWallpaper.lnk";
+    private const string TaskName = "SlideShowWallpaper";
     private readonly Func<string> _processPathProvider;
+    private readonly IScheduledTaskService _scheduledTaskService;
     private readonly IShortcutFileService _shortcutFileService;
     private readonly string _startupShortcutPath;
 
@@ -23,20 +28,43 @@ public sealed class AutostartService
     }
 
     internal AutostartService(string startupShortcutPath, Func<string> processPathProvider, IShortcutFileService shortcutFileService)
+        : this(startupShortcutPath, processPathProvider, shortcutFileService, new WindowsScheduledTaskService())
+    {
+    }
+
+    internal AutostartService(
+        string startupShortcutPath,
+        Func<string> processPathProvider,
+        IShortcutFileService shortcutFileService,
+        IScheduledTaskService scheduledTaskService)
     {
         _startupShortcutPath = startupShortcutPath;
         _processPathProvider = processPathProvider;
         _shortcutFileService = shortcutFileService;
+        _scheduledTaskService = scheduledTaskService;
     }
 
     public bool IsEnabled()
     {
         string processPath = _processPathProvider();
         return !string.IsNullOrWhiteSpace(processPath)
-            && _shortcutFileService.Matches(_startupShortcutPath, processPath, QuietArgument);
+            && (_shortcutFileService.Matches(_startupShortcutPath, processPath, QuietArgument)
+                || _scheduledTaskService.Matches(TaskName, processPath, QuietArgument));
+    }
+
+    public bool IsRunAsAdministratorEnabled()
+    {
+        string processPath = _processPathProvider();
+        return !string.IsNullOrWhiteSpace(processPath)
+            && _scheduledTaskService.Matches(TaskName, processPath, QuietArgument);
     }
 
     public void SetEnabled(bool enabled)
+    {
+        SetEnabled(enabled, runAsAdministrator: false);
+    }
+
+    public void SetEnabled(bool enabled, bool runAsAdministrator)
     {
         if (!enabled)
         {
@@ -47,6 +75,18 @@ public sealed class AutostartService
         string processPath = _processPathProvider();
         if (string.IsNullOrWhiteSpace(processPath))
         {
+            return;
+        }
+
+        if (runAsAdministrator)
+        {
+            _scheduledTaskService.CreateLogonTask(
+                TaskName,
+                processPath,
+                QuietArgument,
+                Path.GetDirectoryName(processPath) ?? AppContext.BaseDirectory);
+            TryDelete(_startupShortcutPath);
+            DeleteLegacyCommandFile();
             return;
         }
 
@@ -61,12 +101,14 @@ public sealed class AutostartService
             processPath,
             QuietArgument,
             Path.GetDirectoryName(processPath) ?? AppContext.BaseDirectory);
+        _scheduledTaskService.Delete(TaskName);
         DeleteLegacyCommandFile();
     }
 
     private void DeleteStartupFiles()
     {
-        File.Delete(_startupShortcutPath);
+        TryDelete(_startupShortcutPath);
+        _scheduledTaskService.Delete(TaskName);
         DeleteLegacyCommandFile();
     }
 
@@ -75,7 +117,18 @@ public sealed class AutostartService
         string legacyPath = Path.ChangeExtension(_startupShortcutPath, ".cmd");
         if (!string.Equals(legacyPath, _startupShortcutPath, StringComparison.OrdinalIgnoreCase))
         {
-            File.Delete(legacyPath);
+            TryDelete(legacyPath);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (DirectoryNotFoundException)
+        {
         }
     }
 
@@ -84,6 +137,196 @@ public sealed class AutostartService
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Startup", StartupFileName);
     }
+}
+
+internal interface IScheduledTaskService
+{
+    void CreateLogonTask(string taskName, string targetPath, string arguments, string workingDirectory);
+
+    void Delete(string taskName);
+
+    bool Matches(string taskName, string targetPath, string arguments);
+}
+
+internal sealed class WindowsScheduledTaskService : IScheduledTaskService
+{
+    private const string TaskXmlNamespace = "http://schemas.microsoft.com/windows/2004/02/mit/task";
+
+    public void CreateLogonTask(string taskName, string targetPath, string arguments, string workingDirectory)
+    {
+        string xmlPath = Path.Combine(Path.GetTempPath(), $"SlideShowWallpaper-{Guid.NewGuid():N}.xml");
+        try
+        {
+            File.WriteAllText(xmlPath, CreateTaskXml(targetPath, arguments, workingDirectory), Encoding.Unicode);
+            RunSchTasks(["/Create", "/TN", taskName, "/XML", xmlPath, "/F"], elevate: !CurrentProcessPrivilege.IsAdministrator());
+        }
+        finally
+        {
+            TryDelete(xmlPath);
+        }
+    }
+
+    public void Delete(string taskName)
+    {
+        SchTasksResult result = RunSchTasks(["/Delete", "/TN", taskName, "/F"], elevate: false, ignoreFailure: true);
+        if (result.ExitCode != 0 && !CurrentProcessPrivilege.IsAdministrator() && Exists(taskName))
+        {
+            RunSchTasks(["/Delete", "/TN", taskName, "/F"], elevate: true, ignoreFailure: true);
+        }
+    }
+
+    public bool Matches(string taskName, string targetPath, string arguments)
+    {
+        SchTasksResult result = RunSchTasks(["/Query", "/TN", taskName, "/XML"], elevate: false, ignoreFailure: true);
+        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
+        {
+            return false;
+        }
+
+        try
+        {
+            XDocument document = XDocument.Parse(result.Output);
+            XNamespace ns = TaskXmlNamespace;
+            string command = document.Descendants(ns + "Command").FirstOrDefault()?.Value ?? string.Empty;
+            string taskArguments = document.Descendants(ns + "Arguments").FirstOrDefault()?.Value ?? string.Empty;
+            string runLevel = document.Descendants(ns + "RunLevel").FirstOrDefault()?.Value ?? string.Empty;
+            return string.Equals(command, targetPath, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(taskArguments, arguments, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(runLevel, "HighestAvailable", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+            return false;
+        }
+    }
+
+    private static string CreateTaskXml(string targetPath, string arguments, string workingDirectory)
+    {
+        string userName = WindowsIdentity.GetCurrent().Name;
+        return $$"""
+            <?xml version="1.0" encoding="UTF-16"?>
+            <Task version="1.4" xmlns="{{TaskXmlNamespace}}">
+              <RegistrationInfo>
+                <Description>SlideShow Wallpaper quiet startup</Description>
+              </RegistrationInfo>
+              <Triggers>
+                <LogonTrigger>
+                  <Enabled>true</Enabled>
+                  <UserId>{{SecurityElement.Escape(userName)}}</UserId>
+                </LogonTrigger>
+              </Triggers>
+              <Principals>
+                <Principal id="Author">
+                  <UserId>{{SecurityElement.Escape(userName)}}</UserId>
+                  <LogonType>InteractiveToken</LogonType>
+                  <RunLevel>HighestAvailable</RunLevel>
+                </Principal>
+              </Principals>
+              <Settings>
+                <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+                <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+                <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+                <AllowHardTerminate>true</AllowHardTerminate>
+                <StartWhenAvailable>false</StartWhenAvailable>
+                <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+                <IdleSettings>
+                  <StopOnIdleEnd>false</StopOnIdleEnd>
+                  <RestartOnIdle>false</RestartOnIdle>
+                </IdleSettings>
+                <AllowStartOnDemand>true</AllowStartOnDemand>
+                <Enabled>true</Enabled>
+                <Hidden>false</Hidden>
+                <RunOnlyIfIdle>false</RunOnlyIfIdle>
+                <WakeToRun>false</WakeToRun>
+                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                <Priority>7</Priority>
+              </Settings>
+              <Actions Context="Author">
+                <Exec>
+                  <Command>{{SecurityElement.Escape(targetPath)}}</Command>
+                  <Arguments>{{SecurityElement.Escape(arguments)}}</Arguments>
+                  <WorkingDirectory>{{SecurityElement.Escape(workingDirectory)}}</WorkingDirectory>
+                </Exec>
+              </Actions>
+            </Task>
+            """;
+    }
+
+    private static bool Exists(string taskName)
+    {
+        SchTasksResult result = RunSchTasks(["/Query", "/TN", taskName], elevate: false, ignoreFailure: true);
+        return result.ExitCode == 0;
+    }
+
+    private static SchTasksResult RunSchTasks(
+        IReadOnlyList<string> arguments,
+        bool elevate,
+        bool ignoreFailure = false)
+    {
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "schtasks.exe",
+            UseShellExecute = elevate,
+            CreateNoWindow = !elevate,
+            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+            RedirectStandardOutput = !elevate,
+            RedirectStandardError = !elevate,
+        };
+        if (elevate)
+        {
+            startInfo.Verb = "runas";
+            startInfo.Arguments = string.Join(' ', arguments.Select(QuoteArgument));
+        }
+        else
+        {
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+        }
+
+        try
+        {
+            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo)
+                ?? throw new InvalidOperationException("Unable to start schtasks.exe.");
+            string output = elevate ? string.Empty : process.StandardOutput.ReadToEnd();
+            string error = elevate ? string.Empty : process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode != 0 && !ignoreFailure)
+            {
+                throw new InvalidOperationException($"schtasks.exe failed with exit code {process.ExitCode}. {error}");
+            }
+
+            return new SchTasksResult(process.ExitCode, output, error);
+        }
+        catch (Exception exception) when (ignoreFailure)
+        {
+            AppLog.Write(exception);
+            return new SchTasksResult(-1, string.Empty, exception.Message);
+        }
+    }
+
+    private static string QuoteArgument(string value)
+    {
+        return value.Contains(' ', StringComparison.Ordinal)
+            ? "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\""
+            : value;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private sealed record SchTasksResult(int ExitCode, string Output, string Error);
 }
 
 internal interface IShortcutFileService

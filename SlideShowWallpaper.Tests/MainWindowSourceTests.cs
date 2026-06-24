@@ -145,10 +145,11 @@ public sealed class MainWindowSourceTests
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
             source.IndexOf("private FrameworkElement CreateHardwareSensorSelectionList", StringComparison.Ordinal)..
-            source.IndexOf("private static TextBlock CreateHardwareSensorNotice", StringComparison.Ordinal)];
+            source.IndexOf("private FrameworkElement CreateHardwarePositionControls", StringComparison.Ordinal)];
 
         Assert.Contains("IsElevated: false", method);
         Assert.Contains("CreateHardwareSensorNotice()", method);
+        Assert.Contains("HardwareMonitorRestartAsAdministrator", method);
     }
 
     [Fact]
