@@ -588,7 +588,13 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(title, title.Text);
         stack.Children.Add(title);
         stack.Children.Add(CreateHardwareEditorActions(config));
-        stack.Children.Add(CreateHardwareEditorPreviewSurface(config));
+        _hardwareEditorPreviewHost = new ContentControl
+        {
+            Content = CreateHardwareEditorPreviewSurface(config),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        AutomationProperties.SetName(_hardwareEditorPreviewHost, LocalizedStrings.Get("HardwareMonitorPreview"));
+        stack.Children.Add(_hardwareEditorPreviewHost);
 
         return new Border
         {
@@ -598,6 +604,14 @@ public sealed partial class MainWindow
             CornerRadius = new CornerRadius(8),
             Child = stack,
         };
+    }
+
+    private void RefreshHardwareEditorPreview(HardwareMonitorConfig config)
+    {
+        if (_hardwareEditorPreviewHost is not null)
+        {
+            _hardwareEditorPreviewHost.Content = CreateHardwareEditorPreviewSurface(config);
+        }
     }
 
     private FrameworkElement CreateHardwareEditorActions(HardwareMonitorConfig config)
@@ -876,24 +890,41 @@ public sealed partial class MainWindow
             {
                 element.Text = textBox.Text;
                 ScheduleApplySettings();
+                RefreshHardwareEditorPreview(config);
             };
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementText"), textBox));
         }
 
         if (element.Kind != HardwareOverlayElementKind.Image)
         {
-            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareFontCombo(string.IsNullOrWhiteSpace(element.FontFamily) ? config.FontFamily : element.FontFamily, value => element.FontFamily = value, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
-            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontSize"), CreateNumberBox(element.FontSize, value => element.FontSize = Math.Max(8, value), LocalizedStrings.Get("HardwareMonitorElementFontSize"))));
-            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareColorPicker(element.Foreground, value => element.Foreground = value, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareFontCombo(string.IsNullOrWhiteSpace(element.FontFamily) ? config.FontFamily : element.FontFamily, value =>
+            {
+                element.FontFamily = value;
+                RefreshHardwareEditorPreview(config);
+            }, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontSize"), CreateNumberBox(element.FontSize, value =>
+            {
+                element.FontSize = Math.Max(8, value);
+                RefreshHardwareEditorPreview(config);
+            }, LocalizedStrings.Get("HardwareMonitorElementFontSize"))));
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareColorPicker(element.Foreground, value =>
+            {
+                element.Foreground = value;
+                RefreshHardwareEditorPreview(config);
+            }, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
         }
         else
         {
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorImportIconImage"), CreateReplaceHardwareElementImageButton(config, element)));
         }
 
-        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwareElementPositionControls(element)));
-        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementSize"), CreateHardwareElementSizeControls(element)));
-        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementOpacity"), CreateOpacitySlider(element.Opacity, value => element.Opacity = Math.Clamp(value, 0.05, 1), LocalizedStrings.Get("HardwareMonitorElementOpacity"))));
+        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwareElementPositionControls(config, element)));
+        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementSize"), CreateHardwareElementSizeControls(config, element)));
+        stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementOpacity"), CreateOpacitySlider(element.Opacity, value =>
+        {
+            element.Opacity = Math.Clamp(value, 0.05, 1);
+            RefreshHardwareEditorPreview(config);
+        }, LocalizedStrings.Get("HardwareMonitorElementOpacity"))));
 
         var deleteButton = new Button
         {
@@ -1158,7 +1189,7 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private FrameworkElement CreateHardwareElementPositionControls(HardwareOverlayElement element)
+    private FrameworkElement CreateHardwareElementPositionControls(HardwareMonitorConfig config, HardwareOverlayElement element)
     {
         var panel = new Grid
         {
@@ -1166,8 +1197,16 @@ public sealed partial class MainWindow
         };
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        FrameworkElement xControl = CreateLabeledNumberBox("X", element.X, value => element.X = Math.Max(0, value));
-        FrameworkElement yControl = CreateLabeledNumberBox("Y", element.Y, value => element.Y = Math.Max(0, value));
+        FrameworkElement xControl = CreateLabeledNumberBox("X", element.X, value =>
+        {
+            element.X = Math.Max(0, value);
+            RefreshHardwareEditorPreview(config);
+        });
+        FrameworkElement yControl = CreateLabeledNumberBox("Y", element.Y, value =>
+        {
+            element.Y = Math.Max(0, value);
+            RefreshHardwareEditorPreview(config);
+        });
         Grid.SetColumn(xControl, 0);
         Grid.SetColumn(yControl, 1);
         panel.Children.Add(xControl);
@@ -1175,7 +1214,7 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private FrameworkElement CreateHardwareElementSizeControls(HardwareOverlayElement element)
+    private FrameworkElement CreateHardwareElementSizeControls(HardwareMonitorConfig config, HardwareOverlayElement element)
     {
         var panel = new Grid
         {
@@ -1183,8 +1222,16 @@ public sealed partial class MainWindow
         };
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        FrameworkElement widthControl = CreateLabeledNumberBox("W", element.Width, value => element.Width = Math.Max(20, value));
-        FrameworkElement heightControl = CreateLabeledNumberBox("H", element.Height, value => element.Height = Math.Max(20, value));
+        FrameworkElement widthControl = CreateLabeledNumberBox("W", element.Width, value =>
+        {
+            element.Width = Math.Max(20, value);
+            RefreshHardwareEditorPreview(config);
+        });
+        FrameworkElement heightControl = CreateLabeledNumberBox("H", element.Height, value =>
+        {
+            element.Height = Math.Max(20, value);
+            RefreshHardwareEditorPreview(config);
+        });
         Grid.SetColumn(widthControl, 0);
         Grid.SetColumn(heightControl, 1);
         panel.Children.Add(widthControl);

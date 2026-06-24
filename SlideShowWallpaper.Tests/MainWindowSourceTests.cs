@@ -310,6 +310,9 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("Spacing = 6", sectionMethod);
         Assert.Contains("Padding = new Thickness(6)", sectionMethod);
+        Assert.Contains("_hardwareEditorPreviewHost = new ContentControl", sectionMethod);
+        Assert.Contains("Content = CreateHardwareEditorPreviewSurface(config)", sectionMethod);
+        Assert.Contains("stack.Children.Add(_hardwareEditorPreviewHost);", sectionMethod);
         Assert.Contains("Padding = new Thickness(0)", surfaceMethod);
         Assert.Contains("new HardwareOverlayLayout(HardwareEditorPreviewDefaultWidth, HardwareEditorPreviewDefaultHeight)", surfaceMethod);
         Assert.Contains("new Viewbox", surfaceMethod);
@@ -571,8 +574,23 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareSensorIconControls(config, element)", method);
         Assert.Contains("CreateReplaceHardwareElementImageButton(config, element)", method);
         Assert.Contains("CreateOpacitySlider(element.Opacity", method);
+        Assert.Contains("element.Foreground = value;", method);
+        Assert.Contains("RefreshHardwareEditorPreview(config);", method);
         Assert.DoesNotContain("CreateNumberBox(element.Opacity", method);
         Assert.DoesNotContain("CreateHardwareTextBox(element.Foreground", method);
+    }
+
+    [Fact]
+    public void RefreshHardwareEditorPreview_ReplacesOnlyPreviewHostContent()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private void RefreshHardwareEditorPreview", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareEditorActions", StringComparison.Ordinal)];
+
+        Assert.Contains("_hardwareEditorPreviewHost.Content = CreateHardwareEditorPreviewSurface(config);", method);
+        Assert.DoesNotContain("RenderTabs(_selectedMonitorId)", method);
     }
 
     [Fact]

@@ -135,6 +135,7 @@ public sealed partial class MainWindow : Window
     private TextBlock? _thumbnailCacheSizeText;
     private ProgressRing? _thumbnailCacheSizeProgress;
     private Button? _clearThumbnailCacheButton;
+    private ContentControl? _hardwareEditorPreviewHost;
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
     private CancellationTokenSource? _backgroundMemoryTrimCancellation;
     private Popup? _previewPopup;
