@@ -160,6 +160,8 @@ public sealed class SettingsStore
             FontFamily = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.FontFamily)), "Segoe UI"),
             FontSize = GetDouble(sections, section, nameof(HardwareMonitorConfig.FontSize), 16),
             Opacity = GetDouble(sections, section, nameof(HardwareMonitorConfig.Opacity), 0.88),
+            OverlayWidth = GetDouble(sections, section, nameof(HardwareMonitorConfig.OverlayWidth), HardwareMonitorConfig.DefaultOverlayWidth),
+            OverlayHeight = GetDouble(sections, section, nameof(HardwareMonitorConfig.OverlayHeight), HardwareMonitorConfig.DefaultOverlayHeight),
             BackgroundImagePath = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundImagePath)), string.Empty),
             BackgroundColor = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundColor)), string.Empty),
             SelectedElementId = GetString(sections, section, nameof(HardwareMonitorConfig.SelectedElementId)),
@@ -206,6 +208,8 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(HardwareMonitorConfig.FontFamily), EncodeString(config.FontFamily));
         AppendValue(builder, nameof(HardwareMonitorConfig.FontSize), config.FontSize);
         AppendValue(builder, nameof(HardwareMonitorConfig.Opacity), config.Opacity);
+        AppendValue(builder, nameof(HardwareMonitorConfig.OverlayWidth), config.OverlayWidth);
+        AppendValue(builder, nameof(HardwareMonitorConfig.OverlayHeight), config.OverlayHeight);
         AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundImagePath), EncodeString(config.BackgroundImagePath));
         AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundColor), EncodeString(config.BackgroundColor));
         AppendValue(builder, nameof(HardwareMonitorConfig.SelectedElementId), config.SelectedElementId);

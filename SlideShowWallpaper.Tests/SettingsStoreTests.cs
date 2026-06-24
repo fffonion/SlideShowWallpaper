@@ -47,6 +47,8 @@ public sealed class SettingsStoreTests
                 FontFamily = "Cascadia Mono",
                 FontSize = 18,
                 Opacity = 0.72,
+                OverlayWidth = 512,
+                OverlayHeight = 288,
                 SelectedSensorIds = ["cpu-temp", "gpu-power"],
                 BackgroundImagePath = @"C:\Wallpapers\panel.png",
                 BackgroundColor = "#80223344",
@@ -125,6 +127,8 @@ public sealed class SettingsStoreTests
         Assert.Equal("Cascadia Mono", loaded.HardwareMonitor.FontFamily);
         Assert.Equal(18, loaded.HardwareMonitor.FontSize);
         Assert.Equal(0.72, loaded.HardwareMonitor.Opacity);
+        Assert.Equal(512, loaded.HardwareMonitor.OverlayWidth);
+        Assert.Equal(288, loaded.HardwareMonitor.OverlayHeight);
         Assert.Equal(["cpu-temp", "gpu-power"], loaded.HardwareMonitor.SelectedSensorIds);
         Assert.Equal(@"C:\Wallpapers\panel.png", loaded.HardwareMonitor.BackgroundImagePath);
         Assert.Equal("#80223344", loaded.HardwareMonitor.BackgroundColor);
