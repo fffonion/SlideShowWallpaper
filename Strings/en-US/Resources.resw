@@ -38,7 +38,7 @@
   <data name="LanguageTraditionalChinese" xml:space="preserve"><value>Traditional Chinese</value></data>
   <data name="LanguageJapanese" xml:space="preserve"><value>Japanese</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>Random</value></data>
-  <data name="PlaybackSingleLoop" xml:space="preserve"><value>Single Loop</value></data>
+  <data name="PlaybackSingleLoop" xml:space="preserve"><value>Single media loop</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>Name Asc</value></data>
   <data name="PlaybackNameDesc" xml:space="preserve"><value>Name Desc</value></data>
   <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>Modified Date Asc</value></data>

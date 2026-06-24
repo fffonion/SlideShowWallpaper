@@ -38,7 +38,7 @@
   <data name="LanguageTraditionalChinese" xml:space="preserve"><value>繁体字中国語</value></data>
   <data name="LanguageJapanese" xml:space="preserve"><value>日本語</value></data>
   <data name="PlaybackRandom" xml:space="preserve"><value>ランダム</value></data>
-  <data name="PlaybackSingleLoop" xml:space="preserve"><value>単一ループ</value></data>
+  <data name="PlaybackSingleLoop" xml:space="preserve"><value>単一メディアループ</value></data>
   <data name="PlaybackNameAsc" xml:space="preserve"><value>名前 昇順</value></data>
   <data name="PlaybackNameDesc" xml:space="preserve"><value>名前 降順</value></data>
   <data name="PlaybackModifiedDateAsc" xml:space="preserve"><value>更新日時 昇順</value></data>
