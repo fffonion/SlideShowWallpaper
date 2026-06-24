@@ -149,21 +149,25 @@ public sealed partial class MainWindow
         Grid.SetColumn(resizeHandle, 1);
         root.Children.Add(resizeHandle);
 
-        var formatStack = new StackPanel
+        var formatGrid = new Grid
         {
-            Spacing = 14,
+            RowSpacing = 14,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
         };
-        formatStack.Children.Add(CreateHardwareOverlayFormatSection(config));
-        formatStack.Children.Add(CreateHardwareElementSettingsSection(config));
+        formatGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        var formatScrollViewer = new ScrollViewer
-        {
-            Content = formatStack,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        };
-        Grid.SetColumn(formatScrollViewer, 2);
-        root.Children.Add(formatScrollViewer);
+        Border globalSection = CreateHardwareOverlayFormatSection(config);
+        Grid.SetRow(globalSection, 0);
+        formatGrid.Children.Add(globalSection);
+
+        Border elementSection = CreateHardwareElementSettingsSection(config);
+        Grid.SetRow(elementSection, 1);
+        formatGrid.Children.Add(elementSection);
+
+        Grid.SetColumn(formatGrid, 2);
+        root.Children.Add(formatGrid);
         return root;
     }
 

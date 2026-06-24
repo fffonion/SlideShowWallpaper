@@ -155,7 +155,10 @@ public sealed class MainWindowSourceTests
         Assert.Contains("MinimumHardwareEditorSettingsWidth", method);
         Assert.Contains("CreateHardwareOverlayFormatSection(config)", method);
         Assert.Contains("CreateHardwareElementSettingsSection(config)", method);
-        Assert.Contains("Grid.SetColumn(formatScrollViewer, 2)", method);
+        Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });", method);
+        Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });", method);
+        Assert.Contains("Grid.SetColumn(formatGrid, 2)", method);
+        Assert.DoesNotContain("formatScrollViewer", method);
     }
 
     [Fact]
@@ -357,6 +360,21 @@ public sealed class MainWindowSourceTests
         Assert.Contains("row.IsFullWidth", method);
         Assert.Contains("AddSettingsRowControl(content, row.Control, column: 0)", method);
         Assert.Contains("AutomationProperties.SetName(text, row.Label);", method);
+    }
+
+    [Fact]
+    public void CreateSettingsContentSection_StretchesAndScrollsContent()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsControls.cs"));
+        string method = source[
+            source.IndexOf("private static Border CreateSettingsContentSection", StringComparison.Ordinal)..
+            source.IndexOf("private static Border CreateSettingsRow", StringComparison.Ordinal)];
+
+        Assert.Contains("new GridLength(1, GridUnitType.Star)", method);
+        Assert.Contains("new ScrollViewer", method);
+        Assert.Contains("VerticalAlignment = VerticalAlignment.Stretch", method);
+        Assert.Contains("VerticalScrollBarVisibility = ScrollBarVisibility.Auto", method);
     }
 
     [Fact]

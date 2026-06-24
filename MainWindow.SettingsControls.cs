@@ -142,7 +142,14 @@ public sealed partial class MainWindow
 
     private static Border CreateSettingsContentSection(string title, FrameworkElement content)
     {
-        var stack = new StackPanel();
+        var grid = new Grid
+        {
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
         var titleBlock = new TextBlock
         {
             Text = title,
@@ -151,11 +158,22 @@ public sealed partial class MainWindow
             Margin = new Thickness(16, 14, 16, 10),
         };
         AutomationProperties.SetName(titleBlock, title);
-        stack.Children.Add(titleBlock);
-        stack.Children.Add(CreateSettingsDivider());
+        Grid.SetRow(titleBlock, 0);
+        grid.Children.Add(titleBlock);
+
+        Border divider = CreateSettingsDivider();
+        Grid.SetRow(divider, 1);
+        grid.Children.Add(divider);
 
         content.Margin = new Thickness(16, 12, 16, 14);
-        stack.Children.Add(content);
+        var scrollViewer = new ScrollViewer
+        {
+            Content = content,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+        Grid.SetRow(scrollViewer, 2);
+        grid.Children.Add(scrollViewer);
 
         return new Border
         {
@@ -163,7 +181,8 @@ public sealed partial class MainWindow
             BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Child = stack,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Child = grid,
         };
     }
 
