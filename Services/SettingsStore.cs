@@ -249,6 +249,7 @@ public sealed class SettingsStore
             FontSize = Math.Max(0, GetDouble(sections, section, $"{prefix}.FontSize", 0)),
             Foreground = DecodeString(GetString(sections, section, $"{prefix}.Foreground"), "#FFFFFFFF"),
             Opacity = Math.Clamp(GetDouble(sections, section, $"{prefix}.Opacity", 1), 0.05, 1),
+            DecimalPlaces = Math.Clamp(GetInt(sections, section, $"{prefix}.DecimalPlaces", -1), -1, 6),
         };
     }
 
@@ -268,6 +269,7 @@ public sealed class SettingsStore
         AppendValue(builder, $"{prefix}.FontSize", Math.Max(0, element.FontSize));
         AppendValue(builder, $"{prefix}.Foreground", EncodeString(element.Foreground));
         AppendValue(builder, $"{prefix}.Opacity", Math.Clamp(element.Opacity, 0.05, 1));
+        AppendValue(builder, $"{prefix}.DecimalPlaces", Math.Clamp(element.DecimalPlaces, -1, 6));
     }
 
     private static Dictionary<string, Dictionary<string, string>> Parse(IEnumerable<string> lines)

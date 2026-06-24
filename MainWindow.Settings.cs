@@ -912,6 +912,16 @@ public sealed partial class MainWindow
             stack.Children.Add(CreateCompactEditorRow(
                 LocalizedStrings.Get("HardwareMonitorImportIconImage"),
                 CreateHardwareSensorIconControls(config, element)));
+            NumberBox decimalPlacesBox = CreateNumberBox(GetHardwareElementDecimalPlaces(element), value =>
+            {
+                element.DecimalPlaces = Math.Clamp((int)Math.Round(value), 0, 6);
+                RefreshHardwareEditorPreview(config);
+            }, LocalizedStrings.Get("HardwareMonitorDecimalPlaces"));
+            decimalPlacesBox.Minimum = 0;
+            decimalPlacesBox.Maximum = 6;
+            decimalPlacesBox.SmallChange = 1;
+            decimalPlacesBox.LargeChange = 1;
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorDecimalPlaces"), decimalPlacesBox));
         }
 
         if (element.Kind == HardwareOverlayElementKind.Text)
@@ -989,6 +999,17 @@ public sealed partial class MainWindow
         return string.IsNullOrWhiteSpace(element.Text)
             ? element.SensorId
             : element.Text;
+    }
+
+    private int GetHardwareElementDecimalPlaces(HardwareOverlayElement element)
+    {
+        if (element.DecimalPlaces >= 0)
+        {
+            return Math.Clamp(element.DecimalPlaces, 0, 6);
+        }
+
+        HardwareSensorReading? sensor = _hardwareMonitorSnapshot?.Sensors.FirstOrDefault(item => string.Equals(item.Id, element.SensorId, StringComparison.OrdinalIgnoreCase));
+        return sensor?.Kind == HardwareMetricKind.FanRpm ? 0 : 1;
     }
 
     private static Border CreateCompactEditorRow(string label, FrameworkElement control)

@@ -141,6 +141,7 @@
   <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>色</value></data>
   <data name="HardwareMonitorElementSize" xml:space="preserve"><value>境界</value></data>
   <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>不透明度</value></data>
+  <data name="HardwareMonitorDecimalPlaces" xml:space="preserve"><value>小数点以下の桁数</value></data>
   <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>要素を削除</value></data>
   <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>プレビューキャンバスで要素を選択してください。</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>テンプレート操作</value></data>

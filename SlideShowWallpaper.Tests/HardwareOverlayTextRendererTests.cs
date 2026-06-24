@@ -100,6 +100,59 @@ public sealed class HardwareOverlayTextRendererTests
     }
 
     [Fact]
+    public void CreateElementStates_WithSensorDecimalPlaces_FormatsCurrentSensorValue()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Id = "element1",
+                    Kind = HardwareOverlayElementKind.Sensor,
+                    SensorId = "gpu-power",
+                    DecimalPlaces = 2,
+                },
+            ],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("gpu-power", "GPU", "Board Power", HardwareMetricKind.Power, HardwareMetricGroup.Gpu, 182.456, "W"),
+            ],
+            DateTimeOffset.Now);
+
+        HardwareOverlayElementState element = Assert.Single(HardwareOverlayTextRenderer.CreateElementStates(config, snapshot));
+
+        Assert.Equal("182.46 W", element.Text);
+    }
+
+    [Fact]
+    public void CreateElementStates_WithIntegerSensorDefault_UsesNoDecimalPlaces()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Id = "element1",
+                    Kind = HardwareOverlayElementKind.Sensor,
+                    SensorId = "fan",
+                },
+            ],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("fan", "Case", "Fan", HardwareMetricKind.FanRpm, HardwareMetricGroup.Motherboard, 2024.4, "RPM"),
+            ],
+            DateTimeOffset.Now);
+
+        HardwareOverlayElementState element = Assert.Single(HardwareOverlayTextRenderer.CreateElementStates(config, snapshot));
+
+        Assert.Equal("2024 RPM", element.Text);
+    }
+
+    [Fact]
     public void CreateElementStates_WithEmptyElementFont_UsesGlobalFontSettings()
     {
         var config = new HardwareMonitorConfig
@@ -141,6 +194,23 @@ public sealed class HardwareOverlayTextRendererTests
         string text = HardwareOverlayTextRenderer.FormatReading(reading);
 
         Assert.Equal("17.1 GB", text);
+    }
+
+    [Fact]
+    public void FormatReading_WithNonIntegerSensorDefault_UsesOneDecimalPlace()
+    {
+        var reading = new HardwareSensorReading(
+            "cpu-temp",
+            "CPU",
+            "Package",
+            HardwareMetricKind.Temperature,
+            HardwareMetricGroup.Cpu,
+            61,
+            "C");
+
+        string text = HardwareOverlayTextRenderer.FormatReading(reading);
+
+        Assert.Equal("61.0 \u00B0C", text);
     }
 
     [Fact]

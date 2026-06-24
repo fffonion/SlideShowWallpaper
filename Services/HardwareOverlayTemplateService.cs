@@ -77,6 +77,7 @@ public static class HardwareOverlayTemplateService
                 FontSize = element.FontSize,
                 Foreground = element.Foreground,
                 Opacity = element.Opacity,
+                DecimalPlaces = element.DecimalPlaces,
             })
             .ToList();
     }

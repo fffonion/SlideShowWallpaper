@@ -141,6 +141,7 @@
   <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>顏色</value></data>
   <data name="HardwareMonitorElementSize" xml:space="preserve"><value>邊界</value></data>
   <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>透明度</value></data>
+  <data name="HardwareMonitorDecimalPlaces" xml:space="preserve"><value>小數位數</value></data>
   <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>刪除元素</value></data>
   <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>在預覽畫布上選擇一個元素。</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>範本操作</value></data>

@@ -140,6 +140,7 @@
   <data name="HardwareMonitorElementForeground" xml:space="preserve"><value>Color</value></data>
   <data name="HardwareMonitorElementSize" xml:space="preserve"><value>Bounds</value></data>
   <data name="HardwareMonitorElementOpacity" xml:space="preserve"><value>Opacity</value></data>
+  <data name="HardwareMonitorDecimalPlaces" xml:space="preserve"><value>Decimal places</value></data>
   <data name="HardwareMonitorDeleteElement" xml:space="preserve"><value>Delete element</value></data>
   <data name="HardwareMonitorNoElementSelected" xml:space="preserve"><value>Select an element on the preview canvas.</value></data>
   <data name="HardwareMonitorTemplateActions" xml:space="preserve"><value>Template actions</value></data>

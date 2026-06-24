@@ -68,6 +68,7 @@ public sealed class SettingsStoreTests
                         FontSize = 17,
                         Foreground = "#FF00FFFF",
                         Opacity = 0.8,
+                        DecimalPlaces = 2,
                     },
                 ],
             },
@@ -141,6 +142,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(17, element.FontSize);
         Assert.Equal("#FF00FFFF", element.Foreground);
         Assert.Equal(0.8, element.Opacity);
+        Assert.Equal(2, element.DecimalPlaces);
         Assert.Equal("display1", monitor.Id);
         Assert.Equal("Dell U2723QE", monitor.DisplayName);
         Assert.Equal(PlaybackOrder.ModifiedDateDesc, monitor.PlaybackOrder);

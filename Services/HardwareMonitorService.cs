@@ -240,13 +240,13 @@ public static class HardwareOverlayTextRenderer
 
     public static string FormatReading(HardwareSensorReading reading)
     {
+        return FormatReading(reading, GetDefaultDecimalPlaces(reading));
+    }
+
+    public static string FormatReading(HardwareSensorReading reading, int decimalPlaces)
+    {
         (double displayValue, string displayUnit) = NormalizeDisplayUnit(reading);
-        string value = reading.Kind switch
-        {
-            HardwareMetricKind.FanRpm => displayValue.ToString("0", CultureInfo.CurrentCulture),
-            HardwareMetricKind.MemoryAvailable or HardwareMetricKind.VramAvailable => displayValue.ToString("0.0", CultureInfo.CurrentCulture),
-            _ => displayValue.ToString("0.#", CultureInfo.CurrentCulture),
-        };
+        string value = displayValue.ToString(CreateDecimalFormat(decimalPlaces), CultureInfo.CurrentCulture);
 
         return $"{value} {displayUnit}";
     }
@@ -281,7 +281,7 @@ public static class HardwareOverlayTextRenderer
         readings.TryGetValue(element.SensorId, out HardwareSensorReading? sensorReading);
         string text = element.Kind switch
         {
-            HardwareOverlayElementKind.Sensor when sensorReading is not null => FormatReading(sensorReading),
+            HardwareOverlayElementKind.Sensor when sensorReading is not null => FormatReading(sensorReading, ResolveDecimalPlaces(element, sensorReading)),
             HardwareOverlayElementKind.Sensor => string.IsNullOrWhiteSpace(element.Text) ? element.SensorId : element.Text,
             HardwareOverlayElementKind.Text => element.Text,
             _ => string.Empty,
@@ -308,6 +308,24 @@ public static class HardwareOverlayTextRenderer
     private static bool IsVisibleReading(HardwareSensorReading reading)
     {
         return !string.Equals(reading.SensorName, "Virtual Memory Available", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ResolveDecimalPlaces(HardwareOverlayElement element, HardwareSensorReading reading)
+    {
+        return element.DecimalPlaces >= 0
+            ? Math.Clamp(element.DecimalPlaces, 0, 6)
+            : GetDefaultDecimalPlaces(reading);
+    }
+
+    private static int GetDefaultDecimalPlaces(HardwareSensorReading reading)
+    {
+        return reading.Kind == HardwareMetricKind.FanRpm ? 0 : 1;
+    }
+
+    private static string CreateDecimalFormat(int decimalPlaces)
+    {
+        int clamped = Math.Clamp(decimalPlaces, 0, 6);
+        return clamped == 0 ? "0" : $"0.{new string('0', clamped)}";
     }
 
     private static int GetDefaultSensorPriority(HardwareSensorReading reading)

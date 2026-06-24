@@ -101,6 +101,8 @@ public sealed class HardwareOverlayElement
     public string Foreground { get; set; } = "#FFFFFFFF";
 
     public double Opacity { get; set; } = 1;
+
+    public int DecimalPlaces { get; set; } = -1;
 }
 
 public sealed class HardwareOverlayTemplate

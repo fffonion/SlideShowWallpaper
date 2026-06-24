@@ -35,4 +35,47 @@ public sealed class HardwareOverlayTemplateServiceTests
         Assert.Equal(@"C:\Wallpapers\panel.png", config.BackgroundImagePath);
         Assert.Equal("#80223344", config.BackgroundColor);
     }
+
+    [Fact]
+    public void FromConfig_CopiesElementDecimalPlaces()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Kind = HardwareOverlayElementKind.Sensor,
+                    DecimalPlaces = 3,
+                },
+            ],
+        };
+
+        HardwareOverlayTemplate template = HardwareOverlayTemplateService.FromConfig(config);
+
+        HardwareOverlayElement element = Assert.Single(template.Elements);
+        Assert.Equal(3, element.DecimalPlaces);
+    }
+
+    [Fact]
+    public void ApplyToConfig_CopiesElementDecimalPlaces()
+    {
+        var config = new HardwareMonitorConfig();
+        var template = new HardwareOverlayTemplate
+        {
+            Elements =
+            [
+                new HardwareOverlayElement
+                {
+                    Kind = HardwareOverlayElementKind.Sensor,
+                    DecimalPlaces = 4,
+                },
+            ],
+        };
+
+        HardwareOverlayTemplateService.ApplyToConfig(template, config);
+
+        HardwareOverlayElement element = Assert.Single(config.Elements);
+        Assert.Equal(4, element.DecimalPlaces);
+    }
 }

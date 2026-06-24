@@ -649,6 +649,9 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareFontCombo", method);
         Assert.Contains("CreateHardwareColorPicker", method);
         Assert.Contains("CreateHardwareSensorIconControls(config, element)", method);
+        Assert.Contains("HardwareMonitorDecimalPlaces", method);
+        Assert.Contains("element.DecimalPlaces = Math.Clamp((int)Math.Round(value), 0, 6);", method);
+        Assert.Contains("GetHardwareElementDecimalPlaces(element)", method);
         Assert.Contains("CreateReplaceHardwareElementImageButton(config, element)", method);
         Assert.Contains("CreateOpacitySlider(element.Opacity", method);
         Assert.Contains("element.Foreground = value;", method);
