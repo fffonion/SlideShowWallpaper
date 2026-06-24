@@ -60,9 +60,6 @@ jobs:
             artifacts/test-results/**
             artifacts/vstest-release.log*
 
-      - name: Build single-file executable
-        run: dotnet msbuild .\SlideShowWallpaper.csproj -t:BuildSingleFile -p:Configuration=Release -p:Platform=x64 -v minimal
-
       - name: Resolve release metadata
         shell: pwsh
         run: |
@@ -75,6 +72,40 @@ jobs:
             throw 'Release tag is required.'
           }
 
+          $version = $tag.TrimStart([char[]]@('v', 'V'))
+          if ($version -notmatch '^\d+(\.\d+){1,3}(-[0-9A-Za-z.-]+)?$') {
+            throw "Release tag must contain a semantic version: $tag"
+          }
+
+          $numericVersion = $version -replace '-.*$', ''
+          $versionParts = [System.Collections.Generic.List[string]]::new()
+          $numericVersion.Split('.') | ForEach-Object { $versionParts.Add($_) }
+          while ($versionParts.Count -lt 4) {
+            $versionParts.Add('0')
+          }
+          $fileVersion = [string]::Join('.', $versionParts.GetRange(0, 4))
+
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_VERSION=$numericVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_FILE_VERSION=$fileVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build single-file executable
+        shell: pwsh
+        run: |
+          dotnet msbuild .\SlideShowWallpaper.csproj `
+            -t:BuildSingleFile `
+            -p:Configuration=Release `
+            -p:Platform=x64 `
+            -p:Version=$env:RELEASE_VERSION `
+            -p:AssemblyVersion=$env:RELEASE_FILE_VERSION `
+            -p:FileVersion=$env:RELEASE_FILE_VERSION `
+            -p:InformationalVersion=$env:RELEASE_TAG `
+            -v minimal
+
+      - name: Resolve release assets
+        shell: pwsh
+        run: |
+          $tag = $env:RELEASE_TAG
           $bundlePath = Join-Path $PWD 'artifacts\release\win-x64\SlideShowWallpaper.exe'
           if (-not (Test-Path $bundlePath)) {
             throw "Single-file executable not found at $bundlePath"
@@ -85,7 +116,6 @@ jobs:
           $hash = (Get-FileHash $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
           Set-Content -Path $shaPath -Value "$hash *$assetName"
 
-          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "RELEASE_ASSET_NAME=$assetName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "RELEASE_BUNDLE_PATH=$bundlePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "RELEASE_SHA_PATH=$shaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

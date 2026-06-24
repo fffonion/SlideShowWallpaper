@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -57,7 +58,8 @@ public sealed partial class MainWindow
                     _viewModel.PreviewPopupDelaySeconds = Math.Max(PreviewPopupPolicy.MinimumHoverDelaySeconds, (int)Math.Round(value));
                     UpdatePreviewPopupDelay();
                 },
-                LocalizedStrings.Get("AppSettingVideoPreviewDelay")))));
+                LocalizedStrings.Get("AppSettingVideoPreviewDelay"))),
+            new SettingsRow(LocalizedStrings.Get("AppSettingUpdateCheck"), CreateUpdateCheckControls())));
         form.Children.Add(CreateHardwareMonitorSettingsSection());
         Grid.SetRow(form, 0);
         root.Children.Add(form);
@@ -118,6 +120,200 @@ public sealed partial class MainWindow
         panel.Children.Add(autostartCheckBox);
         panel.Children.Add(adminCheckBox);
         return panel;
+    }
+
+    private FrameworkElement CreateUpdateCheckControls()
+    {
+        var panel = new StackPanel
+        {
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+
+        var statusRow = new Grid
+        {
+            ColumnSpacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        statusRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        statusRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        statusRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        _updateCheckButton = new Button
+        {
+            Content = LocalizedStrings.Get("CheckForUpdates"),
+            MinWidth = 128,
+        };
+        AutomationProperties.SetName(_updateCheckButton, LocalizedStrings.Get("CheckForUpdates"));
+        _updateCheckButton.Click += async (_, _) => await CheckForUpdatesAsync();
+        Grid.SetColumn(_updateCheckButton, 0);
+        statusRow.Children.Add(_updateCheckButton);
+
+        _updateCheckProgress = new ProgressRing
+        {
+            Width = 18,
+            Height = 18,
+            IsActive = false,
+            Visibility = Visibility.Collapsed,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(_updateCheckProgress, LocalizedStrings.Get("UpdateCheckChecking"));
+        Grid.SetColumn(_updateCheckProgress, 1);
+        statusRow.Children.Add(_updateCheckProgress);
+
+        _updateCheckStatusText = new TextBlock
+        {
+            Text = LocalizedStrings.Format("CurrentVersionFormat", AppVersionService.GetCurrentVersion()),
+            TextWrapping = TextWrapping.WrapWholeWords,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(_updateCheckStatusText, LocalizedStrings.Get("AppSettingUpdateCheck"));
+        Grid.SetColumn(_updateCheckStatusText, 2);
+        statusRow.Children.Add(_updateCheckStatusText);
+        panel.Children.Add(statusRow);
+
+        var actionRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+        };
+        _updateReleaseButton = new Button
+        {
+            Content = LocalizedStrings.Get("OpenReleasePage"),
+            Visibility = Visibility.Collapsed,
+        };
+        AutomationProperties.SetName(_updateReleaseButton, LocalizedStrings.Get("OpenReleasePage"));
+        _updateReleaseButton.Click += (_, _) => OpenExternalUpdateUri(_updateReleaseButton.Tag as string);
+        actionRow.Children.Add(_updateReleaseButton);
+
+        _updateDownloadButton = new Button
+        {
+            Content = LocalizedStrings.Get("DownloadUpdate"),
+            Visibility = Visibility.Collapsed,
+        };
+        AutomationProperties.SetName(_updateDownloadButton, LocalizedStrings.Get("DownloadUpdate"));
+        _updateDownloadButton.Click += (_, _) => OpenExternalUpdateUri(_updateDownloadButton.Tag as string);
+        actionRow.Children.Add(_updateDownloadButton);
+        panel.Children.Add(actionRow);
+
+        return panel;
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        _updateCheckCancellation?.Cancel();
+        _updateCheckCancellation?.Dispose();
+        _updateCheckCancellation = new CancellationTokenSource();
+        CancellationToken cancellationToken = _updateCheckCancellation.Token;
+        SetUpdateCheckBusy(true);
+        HideUpdateLinks();
+
+        Version currentVersion = AppVersionService.GetCurrentVersion();
+        try
+        {
+            UpdateCheckResult result = await _updateCheckService.CheckForUpdateAsync(currentVersion, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            ShowUpdateCheckResult(result);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                SetUpdateCheckBusy(false);
+            }
+        }
+    }
+
+    private void ShowUpdateCheckResult(UpdateCheckResult result)
+    {
+        if (_updateCheckStatusText is null)
+        {
+            return;
+        }
+
+        switch (result.Status)
+        {
+            case UpdateCheckStatus.UpdateAvailable:
+                _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateAvailableFormat", result.LatestTag, result.CurrentVersion);
+                ShowUpdateLinks(result);
+                break;
+            case UpdateCheckStatus.UpToDate:
+                _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateUpToDateFormat", result.CurrentVersion);
+                break;
+            default:
+                _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateCheckFailedFormat", result.ErrorMessage);
+                break;
+        }
+    }
+
+    private void SetUpdateCheckBusy(bool isBusy)
+    {
+        if (_updateCheckButton is not null)
+        {
+            _updateCheckButton.IsEnabled = !isBusy;
+        }
+
+        if (_updateCheckProgress is not null)
+        {
+            _updateCheckProgress.IsActive = isBusy;
+            _updateCheckProgress.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (_updateCheckStatusText is not null && isBusy)
+        {
+            _updateCheckStatusText.Text = LocalizedStrings.Get("UpdateCheckChecking");
+        }
+    }
+
+    private void ShowUpdateLinks(UpdateCheckResult result)
+    {
+        SetUpdateLink(_updateReleaseButton, result.ReleaseUrl);
+        SetUpdateLink(_updateDownloadButton, result.DownloadUrl);
+    }
+
+    private void HideUpdateLinks()
+    {
+        SetUpdateLink(_updateReleaseButton, string.Empty);
+        SetUpdateLink(_updateDownloadButton, string.Empty);
+    }
+
+    private static void SetUpdateLink(Button? button, string url)
+    {
+        if (button is null)
+        {
+            return;
+        }
+
+        button.Tag = url;
+        button.Visibility = string.IsNullOrWhiteSpace(url) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private static void OpenExternalUpdateUri(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return;
+        }
+
+        try
+        {
+            using Process? process = Process.Start(new ProcessStartInfo
+            {
+                FileName = uri.AbsoluteUri,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private UIElement BuildHardwareEditorPage()

@@ -274,6 +274,26 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void BuildAppSettingsPage_ContainsGitHubReleaseUpdateCheck()
+    {
+        string root = FindProjectRoot();
+        string settingsSource = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string windowSource = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string windowingSource = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string method = settingsSource[
+            settingsSource.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
+            settingsSource.IndexOf("private FrameworkElement CreateAutostartControls", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateUpdateCheckControls()", method);
+        Assert.Contains("private readonly GitHubReleaseUpdateService _updateCheckService = new();", windowSource);
+        Assert.Contains("private async Task CheckForUpdatesAsync()", settingsSource);
+        Assert.Contains("AppVersionService.GetCurrentVersion()", settingsSource);
+        Assert.Contains("_updateCheckService.CheckForUpdateAsync", settingsSource);
+        Assert.Contains("OpenExternalUpdateUri", settingsSource);
+        Assert.Contains("_updateCheckService.Dispose();", windowingSource);
+    }
+
+    [Fact]
     public void MediaFilterChoices_ContainPortraitAndLandscapeImageFilters()
     {
         string root = FindProjectRoot();

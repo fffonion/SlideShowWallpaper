@@ -29,6 +29,15 @@
   <data name="ClearThumbnailCache" xml:space="preserve"><value>サムネイルキャッシュをクリア</value></data>
   <data name="AppSettingPauseVideoWhenDisplayOffOrSleeping" xml:space="preserve"><value>ディスプレイオフまたはシステムスリープ中は動画を一時停止</value></data>
   <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>動画プレビュー遅延（秒）</value></data>
+  <data name="AppSettingUpdateCheck" xml:space="preserve"><value>更新</value></data>
+  <data name="CheckForUpdates" xml:space="preserve"><value>更新を確認</value></data>
+  <data name="UpdateCheckChecking" xml:space="preserve"><value>更新を確認しています...</value></data>
+  <data name="CurrentVersionFormat" xml:space="preserve"><value>現在のバージョン: {0}</value></data>
+  <data name="UpdateAvailableFormat" xml:space="preserve"><value>{0} が利用可能です。現在のバージョン: {1}</value></data>
+  <data name="UpdateUpToDateFormat" xml:space="preserve"><value>最新バージョンです。現在のバージョン: {0}</value></data>
+  <data name="UpdateCheckFailedFormat" xml:space="preserve"><value>更新の確認に失敗しました: {0}</value></data>
+  <data name="OpenReleasePage" xml:space="preserve"><value>リリースページを開く</value></data>
+  <data name="DownloadUpdate" xml:space="preserve"><value>更新をダウンロード</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>ダーク</value></data>

@@ -29,6 +29,15 @@
   <data name="ClearThumbnailCache" xml:space="preserve"><value>清除縮圖快取</value></data>
   <data name="AppSettingPauseVideoWhenDisplayOffOrSleeping" xml:space="preserve"><value>螢幕關閉或系統睡眠時暫停影片</value></data>
   <data name="AppSettingVideoPreviewDelay" xml:space="preserve"><value>影片預覽延遲（秒）</value></data>
+  <data name="AppSettingUpdateCheck" xml:space="preserve"><value>更新</value></data>
+  <data name="CheckForUpdates" xml:space="preserve"><value>檢查更新</value></data>
+  <data name="UpdateCheckChecking" xml:space="preserve"><value>正在檢查更新...</value></data>
+  <data name="CurrentVersionFormat" xml:space="preserve"><value>目前版本：{0}</value></data>
+  <data name="UpdateAvailableFormat" xml:space="preserve"><value>{0} 可用。目前版本：{1}</value></data>
+  <data name="UpdateUpToDateFormat" xml:space="preserve"><value>已是最新版本。目前版本：{0}</value></data>
+  <data name="UpdateCheckFailedFormat" xml:space="preserve"><value>檢查更新失敗：{0}</value></data>
+  <data name="OpenReleasePage" xml:space="preserve"><value>開啟發布頁面</value></data>
+  <data name="DownloadUpdate" xml:space="preserve"><value>下載更新</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟隨系統</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>淺色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>

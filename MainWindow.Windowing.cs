@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         const int sectionSpacing = 14;
         return titleBarHeight
             + contentTopPadding
-            + EstimateSettingsSectionHeight(true, 9)
+            + EstimateSettingsSectionHeight(true, 10)
             + sectionSpacing
             + EstimateSettingsSectionHeight(true, 3)
             + contentBottomPadding;
@@ -317,5 +317,8 @@ public sealed partial class MainWindow
         _trayIconService.Dispose();
         _coordinator.Shutdown();
         _hardwareMonitorService.Dispose();
+        _updateCheckCancellation?.Cancel();
+        _updateCheckCancellation?.Dispose();
+        _updateCheckService.Dispose();
     }
 }
