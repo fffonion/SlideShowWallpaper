@@ -24,8 +24,10 @@ public sealed class HardwareOverlayTextRendererTests
         string text = HardwareOverlayTextRenderer.Render(config, snapshot);
 
         Assert.Contains("Now", text);
-        Assert.Contains("Package: 61.2", text);
-        Assert.Contains("Board Power: 182.5 W", text);
+        Assert.Contains("61.2", text);
+        Assert.Contains("182.5 W", text);
+        Assert.DoesNotContain("Package", text);
+        Assert.DoesNotContain("Board Power", text);
         Assert.DoesNotContain("Fan", text);
     }
 
@@ -51,5 +53,25 @@ public sealed class HardwareOverlayTextRendererTests
         Assert.Equal(8, selected.Count);
         Assert.Equal("sensor-0", selected[0].Id);
         Assert.Equal("sensor-7", selected[^1].Id);
+    }
+
+    [Fact]
+    public void SelectSensors_WithVirtualMemoryAvailable_ExcludesIt()
+    {
+        var config = new HardwareMonitorConfig
+        {
+            SelectedSensorIds = ["virtual-memory", "physical-memory"],
+        };
+        var snapshot = new HardwareMonitorSnapshot(
+            [
+                new HardwareSensorReading("virtual-memory", "Memory", "Virtual Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 128, "GB"),
+                new HardwareSensorReading("physical-memory", "Memory", "Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 32, "GB"),
+            ],
+            DateTimeOffset.Now);
+
+        IReadOnlyList<HardwareSensorReading> selected = HardwareOverlayTextRenderer.SelectSensors(config, snapshot);
+
+        HardwareSensorReading reading = Assert.Single(selected);
+        Assert.Equal("physical-memory", reading.Id);
     }
 }

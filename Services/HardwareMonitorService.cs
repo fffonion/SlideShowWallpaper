@@ -132,7 +132,9 @@ public sealed class HardwareMonitorService : IDisposable
 
     private static HardwareMetricKind? TryCreateMemoryKind(HardwareMetricGroup group, string sensorName)
     {
-        if (group == HardwareMetricGroup.Memory && sensorName.Contains("Available", StringComparison.OrdinalIgnoreCase))
+        if (group == HardwareMetricGroup.Memory
+            && sensorName.Contains("Available", StringComparison.OrdinalIgnoreCase)
+            && !sensorName.Contains("Virtual", StringComparison.OrdinalIgnoreCase))
         {
             return HardwareMetricKind.MemoryAvailable;
         }
@@ -178,13 +180,14 @@ public static class HardwareOverlayTextRenderer
 
     public static IReadOnlyList<HardwareSensorReading> SelectSensors(HardwareMonitorConfig config, HardwareMonitorSnapshot snapshot)
     {
+        IEnumerable<HardwareSensorReading> visibleSensors = snapshot.Sensors.Where(IsVisibleReading);
         if (config.SelectedSensorIds.Count == 0)
         {
-            return snapshot.Sensors.Take(8).ToArray();
+            return visibleSensors.Take(8).ToArray();
         }
 
         HashSet<string> selectedIds = config.SelectedSensorIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return snapshot.Sensors.Where(sensor => selectedIds.Contains(sensor.Id)).ToArray();
+        return visibleSensors.Where(sensor => selectedIds.Contains(sensor.Id)).ToArray();
     }
 
     public static string FormatReading(HardwareSensorReading reading)
@@ -201,6 +204,30 @@ public static class HardwareOverlayTextRenderer
             unit = "\u00B0C";
         }
 
-        return $"{reading.SensorName}: {value} {unit}";
+        return $"{GetReadingIcon(reading)} {value} {unit}";
+    }
+
+    private static string GetReadingIcon(HardwareSensorReading reading)
+    {
+        return reading.Kind switch
+        {
+            HardwareMetricKind.Temperature => reading.Group switch
+            {
+                HardwareMetricGroup.Cpu => "\u25A3 \uD83C\uDF21\uFE0F",
+                HardwareMetricGroup.Gpu => "\u25A4 \uD83C\uDF21\uFE0F",
+                HardwareMetricGroup.Storage => "\u25A5 \uD83C\uDF21\uFE0F",
+                _ => "\uD83C\uDF21\uFE0F",
+            },
+            HardwareMetricKind.FanRpm => "\u25CC",
+            HardwareMetricKind.MemoryAvailable => "\u25A6",
+            HardwareMetricKind.VramAvailable => "\u25A4 \u25A6",
+            HardwareMetricKind.Power => reading.Group == HardwareMetricGroup.Gpu ? "\u25A4 \u26A1" : "\u25A3 \u26A1",
+            _ => "\u25A1",
+        };
+    }
+
+    private static bool IsVisibleReading(HardwareSensorReading reading)
+    {
+        return !string.Equals(reading.SensorName, "Virtual Memory Available", StringComparison.OrdinalIgnoreCase);
     }
 }
