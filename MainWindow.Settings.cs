@@ -658,6 +658,31 @@ public sealed partial class MainWindow
         }
     }
 
+    private void RequestHardwareEditorKeyboardFocus()
+    {
+        _hardwareEditorKeyboardFocusPending = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_hardwareEditorKeyboardCanvas is Canvas canvas)
+            {
+                FocusHardwareEditorKeyboardCanvasIfPending(canvas);
+            }
+        });
+    }
+
+    private void FocusHardwareEditorKeyboardCanvasIfPending(Canvas canvas)
+    {
+        if (!_hardwareEditorKeyboardFocusPending || !ReferenceEquals(canvas, _hardwareEditorKeyboardCanvas))
+        {
+            return;
+        }
+
+        if (canvas.Focus(FocusState.Programmatic))
+        {
+            _hardwareEditorKeyboardFocusPending = false;
+        }
+    }
+
     private void ApplyHardwareEditorGridSpacing(HardwareMonitorConfig config)
     {
         if (HardwareEditorLayoutService.ApplyGridSpacing(config.Elements))
@@ -751,6 +776,7 @@ public sealed partial class MainWindow
             IsTabStop = true,
         };
         _hardwareEditorKeyboardCanvas = canvas;
+        canvas.Loaded += (_, _) => FocusHardwareEditorKeyboardCanvasIfPending(canvas);
         AutomationProperties.SetName(canvas, LocalizedStrings.Get("HardwareMonitorPreview"));
         if (TryCreateSettingsBitmapImage(config.BackgroundImagePath, out BitmapImage? background))
         {
@@ -1641,6 +1667,7 @@ public sealed partial class MainWindow
             selectionRectangle.Visibility = Visibility.Collapsed;
             canvas.ReleasePointerCapture(args.Pointer);
             RefreshHardwareEditorPreview(config);
+            RequestHardwareEditorKeyboardFocus();
             args.Handled = true;
         };
         canvas.PointerCanceled += (_, args) =>
@@ -1764,7 +1791,7 @@ public sealed partial class MainWindow
             _hardwareEditorSelectedElementIds.Add(element.Id);
             config.SelectedElementId = element.Id;
             RenderTabs(_selectedMonitorId);
-            DispatcherQueue.TryEnqueue(() => _hardwareEditorKeyboardCanvas?.Focus(FocusState.Programmatic));
+            RequestHardwareEditorKeyboardFocus();
         };
         visual.PointerPressed += (_, args) =>
         {
@@ -1836,6 +1863,7 @@ public sealed partial class MainWindow
             isDragging = false;
             visual.ReleasePointerCapture(args.Pointer);
             HideHardwareEditorGuides(verticalGuide, horizontalGuide);
+            RequestHardwareEditorKeyboardFocus();
             args.Handled = true;
         };
         visual.PointerCanceled += (_, args) =>

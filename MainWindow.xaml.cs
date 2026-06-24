@@ -135,6 +135,7 @@ public sealed partial class MainWindow : Window
     private Button? _clearThumbnailCacheButton;
     private ContentControl? _hardwareEditorPreviewHost;
     private Canvas? _hardwareEditorKeyboardCanvas;
+    private bool _hardwareEditorKeyboardFocusPending;
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
     private CancellationTokenSource? _backgroundMemoryTrimCancellation;
     private Popup? _previewPopup;

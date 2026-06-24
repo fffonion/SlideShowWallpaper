@@ -557,6 +557,10 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)];
 
         Assert.Contains("canvas.KeyDown +=", method);
+        Assert.Contains("RequestHardwareEditorKeyboardFocus", source);
+        Assert.Contains("FocusHardwareEditorKeyboardCanvasIfPending", source);
+        Assert.Contains("canvas.Loaded += (_, _) => FocusHardwareEditorKeyboardCanvasIfPending(canvas);", source);
+        Assert.Contains("_hardwareEditorKeyboardFocusPending = true;", source);
         Assert.Contains("global::Windows.System.VirtualKey.Left", method);
         Assert.Contains("MoveHardwareEditorSelection(config, visualsById, canvas.Width, canvas.Height", method);
         Assert.Contains("args.Handled = true;", method);
