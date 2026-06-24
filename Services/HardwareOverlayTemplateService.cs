@@ -23,6 +23,7 @@ public static class HardwareOverlayTemplateService
             Opacity = config.Opacity,
             SelectedSensorIds = config.SelectedSensorIds.ToList(),
             BackgroundImagePath = config.BackgroundImagePath,
+            BackgroundColor = config.BackgroundColor,
             Elements = CloneElements(config.Elements),
         };
     }
@@ -40,6 +41,7 @@ public static class HardwareOverlayTemplateService
         config.Opacity = Math.Clamp(template.Opacity, 0.1, 1);
         config.SelectedSensorIds = template.SelectedSensorIds.ToList();
         config.BackgroundImagePath = template.BackgroundImagePath;
+        config.BackgroundColor = template.BackgroundColor;
         config.Elements = CloneElements(template.Elements);
         config.SelectedElementId = config.Elements.FirstOrDefault()?.Id ?? string.Empty;
     }

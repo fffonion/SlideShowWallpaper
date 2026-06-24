@@ -161,6 +161,7 @@ public sealed class SettingsStore
             FontSize = GetDouble(sections, section, nameof(HardwareMonitorConfig.FontSize), 16),
             Opacity = GetDouble(sections, section, nameof(HardwareMonitorConfig.Opacity), 0.88),
             BackgroundImagePath = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundImagePath)), string.Empty),
+            BackgroundColor = DecodeString(GetString(sections, section, nameof(HardwareMonitorConfig.BackgroundColor)), string.Empty),
             SelectedElementId = GetString(sections, section, nameof(HardwareMonitorConfig.SelectedElementId)),
         };
 
@@ -206,6 +207,7 @@ public sealed class SettingsStore
         AppendValue(builder, nameof(HardwareMonitorConfig.FontSize), config.FontSize);
         AppendValue(builder, nameof(HardwareMonitorConfig.Opacity), config.Opacity);
         AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundImagePath), EncodeString(config.BackgroundImagePath));
+        AppendValue(builder, nameof(HardwareMonitorConfig.BackgroundColor), EncodeString(config.BackgroundColor));
         AppendValue(builder, nameof(HardwareMonitorConfig.SelectedElementId), config.SelectedElementId);
         AppendValue(builder, "SelectedSensorCount", config.SelectedSensorIds.Count);
         for (int index = 0; index < config.SelectedSensorIds.Count; index++)

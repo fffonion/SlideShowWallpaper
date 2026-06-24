@@ -205,7 +205,13 @@ public sealed partial class MainWindow
                 RenderTabs(_selectedMonitorId);
             }, LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateOpacitySlider(config.Opacity, value => config.Opacity = value, LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)));
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackgroundColor"), CreateHardwareColorPicker(GetHardwareBackgroundColor(config), value =>
+            {
+                config.BackgroundColor = value;
+                ScheduleApplySettings();
+                RefreshHardwareEditorPreview(config);
+            }, LocalizedStrings.Get("HardwareMonitorBackgroundColor"))));
     }
 
     private static void ApplyHardwareGlobalFontFamily(HardwareMonitorConfig config, string newFontFamily)
@@ -268,6 +274,7 @@ public sealed partial class MainWindow
         clearBackgroundButton.Click += (_, _) =>
         {
             config.BackgroundImagePath = string.Empty;
+            config.BackgroundColor = string.Empty;
             ScheduleApplySettings();
             RenderTabs(_selectedMonitorId);
         };
@@ -682,7 +689,7 @@ public sealed partial class MainWindow
         {
             Width = layout.Width,
             Height = layout.Height,
-            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 18, 22, 26)),
+            Background = HardwareOverlayVisualFactory.CreateBrush(GetHardwareBackgroundColor(config), Microsoft.UI.ColorHelper.FromArgb(255, 18, 22, 26)),
         };
         AutomationProperties.SetName(canvas, LocalizedStrings.Get("HardwareMonitorPreview"));
         if (TryCreateSettingsBitmapImage(config.BackgroundImagePath, out BitmapImage? background))
@@ -1667,6 +1674,11 @@ public sealed partial class MainWindow
             bitmap = null;
             return false;
         }
+    }
+
+    private static string GetHardwareBackgroundColor(HardwareMonitorConfig config)
+    {
+        return string.IsNullOrWhiteSpace(config.BackgroundColor) ? "#99000000" : config.BackgroundColor;
     }
 
     private static global::Windows.UI.Color ParseSettingsColor(string value)

@@ -386,7 +386,8 @@ public sealed partial class WallpaperPlaybackCoordinator
         bool hasVisualOverlay = !string.IsNullOrWhiteSpace(text)
             || metrics.Count > 0
             || elements.Count > 0
-            || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundImagePath);
+            || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundImagePath)
+            || !string.IsNullOrWhiteSpace(_hardwareMonitorConfig.BackgroundColor);
         string? targetMonitorId = GetHardwareOverlayTargetMonitorId();
         if (!hasVisualOverlay
             || targetMonitorId is null
@@ -407,6 +408,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             _hardwareMonitorConfig.Opacity)
         {
             BackgroundImagePath = _hardwareMonitorConfig.BackgroundImagePath,
+            BackgroundColor = _hardwareMonitorConfig.BackgroundColor,
             Elements = elements,
         };
         HardwareOverlayWindow overlayWindow = EnsureHardwareOverlayWindow();

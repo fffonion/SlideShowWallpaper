@@ -49,6 +49,7 @@ public sealed partial class HardwareOverlayWindow : Window
         }
 
         _monitorRect = monitorRect;
+        HardwareOverlay.Background = HardwareOverlayVisualFactory.CreateBrush(state.BackgroundColor, Microsoft.UI.ColorHelper.FromArgb(153, 0, 0, 0));
         string fontFamily = string.IsNullOrWhiteSpace(state.FontFamily) ? "Segoe UI" : state.FontFamily;
         double fontSize = Math.Max(10, state.FontSize);
         bool hasBackgroundSize = ImageDimensionReader.TryRead(state.BackgroundImagePath, out int backgroundWidth, out int backgroundHeight);

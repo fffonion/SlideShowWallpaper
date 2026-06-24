@@ -269,7 +269,7 @@ public sealed class MainWindowSourceTests
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
 
         Assert.Contains("MinimumHardwareEditorPaneWidth = 320", source);
-        Assert.Contains("MaximumHardwareEditorPaneWidth = 520", source);
+        Assert.Contains("MaximumHardwareEditorPaneWidth = 940", source);
         Assert.Contains("HardwareEditorPreviewDefaultWidth = 360", source);
         Assert.Contains("HardwareEditorPreviewDefaultHeight = 210", source);
         Assert.Contains("HardwareEditorPreviewMaxWidth = 360", source);
@@ -280,6 +280,7 @@ public sealed class MainWindowSourceTests
         Assert.Contains("_hardwareEditorPreviewWidth = HardwareEditorPreviewMaxWidth", source);
         Assert.Contains("_hardwareEditorPreviewHeight = HardwareEditorPreviewDefaultHeight", source);
         Assert.DoesNotContain("MinimumHardwareEditorPaneWidth = 560", source);
+        Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 520", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 1100", source);
     }
 
@@ -460,11 +461,43 @@ public sealed class MainWindowSourceTests
         Assert.Contains("RenderTabs(_selectedMonitorId);", method);
         Assert.Contains("HardwareMonitorBackground", method);
         Assert.Contains("CreateHardwareBackgroundControls(config)", method);
+        Assert.Contains("HardwareMonitorBackgroundColor", method);
+        Assert.Contains("CreateHardwareColorPicker(GetHardwareBackgroundColor(config)", method);
+        Assert.Contains("config.BackgroundColor = value;", method);
         Assert.Contains("CreateOpacitySlider(config.Opacity", method);
         Assert.DoesNotContain("CreateNumberBox(config.Opacity", method);
         Assert.DoesNotContain("HardwareMonitorTemplate", method);
         Assert.DoesNotContain("HardwareMonitorTemplateActions", method);
         Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
+    }
+
+    [Fact]
+    public void CreateHardwareBackgroundControls_ExposesImageButtonsAndClearAction()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareBackgroundControls", StringComparison.Ordinal)..
+            source.IndexOf("private async Task ShowHardwareSensorSelectionDialogAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("ImportHardwareBackgroundAsync(config)", method);
+        Assert.Contains("AutomationProperties.SetName(backgroundButton", method);
+        Assert.Contains("config.BackgroundImagePath = string.Empty;", method);
+        Assert.Contains("config.BackgroundColor = string.Empty;", method);
+        Assert.Contains("RenderTabs(_selectedMonitorId);", method);
+    }
+
+    [Fact]
+    public void HardwareOverlayBackgroundColor_FlowsToEditorAndOverlayWindow()
+    {
+        string root = FindProjectRoot();
+        string mainWindowSource = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string coordinatorSource = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string overlaySource = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml.cs"));
+
+        Assert.Contains("Background = HardwareOverlayVisualFactory.CreateBrush(GetHardwareBackgroundColor(config)", mainWindowSource);
+        Assert.Contains("BackgroundColor = _hardwareMonitorConfig.BackgroundColor", coordinatorSource);
+        Assert.Contains("HardwareOverlay.Background = HardwareOverlayVisualFactory.CreateBrush(state.BackgroundColor", overlaySource);
     }
 
     [Fact]

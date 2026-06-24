@@ -49,6 +49,7 @@ public sealed class SettingsStoreTests
                 Opacity = 0.72,
                 SelectedSensorIds = ["cpu-temp", "gpu-power"],
                 BackgroundImagePath = @"C:\Wallpapers\panel.png",
+                BackgroundColor = "#80223344",
                 SelectedElementId = "element1",
                 Elements =
                 [
@@ -125,6 +126,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(0.72, loaded.HardwareMonitor.Opacity);
         Assert.Equal(["cpu-temp", "gpu-power"], loaded.HardwareMonitor.SelectedSensorIds);
         Assert.Equal(@"C:\Wallpapers\panel.png", loaded.HardwareMonitor.BackgroundImagePath);
+        Assert.Equal("#80223344", loaded.HardwareMonitor.BackgroundColor);
         Assert.Equal("element1", loaded.HardwareMonitor.SelectedElementId);
         HardwareOverlayElement element = Assert.Single(loaded.HardwareMonitor.Elements);
         Assert.Equal(HardwareOverlayElementKind.Sensor, element.Kind);

@@ -118,6 +118,7 @@
   <data name="HardwareMonitorPosition" xml:space="preserve"><value>位置</value></data>
   <data name="HardwareMonitorStyle" xml:space="preserve"><value>全域</value></data>
   <data name="HardwareMonitorBackground" xml:space="preserve"><value>背景</value></data>
+  <data name="HardwareMonitorBackgroundColor" xml:space="preserve"><value>背景色彩</value></data>
   <data name="HardwareMonitorTemplate" xml:space="preserve"><value>範本</value></data>
   <data name="HardwareMonitorPreview" xml:space="preserve"><value>預覽</value></data>
   <data name="HardwareMonitorEditor" xml:space="preserve"><value>編輯器</value></data>

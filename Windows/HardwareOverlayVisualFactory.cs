@@ -70,12 +70,14 @@ internal static class HardwareOverlayVisualFactory
 
     public static SolidColorBrush CreateBrush(string value)
     {
-        if (TryParseColor(value, out global::Windows.UI.Color color))
-        {
-            return new SolidColorBrush(color);
-        }
+        return CreateBrush(value, Microsoft.UI.Colors.White);
+    }
 
-        return new SolidColorBrush(Microsoft.UI.Colors.White);
+    public static SolidColorBrush CreateBrush(string value, global::Windows.UI.Color fallback)
+    {
+        return TryParseColor(value, out global::Windows.UI.Color color)
+            ? new SolidColorBrush(color)
+            : new SolidColorBrush(fallback);
     }
 
     private static FrameworkElement CreateSensorElement(HardwareOverlayElementState element)

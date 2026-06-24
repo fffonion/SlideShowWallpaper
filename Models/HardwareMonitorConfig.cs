@@ -67,6 +67,8 @@ public sealed class HardwareMonitorConfig
 
     public string BackgroundImagePath { get; set; } = string.Empty;
 
+    public string BackgroundColor { get; set; } = string.Empty;
+
     public string SelectedElementId { get; set; } = string.Empty;
 
     public List<HardwareOverlayElement> Elements { get; set; } = [];
@@ -122,6 +124,8 @@ public sealed class HardwareOverlayTemplate
     public List<string> SelectedSensorIds { get; set; } = [];
 
     public string BackgroundImagePath { get; set; } = string.Empty;
+
+    public string BackgroundColor { get; set; } = string.Empty;
 
     public List<HardwareOverlayElement> Elements { get; set; } = [];
 }
@@ -272,6 +276,8 @@ public sealed record HardwareOverlayState(
     double Opacity)
 {
     public string BackgroundImagePath { get; init; } = string.Empty;
+
+    public string BackgroundColor { get; init; } = string.Empty;
 
     public IReadOnlyList<HardwareOverlayElementState> Elements { get; init; } = [];
 }
