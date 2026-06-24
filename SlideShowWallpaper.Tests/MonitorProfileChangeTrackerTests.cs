@@ -219,4 +219,25 @@ public sealed class MonitorProfileChangeTrackerTests
         Assert.False(change.VisualChanged);
         Assert.True(change.HasChanges);
     }
+
+    [Fact]
+    public void Update_WithRecursiveSubdirectoryChange_RequiresQueueRefresh()
+    {
+        var tracker = new MonitorProfileChangeTracker();
+        var profile = new MonitorProfile
+        {
+            Id = "display1",
+            FolderPath = @"C:\Wallpapers",
+            PlaybackOrder = PlaybackOrder.NameAsc,
+            IncludeSubdirectories = false,
+        };
+        _ = tracker.Update(profile);
+
+        profile.IncludeSubdirectories = true;
+        MonitorProfileChange change = tracker.Update(profile);
+
+        Assert.True(change.QueueChanged);
+        Assert.False(change.VisualChanged);
+        Assert.True(change.HasChanges);
+    }
 }

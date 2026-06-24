@@ -266,7 +266,12 @@ public sealed partial class WallpaperPlaybackCoordinator
         {
             IReadOnlyList<string> paths = orderedPaths is { Count: > 0 }
                 ? orderedPaths
-                : (await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None))
+                : (await _imageOrderService.GetOrLoadOrderedImagesAsync(
+                        profile.FolderPath,
+                        profile.PlaybackOrder,
+                        profile.MediaFilter,
+                        profile.IncludeSubdirectories,
+                        CancellationToken.None))
                     .Select(image => image.Path)
                     .ToArray();
             ReplaceQueue(profile, paths, preserveInitialOrder: true);

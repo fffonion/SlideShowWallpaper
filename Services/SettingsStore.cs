@@ -75,6 +75,7 @@ public sealed class SettingsStore
                     VideoSoundEnabled = GetBool(sections, section, nameof(MonitorProfile.VideoSoundEnabled), false),
                     PauseVideoWhenOtherAppMaximized = GetBool(sections, section, nameof(MonitorProfile.PauseVideoWhenOtherAppMaximized), true),
                     MediaFilter = GetEnum(sections, section, nameof(MonitorProfile.MediaFilter), PlaybackMediaFilter.ImagesAndVideos),
+                    IncludeSubdirectories = GetBool(sections, section, nameof(MonitorProfile.IncludeSubdirectories), false),
                     IsPaused = GetBool(sections, section, nameof(MonitorProfile.IsPaused), false),
                     IsStopped = GetBool(sections, section, nameof(MonitorProfile.IsStopped), false),
                     SelectedImagePath = GetString(sections, section, nameof(MonitorProfile.SelectedImagePath)),
@@ -135,6 +136,7 @@ public sealed class SettingsStore
             AppendValue(builder, nameof(MonitorProfile.VideoSoundEnabled), monitor.VideoSoundEnabled);
             AppendValue(builder, nameof(MonitorProfile.PauseVideoWhenOtherAppMaximized), monitor.PauseVideoWhenOtherAppMaximized);
             AppendValue(builder, nameof(MonitorProfile.MediaFilter), monitor.MediaFilter);
+            AppendValue(builder, nameof(MonitorProfile.IncludeSubdirectories), monitor.IncludeSubdirectories);
             AppendValue(builder, nameof(MonitorProfile.IsPaused), monitor.IsPaused);
             AppendValue(builder, nameof(MonitorProfile.IsStopped), monitor.IsStopped);
             AppendValue(builder, nameof(MonitorProfile.SelectedImagePath), monitor.SelectedImagePath);

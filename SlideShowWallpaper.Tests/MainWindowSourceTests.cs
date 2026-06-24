@@ -179,6 +179,64 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void MediaFilterChoices_ContainPortraitAndLandscapeImageFilters()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string choices = source[
+            source.IndexOf("private static IReadOnlyList<Choice<PlaybackMediaFilter>> MediaFilterChoices", StringComparison.Ordinal)..
+            source.IndexOf("private static IReadOnlyList<Choice<TimeUnit>> TimeUnitChoices", StringComparison.Ordinal)];
+
+        Assert.Contains("PlaybackMediaFilter.PortraitImagesOnly", choices);
+        Assert.Contains("MediaFilterPortraitImages", choices);
+        Assert.Contains("PlaybackMediaFilter.LandscapeImagesOnly", choices);
+        Assert.Contains("MediaFilterLandscapeImages", choices);
+    }
+
+    [Fact]
+    public void BuildMonitorSettings_ContainsRecursiveSubdirectoryOption()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private UIElement BuildMonitorSettings", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement BuildMonitorCommandBar", StringComparison.Ordinal)];
+
+        Assert.Contains("profile.IncludeSubdirectories", method);
+        Assert.Contains("IncludeSubdirectories", method);
+    }
+
+    [Fact]
+    public void BuildMonitorCommandBar_AddsRefreshButtonAfterShuffle()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement BuildMonitorCommandBar", StringComparison.Ordinal)..];
+        int shuffleIndex = method.IndexOf("commandBar.PrimaryCommands.Add(shuffleButton);", StringComparison.Ordinal);
+        int refreshIndex = method.IndexOf("commandBar.PrimaryCommands.Add(refreshButton);", StringComparison.Ordinal);
+
+        Assert.True(shuffleIndex >= 0);
+        Assert.True(refreshIndex > shuffleIndex);
+        Assert.Contains("RefreshProfileMedia(profile)", method);
+    }
+
+    [Fact]
+    public void StartPreviewLoad_UsesCacheStatusAndBackgroundRefresh()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Preview.cs"));
+        string method = source[
+            source.IndexOf("private async void StartPreviewLoad", StringComparison.Ordinal)..
+            source.IndexOf("private void CancelPreviewLoad", StringComparison.Ordinal)];
+
+        Assert.Contains("GetOrLoadOrderedImagesWithStatusAsync", method);
+        Assert.Contains("profile.IncludeSubdirectories", method);
+        Assert.Contains("result.LoadedFromCache", method);
+        Assert.Contains("RefreshPreviewCacheAsync", method);
+    }
+
+    [Fact]
     public void BuildHardwareEditorPage_ContainsPreviewAndFormatSections()
     {
         string root = FindProjectRoot();

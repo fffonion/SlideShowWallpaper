@@ -86,6 +86,54 @@ public sealed class ImageOrderServiceTests
         Assert.Single(imagesOnly);
     }
 
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_WithPortraitFilter_UsesCachedDimensions()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string cachePath = Path.Combine(folder, "cache.json");
+        Directory.CreateDirectory(folder);
+        var cache = new MediaLibraryCacheService(cachePath);
+        cache.Save(
+            folder,
+            includeSubdirectories: false,
+            [
+                new ImageMetadata(Path.Combine(folder, "portrait.ndf"), "portrait.ndf", DateTime.UtcNow, 1, MediaKind.Image, 1080, 1920),
+                new ImageMetadata(Path.Combine(folder, "landscape.ndf"), "landscape.ndf", DateTime.UtcNow, 1, MediaKind.Image, 1920, 1080),
+            ]);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        ImageOrderLoadResult result = await service.GetOrLoadOrderedImagesWithStatusAsync(
+            folder,
+            PlaybackOrder.NameAsc,
+            PlaybackMediaFilter.PortraitImagesOnly,
+            includeSubdirectories: false,
+            CancellationToken.None);
+
+        Assert.True(result.LoadedFromCache);
+        ImageMetadata item = Assert.Single(result.Images);
+        Assert.Equal("portrait.ndf", item.FileName);
+    }
+
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_WithRecursiveEnabled_ReturnsNestedFiles()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string child = Path.Combine(folder, "child");
+        Directory.CreateDirectory(child);
+        await File.WriteAllTextAsync(Path.Combine(folder, "root.png"), string.Empty);
+        await File.WriteAllTextAsync(Path.Combine(child, "nested.png"), string.Empty);
+        var service = new ImageOrderService(new ZeroRandom());
+
+        IReadOnlyList<ImageMetadata> media = await service.GetOrLoadOrderedImagesAsync(
+            folder,
+            PlaybackOrder.NameAsc,
+            PlaybackMediaFilter.ImagesOnly,
+            includeSubdirectories: true,
+            CancellationToken.None);
+
+        Assert.Equal(["nested.png", "root.png"], media.Select(item => item.FileName).OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
     private sealed class ZeroRandom : Random
     {
         public override int Next(int maxValue)

@@ -81,6 +81,8 @@ public static class ImageLibrary
         return filter switch
         {
             PlaybackMediaFilter.ImagesOnly => media.Where(item => item.Kind == MediaKind.Image).ToArray(),
+            PlaybackMediaFilter.PortraitImagesOnly => media.Where(item => item.Kind == MediaKind.Image && item.Height > item.Width && item.Width > 0).ToArray(),
+            PlaybackMediaFilter.LandscapeImagesOnly => media.Where(item => item.Kind == MediaKind.Image && item.Width > item.Height && item.Height > 0).ToArray(),
             PlaybackMediaFilter.VideosOnly => media.Where(item => item.Kind == MediaKind.Video).ToArray(),
             _ => media.ToArray(),
         };
@@ -100,12 +102,17 @@ public static class ImageLibrary
 
     public static IReadOnlyList<ImageMetadata> ScanFolderMetadata(string folderPath, PlaybackOrder order)
     {
+        return ScanFolderMetadata(folderPath, order, includeSubdirectories: false);
+    }
+
+    public static IReadOnlyList<ImageMetadata> ScanFolderMetadata(string folderPath, PlaybackOrder order, bool includeSubdirectories)
+    {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
         {
             return [];
         }
 
-        var images = Directory.EnumerateFiles(folderPath)
+        var images = EnumerateMediaFiles(folderPath, includeSubdirectories)
             .Where(IsSupportedMediaPath)
             .Select(CreateMetadata);
 
@@ -113,6 +120,15 @@ public static class ImageLibrary
     }
 
     public static Task<IReadOnlyList<ImageMetadata>> ScanFolderMetadataAsync(string folderPath, PlaybackOrder order, CancellationToken cancellationToken)
+    {
+        return ScanFolderMetadataAsync(folderPath, order, includeSubdirectories: false, cancellationToken);
+    }
+
+    public static Task<IReadOnlyList<ImageMetadata>> ScanFolderMetadataAsync(
+        string folderPath,
+        PlaybackOrder order,
+        bool includeSubdirectories,
+        CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
@@ -122,7 +138,7 @@ public static class ImageLibrary
             }
 
             var images = new List<ImageMetadata>();
-            foreach (string path in Directory.EnumerateFiles(folderPath))
+            foreach (string path in EnumerateMediaFiles(folderPath, includeSubdirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!IsSupportedMediaPath(path))
@@ -152,6 +168,18 @@ public static class ImageLibrary
             .ToArray();
     }
 
+    private static IEnumerable<string> EnumerateMediaFiles(string folderPath, bool includeSubdirectories)
+    {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = includeSubdirectories,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+        };
+
+        return Directory.EnumerateFiles(folderPath, "*", options);
+    }
+
     private static IReadOnlyList<ImageMetadata> Shuffle(IEnumerable<ImageMetadata> images, Random random)
     {
         ImageMetadata[] shuffled = images.ToArray();
@@ -178,7 +206,24 @@ public static class ImageLibrary
     {
         var linkInfo = new FileInfo(path);
         FileInfo metadataInfo = FileLinkResolver.GetFinalFileInfo(path);
-        return new ImageMetadata(linkInfo.FullName, linkInfo.Name, metadataInfo.LastWriteTimeUtc, metadataInfo.Length, GetMediaKind(linkInfo.FullName));
+        MediaKind kind = GetMediaKind(linkInfo.FullName);
+        (int width, int height) = GetMediaDimensions(linkInfo.FullName, kind);
+        return new ImageMetadata(linkInfo.FullName, linkInfo.Name, metadataInfo.LastWriteTimeUtc, metadataInfo.Length, kind, width, height);
+    }
+
+    private static (int Width, int Height) GetMediaDimensions(string path, MediaKind kind)
+    {
+        if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            return (info.Width, info.Height);
+        }
+
+        if (kind == MediaKind.Image && ImageDimensionReader.TryRead(path, out int width, out int height))
+        {
+            return (width, height);
+        }
+
+        return (0, 0);
     }
 
     private static bool IsLargeEnoughNdfMedia(NdfMediaInfo info)

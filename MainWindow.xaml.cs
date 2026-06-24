@@ -62,6 +62,8 @@ public sealed partial class MainWindow : Window
     private static IReadOnlyList<Choice<PlaybackMediaFilter>> MediaFilterChoices =>
     [
         new(PlaybackMediaFilter.ImagesOnly, LocalizedStrings.Get("MediaFilterImages")),
+        new(PlaybackMediaFilter.PortraitImagesOnly, LocalizedStrings.Get("MediaFilterPortraitImages")),
+        new(PlaybackMediaFilter.LandscapeImagesOnly, LocalizedStrings.Get("MediaFilterLandscapeImages")),
         new(PlaybackMediaFilter.VideosOnly, LocalizedStrings.Get("MediaFilterVideos")),
         new(PlaybackMediaFilter.ImagesAndVideos, LocalizedStrings.Get("MediaFilterImagesAndVideos")),
     ];

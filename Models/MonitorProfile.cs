@@ -36,6 +36,8 @@ public sealed class MonitorProfile
 
     public PlaybackMediaFilter MediaFilter { get; set; } = PlaybackMediaFilter.ImagesAndVideos;
 
+    public bool IncludeSubdirectories { get; set; }
+
     public bool IsPaused { get; set; }
 
     public bool IsStopped { get; set; }

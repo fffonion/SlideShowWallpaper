@@ -23,7 +23,8 @@ public sealed class MonitorProfileChangeTracker
         _snapshots[profile.Id] = next;
         bool queueChanged = !string.Equals(previous.FolderPath, next.FolderPath, StringComparison.OrdinalIgnoreCase)
             || previous.PlaybackOrder != next.PlaybackOrder
-            || previous.MediaFilter != next.MediaFilter;
+            || previous.MediaFilter != next.MediaFilter
+            || previous.IncludeSubdirectories != next.IncludeSubdirectories;
         bool visualChanged = !queueChanged
             && (previous.ScaleMode != next.ScaleMode
                 || !previous.OffsetX.Equals(next.OffsetX)
@@ -62,7 +63,8 @@ public sealed class MonitorProfileChangeTracker
         bool VideoLoop,
         bool VideoSoundEnabled,
         bool PauseVideoWhenOtherAppMaximized,
-        PlaybackMediaFilter MediaFilter)
+        PlaybackMediaFilter MediaFilter,
+        bool IncludeSubdirectories)
     {
         public static Snapshot From(MonitorProfile profile)
         {
@@ -78,7 +80,8 @@ public sealed class MonitorProfileChangeTracker
                 profile.VideoLoop,
                 profile.VideoSoundEnabled,
                 profile.PauseVideoWhenOtherAppMaximized,
-                profile.MediaFilter);
+                profile.MediaFilter,
+                profile.IncludeSubdirectories);
         }
     }
 }

@@ -19,6 +19,11 @@ public sealed class FolderChangeWatcherService : IDisposable
 
     public void Watch(string key, string folderPath, Action changed)
     {
+        Watch(key, folderPath, includeSubdirectories: false, changed);
+    }
+
+    public void Watch(string key, string folderPath, bool includeSubdirectories, Action changed)
+    {
         if (_disposed)
         {
             throw new ObjectDisposedException(nameof(FolderChangeWatcherService));
@@ -34,12 +39,15 @@ public sealed class FolderChangeWatcherService : IDisposable
         if (_registrations.TryGetValue(key, out WatchRegistration? existing)
             && string.Equals(existing.FolderPath, normalizedFolder, StringComparison.OrdinalIgnoreCase))
         {
-            existing.UpdateCallback(changed);
-            return;
+            if (existing.IncludeSubdirectories == includeSubdirectories)
+            {
+                existing.UpdateCallback(changed);
+                return;
+            }
         }
 
         Unwatch(key);
-        _registrations[key] = new WatchRegistration(normalizedFolder, changed, _debounceDelay);
+        _registrations[key] = new WatchRegistration(normalizedFolder, includeSubdirectories, changed, _debounceDelay);
     }
 
     public void Unwatch(string key)
@@ -84,15 +92,16 @@ public sealed class FolderChangeWatcherService : IDisposable
         private Action _changed;
         private bool _disposed;
 
-        public WatchRegistration(string folderPath, Action changed, TimeSpan debounceDelay)
+        public WatchRegistration(string folderPath, bool includeSubdirectories, Action changed, TimeSpan debounceDelay)
         {
             FolderPath = folderPath;
+            IncludeSubdirectories = includeSubdirectories;
             _changed = changed;
             _timer = new Timer(_ => RaiseChanged(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _watcher = new FileSystemWatcher(folderPath)
             {
                 Filter = "*.*",
-                IncludeSubdirectories = false,
+                IncludeSubdirectories = includeSubdirectories,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime,
             };
             _watcher.Created += (_, _) => Schedule(debounceDelay);
@@ -104,6 +113,8 @@ public sealed class FolderChangeWatcherService : IDisposable
         }
 
         public string FolderPath { get; }
+
+        public bool IncludeSubdirectories { get; }
 
         public void UpdateCallback(Action changed)
         {

@@ -4,5 +4,7 @@ public enum PlaybackMediaFilter
 {
     ImagesAndVideos,
     ImagesOnly,
+    PortraitImagesOnly,
+    LandscapeImagesOnly,
     VideosOnly,
 }

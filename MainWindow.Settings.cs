@@ -1688,6 +1688,11 @@ public sealed partial class MainWindow
                 profile.MediaFilter = value;
                 RenderTabs(profile.Id);
             }, LocalizedStrings.Get("MediaFilterAutomation"))),
+            new SettingsRow(LocalizedStrings.Get("IncludeSubdirectories"), CreateCheckBox(profile.IncludeSubdirectories, value =>
+            {
+                profile.IncludeSubdirectories = value;
+                RenderTabs(profile.Id);
+            }, LocalizedStrings.Get("IncludeSubdirectoriesAutomation"))),
             new SettingsRow(LocalizedStrings.Get("Order"), CreateChoiceCombo(PlaybackOrderChoices, profile.PlaybackOrder, value =>
             {
                 profile.PlaybackOrder = value;
@@ -1775,6 +1780,14 @@ public sealed partial class MainWindow
         };
         shuffleButton.Click += (_, _) => ShuffleProfile(profile);
 
+        var refreshButton = new AppBarButton
+        {
+            Icon = new SymbolIcon(Symbol.Refresh),
+            Label = LocalizedStrings.Get("RefreshMediaList"),
+        };
+        AutomationProperties.SetName(refreshButton, LocalizedStrings.Get("RefreshMediaList"));
+        refreshButton.Click += (_, _) => RefreshProfileMedia(profile);
+
         var commandBar = new CommandBar
         {
             DefaultLabelPosition = CommandBarDefaultLabelPosition.Right,
@@ -1784,6 +1797,7 @@ public sealed partial class MainWindow
         commandBar.PrimaryCommands.Add(pauseButton);
         commandBar.PrimaryCommands.Add(nextButton);
         commandBar.PrimaryCommands.Add(shuffleButton);
+        commandBar.PrimaryCommands.Add(refreshButton);
         return commandBar;
     }
 

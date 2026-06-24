@@ -534,19 +534,30 @@ public sealed partial class MainWindow
         progressRing.IsActive = true;
         ImagePreviewItem[] reusableItems = [.. items];
         items.Clear();
+        bool backgroundRefreshStarted = false;
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, cancellation.Token);
+            ImageOrderLoadResult result = await _imageOrderService.GetOrLoadOrderedImagesWithStatusAsync(
+                profile.FolderPath,
+                profile.PlaybackOrder,
+                profile.MediaFilter,
+                profile.IncludeSubdirectories,
+                cancellation.Token);
             if (IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
             {
                 return;
             }
 
-            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems, CreateThumbnailLoader());
+            ImagePreviewCollectionUpdater.Apply(items, result.Images, reusableItems, CreateThumbnailLoader());
 
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
+            if (result.LoadedFromCache)
+            {
+                backgroundRefreshStarted = true;
+                _ = RefreshPreviewCacheAsync(profile, items, metadataText, cancellation, previewSessionVersion);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -566,9 +577,64 @@ public sealed partial class MainWindow
         {
             if (!IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
             {
-                _previewLoadTokens.Remove(profile.Id);
+                if (!backgroundRefreshStarted)
+                {
+                    _previewLoadTokens.Remove(profile.Id);
+                }
+
                 loadingPanel.Visibility = Visibility.Collapsed;
                 progressRing.IsActive = false;
+            }
+
+            if (!backgroundRefreshStarted)
+            {
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private async Task RefreshPreviewCacheAsync(
+        MonitorProfile profile,
+        ObservableCollection<ImagePreviewItem> items,
+        TextBlock metadataText,
+        CancellationTokenSource cancellation,
+        int previewSessionVersion)
+    {
+        try
+        {
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(
+                profile.FolderPath,
+                profile.PlaybackOrder,
+                profile.MediaFilter,
+                profile.IncludeSubdirectories,
+                cancellation.Token);
+            if (IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
+            {
+                return;
+            }
+
+            ImagePreviewItem[] reusableItems = [.. items];
+            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems, CreateThumbnailLoader());
+            profile.TotalMediaCount = items.Count;
+            UpdatePlaybackStatusText(profile);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!IsPreviewLoadExpired(profile.Id, cancellation, previewSessionVersion))
+            {
+                AppLog.Write(exception);
+                metadataText.Text = LocalizedStrings.Get("UnableToLoadImages");
+            }
+        }
+        finally
+        {
+            if (_previewLoadTokens.TryGetValue(profile.Id, out CancellationTokenSource? current)
+                && ReferenceEquals(current, cancellation))
+            {
+                _previewLoadTokens.Remove(profile.Id);
             }
 
             cancellation.Dispose();

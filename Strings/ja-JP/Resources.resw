@@ -67,8 +67,13 @@
   <data name="VideoSound" xml:space="preserve"><value>音声を再生</value></data>
   <data name="PauseVideoWhenOtherAppMaximized" xml:space="preserve"><value>他のアプリが最大化または全画面のとき動画を一時停止</value></data>
   <data name="MediaFilterImages" xml:space="preserve"><value>画像</value></data>
+  <data name="MediaFilterPortraitImages" xml:space="preserve"><value>画像（縦向きのみ）</value></data>
+  <data name="MediaFilterLandscapeImages" xml:space="preserve"><value>画像（横向きのみ）</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>動画</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>画像と動画</value></data>
+  <data name="IncludeSubdirectories" xml:space="preserve"><value>サブフォルダーを含める</value></data>
+  <data name="IncludeSubdirectoriesAutomation" xml:space="preserve"><value>サブフォルダーを含める</value></data>
+  <data name="RefreshMediaList" xml:space="preserve"><value>メディア リストを更新</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0個のメディア</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0}個のメディア</value></data>
   <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1}個のメディア、{2}</value></data>

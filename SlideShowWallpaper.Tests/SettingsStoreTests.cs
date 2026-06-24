@@ -90,6 +90,7 @@ public sealed class SettingsStoreTests
                     VideoSoundEnabled = true,
                     PauseVideoWhenOtherAppMaximized = true,
                     MediaFilter = PlaybackMediaFilter.ImagesOnly,
+                    IncludeSubdirectories = true,
                     IsPaused = true,
                     IsStopped = true,
                     SelectedImagePath = @"C:\Wallpapers\a.png",
@@ -146,6 +147,7 @@ public sealed class SettingsStoreTests
         Assert.True(monitor.VideoSoundEnabled);
         Assert.True(monitor.PauseVideoWhenOtherAppMaximized);
         Assert.Equal(PlaybackMediaFilter.ImagesOnly, monitor.MediaFilter);
+        Assert.True(monitor.IncludeSubdirectories);
         Assert.True(monitor.IsStopped);
     }
 
@@ -211,6 +213,14 @@ public sealed class SettingsStoreTests
         var profile = new MonitorProfile();
 
         Assert.Equal(PlaybackOrder.Random, profile.PlaybackOrder);
+    }
+
+    [Fact]
+    public void MonitorProfile_WithDefaultConstructor_DisablesRecursiveSubdirectories()
+    {
+        var profile = new MonitorProfile();
+
+        Assert.False(profile.IncludeSubdirectories);
     }
 
     [Fact]

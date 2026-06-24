@@ -105,6 +105,42 @@ public sealed class ImageLibraryTests
 
         Assert.Equal(["image.ndf", "video.ndf"], media.Select(item => item.FileName));
         Assert.Equal([MediaKind.Image, MediaKind.Video], media.Select(item => item.Kind));
+        Assert.Equal([1920, 1920], media.Select(item => item.Width));
+        Assert.Equal([1080, 1080], media.Select(item => item.Height));
+    }
+
+    [Fact]
+    public void ScanFolderMetadata_WithRecursiveEnabled_ReturnsSubdirectoryMedia()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string child = Path.Combine(folder, "child");
+        Directory.CreateDirectory(child);
+        File.WriteAllBytes(Path.Combine(folder, "root.ndf"), CreatePngNdf(1920, 1080));
+        File.WriteAllBytes(Path.Combine(child, "nested.ndf"), CreatePngNdf(1080, 1920));
+
+        IReadOnlyList<ImageMetadata> media = ImageLibrary.ScanFolderMetadata(folder, PlaybackOrder.NameAsc, includeSubdirectories: true);
+
+        Assert.Equal(["nested.ndf", "root.ndf"], media.Select(item => item.FileName).OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void FilterByMediaFilter_WithPortraitAndLandscapeImages_UsesCachedDimensions()
+    {
+        ImageMetadata[] items =
+        [
+            new(@"C:\Wallpapers\portrait.png", "portrait.png", DateTime.UtcNow, 1, MediaKind.Image, Width: 1080, Height: 1920),
+            new(@"C:\Wallpapers\landscape.png", "landscape.png", DateTime.UtcNow, 1, MediaKind.Image, Width: 1920, Height: 1080),
+            new(@"C:\Wallpapers\unknown.png", "unknown.png", DateTime.UtcNow, 1, MediaKind.Image),
+            new(@"C:\Wallpapers\clip.mp4", "clip.mp4", DateTime.UtcNow, 1, MediaKind.Video, Width: 1920, Height: 1080),
+        ];
+
+        IReadOnlyList<ImageMetadata> portrait = ImageLibrary.FilterByMediaFilter(items, PlaybackMediaFilter.PortraitImagesOnly);
+        IReadOnlyList<ImageMetadata> landscape = ImageLibrary.FilterByMediaFilter(items, PlaybackMediaFilter.LandscapeImagesOnly);
+
+        ImageMetadata portraitItem = Assert.Single(portrait);
+        ImageMetadata landscapeItem = Assert.Single(landscape);
+        Assert.Equal("portrait.png", portraitItem.FileName);
+        Assert.Equal("landscape.png", landscapeItem.FileName);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
-        _folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, () => DispatchFolderChange(profile.Id));
+        _folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, profile.IncludeSubdirectories, () => DispatchFolderChange(profile.Id));
     }
 
     private async void StartRebuildQueue(MonitorProfile profile)
@@ -24,7 +24,13 @@ public sealed partial class WallpaperPlaybackCoordinator
         try
         {
             selectedImageShown = await TryShowSelectedImageAsync(profile);
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.GetOrLoadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None);
+            ImageOrderLoadResult result = await _imageOrderService.GetOrLoadOrderedImagesWithStatusAsync(
+                profile.FolderPath,
+                profile.PlaybackOrder,
+                profile.MediaFilter,
+                profile.IncludeSubdirectories,
+                CancellationToken.None);
+            IReadOnlyList<ImageMetadata> images = result.Images;
             if (!_playbackEnabled
                 || profile.IsStopped
                 || !_queueVersions.TryGetValue(profile.Id, out int latestVersion)
@@ -51,6 +57,11 @@ public sealed partial class WallpaperPlaybackCoordinator
             {
                 await ShowNextAsync(profile.Id);
             }
+
+            if (result.LoadedFromCache)
+            {
+                DispatchFolderChange(profile.Id);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -66,6 +77,11 @@ public sealed partial class WallpaperPlaybackCoordinator
         _dispatcherQueue.TryEnqueue(() => ReloadChangedFolderAsync(monitorId));
     }
 
+    public void RefreshFolder(string monitorId)
+    {
+        DispatchFolderChange(monitorId);
+    }
+
     private async void ReloadChangedFolderAsync(string monitorId)
     {
         if (!_profiles.TryGetValue(monitorId, out MonitorProfile? profile) || string.IsNullOrWhiteSpace(profile.FolderPath))
@@ -75,7 +91,12 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         try
         {
-            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(profile.FolderPath, profile.PlaybackOrder, profile.MediaFilter, CancellationToken.None);
+            IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(
+                profile.FolderPath,
+                profile.PlaybackOrder,
+                profile.MediaFilter,
+                profile.IncludeSubdirectories,
+                CancellationToken.None);
             OrderedImagesChanged?.Invoke(this, new OrderedImagesChangedEventArgs(profile.Id, images));
             if (!_playbackEnabled || profile.IsStopped)
             {
@@ -140,8 +161,32 @@ public sealed partial class WallpaperPlaybackCoordinator
         return mediaFilter switch
         {
             PlaybackMediaFilter.ImagesOnly => ImageLibrary.IsSupportedImagePath(path),
+            PlaybackMediaFilter.PortraitImagesOnly => IsImageOrientation(path, requirePortrait: true),
+            PlaybackMediaFilter.LandscapeImagesOnly => IsImageOrientation(path, requirePortrait: false),
             PlaybackMediaFilter.VideosOnly => ImageLibrary.IsSupportedVideoPath(path),
             _ => ImageLibrary.IsSupportedMediaPath(path),
         };
+    }
+
+    private static bool IsImageOrientation(string path, bool requirePortrait)
+    {
+        if (!ImageLibrary.IsSupportedImagePath(path))
+        {
+            return false;
+        }
+
+        int width;
+        int height;
+        if (NdfMediaService.TryGetMediaInfo(path, out NdfMediaInfo info))
+        {
+            width = info.Width;
+            height = info.Height;
+        }
+        else if (!ImageDimensionReader.TryRead(path, out width, out height))
+        {
+            return false;
+        }
+
+        return requirePortrait ? height > width : width > height;
     }
 }

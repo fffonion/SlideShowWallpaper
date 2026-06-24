@@ -51,6 +51,22 @@ public sealed class FolderChangeWatcherServiceTests
         Assert.Same(completion.Task, completed);
     }
 
+    [Fact]
+    public async Task Watch_WithRecursiveEnabled_RaisesChangeForNestedFile()
+    {
+        string folder = CreateTempFolder();
+        string child = Path.Combine(folder, "child");
+        Directory.CreateDirectory(child);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var watcher = new FolderChangeWatcherService(TimeSpan.FromMilliseconds(50));
+
+        watcher.Watch("display1", folder, includeSubdirectories: true, () => completion.TrySetResult());
+        await File.WriteAllTextAsync(Path.Combine(child, "new.png"), string.Empty);
+
+        Task completed = await Task.WhenAny(completion.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        Assert.Same(completion.Task, completed);
+    }
+
     private static string CreateTempFolder()
     {
         string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));

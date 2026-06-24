@@ -109,6 +109,28 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         Assert.DoesNotContain("EnsureWindow(profile);", method);
     }
 
+    [Fact]
+    public void QueueReloads_UseRecursiveSubdirectorySetting()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+
+        Assert.Contains("profile.IncludeSubdirectories", source);
+        Assert.Contains("_folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, profile.IncludeSubdirectories", source);
+        Assert.Contains("GetOrLoadOrderedImagesWithStatusAsync", source);
+        Assert.Contains("ReloadOrderedImagesAsync", source);
+    }
+
+    [Fact]
+    public void CoordinatorExposesManualFolderRefresh()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+
+        Assert.Contains("public void RefreshFolder(string monitorId)", source);
+        Assert.Contains("DispatchFolderChange(monitorId)", source);
+    }
+
     private static string ReadCoordinatorWindowingSource()
     {
         string root = FindProjectRoot();

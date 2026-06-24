@@ -67,8 +67,13 @@
   <data name="VideoSound" xml:space="preserve"><value>播放聲音</value></data>
   <data name="PauseVideoWhenOtherAppMaximized" xml:space="preserve"><value>其他應用程式最大化或全螢幕時暫停影片</value></data>
   <data name="MediaFilterImages" xml:space="preserve"><value>圖片</value></data>
+  <data name="MediaFilterPortraitImages" xml:space="preserve"><value>圖片（僅直向）</value></data>
+  <data name="MediaFilterLandscapeImages" xml:space="preserve"><value>圖片（僅橫向）</value></data>
   <data name="MediaFilterVideos" xml:space="preserve"><value>影片</value></data>
   <data name="MediaFilterImagesAndVideos" xml:space="preserve"><value>圖片和影片</value></data>
+  <data name="IncludeSubdirectories" xml:space="preserve"><value>包含子資料夾</value></data>
+  <data name="IncludeSubdirectoriesAutomation" xml:space="preserve"><value>包含子資料夾</value></data>
+  <data name="RefreshMediaList" xml:space="preserve"><value>重新整理媒體清單</value></data>
   <data name="ImageCountZero" xml:space="preserve"><value>0個媒體</value></data>
   <data name="ImageCountFormat" xml:space="preserve"><value>{0}個媒體</value></data>
   <data name="PreviewStatusFormat" xml:space="preserve"><value>{0}/{1}個媒體，{2}</value></data>

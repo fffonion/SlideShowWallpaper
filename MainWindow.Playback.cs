@@ -157,6 +157,11 @@ public sealed partial class MainWindow
         _coordinator.Shuffle(profile.Id);
     }
 
+    private void RefreshProfileMedia(MonitorProfile profile)
+    {
+        _coordinator.RefreshFolder(profile.Id);
+    }
+
     private void SaveCurrentImageCheckpoint()
     {
         _settingsStore.Save(CreateConfig());
