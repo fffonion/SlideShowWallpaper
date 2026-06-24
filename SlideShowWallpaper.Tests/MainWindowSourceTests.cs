@@ -150,15 +150,36 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
 
         Assert.Contains("CreateHardwareEditorPreviewSection(config)", method);
-        Assert.Contains("new GridLength(DefaultHardwareEditorPaneWidth)", method);
+        Assert.Contains("Width = GridLength.Auto", method);
         Assert.Contains("CreateHardwareEditorResizeHandle(root, editorColumn)", method);
-        Assert.Contains("MinimumHardwareEditorSettingsWidth", method);
+        Assert.Contains("root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });", method);
+        Assert.DoesNotContain("MinimumHardwareEditorSettingsWidth", method);
         Assert.Contains("CreateHardwareOverlayFormatSection(config)", method);
         Assert.Contains("CreateHardwareElementSettingsSection(config)", method);
+        Assert.Contains("globalSection.HorizontalAlignment = HorizontalAlignment.Stretch;", method);
+        Assert.Contains("elementSection.HorizontalAlignment = HorizontalAlignment.Stretch;", method);
         Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });", method);
         Assert.Contains("formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });", method);
         Assert.Contains("Grid.SetColumn(formatGrid, 2)", method);
         Assert.DoesNotContain("formatScrollViewer", method);
+    }
+
+    [Fact]
+    public void HardwareEditorPreviewSection_UsesTightPreviewPadding()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string sectionMethod = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSection", StringComparison.Ordinal)..
+            source.IndexOf("private FrameworkElement CreateHardwareEditorActions", StringComparison.Ordinal)];
+        string surfaceMethod = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewSurface", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareElementSettingsSection", StringComparison.Ordinal)];
+
+        Assert.Contains("Spacing = 8", sectionMethod);
+        Assert.Contains("Padding = new Thickness(8)", sectionMethod);
+        Assert.Contains("Padding = new Thickness(0)", surfaceMethod);
+        Assert.DoesNotContain("Padding = new Thickness(16)", sectionMethod);
     }
 
     [Fact]

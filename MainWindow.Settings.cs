@@ -132,16 +132,15 @@ public sealed partial class MainWindow
         };
         var editorColumn = new ColumnDefinition
         {
-            Width = new GridLength(DefaultHardwareEditorPaneWidth),
+            Width = GridLength.Auto,
             MinWidth = MinimumHardwareEditorPaneWidth,
             MaxWidth = MaximumHardwareEditorPaneWidth,
         };
         root.ColumnDefinitions.Add(editorColumn);
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = MinimumHardwareEditorSettingsWidth });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         FrameworkElement previewSection = CreateHardwareEditorPreviewSection(config);
-        previewSection.Margin = new Thickness(0, 0, 8, 0);
         Grid.SetColumn(previewSection, 0);
         root.Children.Add(previewSection);
 
@@ -159,10 +158,12 @@ public sealed partial class MainWindow
         formatGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         Border globalSection = CreateHardwareOverlayFormatSection(config);
+        globalSection.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetRow(globalSection, 0);
         formatGrid.Children.Add(globalSection);
 
         Border elementSection = CreateHardwareElementSettingsSection(config);
+        elementSection.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetRow(elementSection, 1);
         formatGrid.Children.Add(elementSection);
 
@@ -586,8 +587,8 @@ public sealed partial class MainWindow
     {
         var stack = new StackPanel
         {
-            Spacing = 12,
-            Padding = new Thickness(16),
+            Spacing = 8,
+            Padding = new Thickness(8),
         };
 
         var title = new TextBlock
@@ -707,7 +708,7 @@ public sealed partial class MainWindow
         return new Border
         {
             HorizontalAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(8),
+            Padding = new Thickness(0),
             Background = GetThemeBrush("LayerFillColorDefaultBrush"),
             BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
             BorderThickness = new Thickness(1),
