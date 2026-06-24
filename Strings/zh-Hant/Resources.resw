@@ -4,11 +4,11 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="AppTitle" xml:space="preserve"><value>幻燈片桌布</value></data>
-  <data name="MainWindow.Title" xml:space="preserve"><value>幻燈片桌布</value></data>
-  <data name="AppTitleBar.Title" xml:space="preserve"><value>幻燈片桌布</value></data>
-  <data name="PlayerTitle" xml:space="preserve"><value>幻燈片桌布播放器</value></data>
-  <data name="WallpaperWindow.Title" xml:space="preserve"><value>幻燈片桌布播放器</value></data>
+  <data name="AppTitle" xml:space="preserve"><value>Codex 壁紙大師</value></data>
+  <data name="MainWindow.Title" xml:space="preserve"><value>Codex 壁紙大師</value></data>
+  <data name="AppTitleBar.Title" xml:space="preserve"><value>Codex 壁紙大師</value></data>
+  <data name="PlayerTitle" xml:space="preserve"><value>Codex 壁紙大師播放器</value></data>
+  <data name="WallpaperWindow.Title" xml:space="preserve"><value>Codex 壁紙大師播放器</value></data>
   <data name="RefreshButton.Label" xml:space="preserve"><value>重新整理</value></data>
   <data name="AutostartButton.Label" xml:space="preserve"><value>開機啟動</value></data>
   <data name="CloseToTrayButton.Label" xml:space="preserve"><value>關閉到系統匣</value></data>
