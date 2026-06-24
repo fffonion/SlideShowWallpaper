@@ -274,6 +274,11 @@ public sealed class MainWindowSourceTests
         Assert.Contains("HardwareEditorPreviewDefaultHeight = 210", source);
         Assert.Contains("HardwareEditorPreviewMaxWidth = 360", source);
         Assert.Contains("HardwareEditorPreviewMaxHeight = 520", source);
+        Assert.Contains("HardwareEditorPreviewResizeHandleSize", source);
+        Assert.Contains("HardwareEditorPreviewResizeMinWidth = 240", source);
+        Assert.Contains("HardwareEditorPreviewResizeMaxWidth = 900", source);
+        Assert.Contains("_hardwareEditorPreviewWidth = HardwareEditorPreviewMaxWidth", source);
+        Assert.Contains("_hardwareEditorPreviewHeight = HardwareEditorPreviewDefaultHeight", source);
         Assert.DoesNotContain("MinimumHardwareEditorPaneWidth = 560", source);
         Assert.DoesNotContain("MaximumHardwareEditorPaneWidth = 1100", source);
     }
@@ -311,10 +316,35 @@ public sealed class MainWindowSourceTests
         Assert.Contains("MaxWidth = HardwareEditorPreviewMaxWidth", surfaceMethod);
         Assert.Contains("MaxHeight = HardwareEditorPreviewMaxHeight", surfaceMethod);
         Assert.Contains("Stretch = Stretch.Uniform", surfaceMethod);
-        Assert.Contains("Child = viewbox", surfaceMethod);
+        Assert.Contains("viewbox.MaxWidth = _hardwareEditorPreviewWidth;", surfaceMethod);
+        Assert.Contains("viewbox.MaxHeight = _hardwareEditorPreviewHeight;", surfaceMethod);
+        Assert.Contains("CreateHardwareEditorPreviewResizeHandle(viewbox)", surfaceMethod);
+        Assert.Contains("surfaceGrid.Children.Add(viewbox);", surfaceMethod);
+        Assert.Contains("surfaceGrid.Children.Add(resizeHandle);", surfaceMethod);
+        Assert.Contains("Child = surfaceGrid", surfaceMethod);
         Assert.DoesNotContain("new HardwareOverlayLayout(720, 420)", surfaceMethod);
         Assert.DoesNotContain("Padding = new Thickness(8)", sectionMethod);
         Assert.DoesNotContain("Padding = new Thickness(16)", sectionMethod);
+    }
+
+    [Fact]
+    public void HardwareEditorPreviewResizeHandle_UpdatesPreviewBounds()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareEditorPreviewResizeHandle", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareElementSettingsSection", StringComparison.Ordinal)];
+
+        Assert.Contains("HorizontalAlignment = HorizontalAlignment.Right", method);
+        Assert.Contains("VerticalAlignment = VerticalAlignment.Bottom", method);
+        Assert.Contains("Width = HardwareEditorPreviewResizeHandleSize", method);
+        Assert.Contains("Height = HardwareEditorPreviewResizeHandleSize", method);
+        Assert.Contains("handle.CapturePointer(args.Pointer);", method);
+        Assert.Contains("viewbox.MaxWidth = _hardwareEditorPreviewWidth;", method);
+        Assert.Contains("viewbox.MaxHeight = _hardwareEditorPreviewHeight;", method);
+        Assert.Contains("Math.Clamp(startWidth + delta.X", method);
+        Assert.Contains("Math.Clamp(startHeight + delta.Y", method);
     }
 
     [Fact]

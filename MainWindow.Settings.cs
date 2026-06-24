@@ -720,7 +720,17 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Left,
             Child = canvas,
         };
+        viewbox.MaxWidth = _hardwareEditorPreviewWidth;
+        viewbox.MaxHeight = _hardwareEditorPreviewHeight;
         AutomationProperties.SetName(viewbox, LocalizedStrings.Get("HardwareMonitorPreview"));
+
+        var surfaceGrid = new Grid
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        surfaceGrid.Children.Add(viewbox);
+        FrameworkElement resizeHandle = CreateHardwareEditorPreviewResizeHandle(viewbox);
+        surfaceGrid.Children.Add(resizeHandle);
 
         return new Border
         {
@@ -730,8 +740,85 @@ public sealed partial class MainWindow
             BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
-            Child = viewbox,
+            Child = surfaceGrid,
         };
+    }
+
+    private FrameworkElement CreateHardwareEditorPreviewResizeHandle(Viewbox viewbox)
+    {
+        bool isResizing = false;
+        double startX = 0;
+        double startY = 0;
+        double startWidth = 0;
+        double startHeight = 0;
+        Brush lineBrush = GetThemeBrush("TextFillColorSecondaryBrush");
+        var handle = new Grid
+        {
+            Width = HardwareEditorPreviewResizeHandleSize,
+            Height = HardwareEditorPreviewResizeHandleSize,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+        handle.Children.Add(new Line
+        {
+            X1 = 8,
+            Y1 = 18,
+            X2 = 18,
+            Y2 = 8,
+            Stroke = lineBrush,
+            StrokeThickness = 1.5,
+        });
+        handle.Children.Add(new Line
+        {
+            X1 = 13,
+            Y1 = 18,
+            X2 = 18,
+            Y2 = 13,
+            Stroke = lineBrush,
+            StrokeThickness = 1.5,
+        });
+        AutomationProperties.SetName(handle, LocalizedStrings.Get("HardwareMonitorPreview"));
+
+        handle.PointerPressed += (_, args) =>
+        {
+            isResizing = true;
+            global::Windows.Foundation.Point position = args.GetCurrentPoint(viewbox).Position;
+            startX = position.X;
+            startY = position.Y;
+            startWidth = _hardwareEditorPreviewWidth;
+            startHeight = _hardwareEditorPreviewHeight;
+            handle.CapturePointer(args.Pointer);
+            args.Handled = true;
+        };
+        handle.PointerMoved += (_, args) =>
+        {
+            if (!isResizing)
+            {
+                return;
+            }
+
+            global::Windows.Foundation.Point position = args.GetCurrentPoint(viewbox).Position;
+            global::Windows.Foundation.Point delta = new(position.X - startX, position.Y - startY);
+            _hardwareEditorPreviewWidth = Math.Clamp(startWidth + delta.X, HardwareEditorPreviewResizeMinWidth, HardwareEditorPreviewResizeMaxWidth);
+            _hardwareEditorPreviewHeight = Math.Clamp(startHeight + delta.Y, HardwareEditorPreviewResizeMinHeight, HardwareEditorPreviewResizeMaxHeight);
+            viewbox.MaxWidth = _hardwareEditorPreviewWidth;
+            viewbox.MaxHeight = _hardwareEditorPreviewHeight;
+            args.Handled = true;
+        };
+        handle.PointerReleased += (_, args) =>
+        {
+            isResizing = false;
+            handle.ReleasePointerCapture(args.Pointer);
+            args.Handled = true;
+        };
+        handle.PointerCanceled += (_, args) =>
+        {
+            isResizing = false;
+            handle.ReleasePointerCapture(args.Pointer);
+        };
+        handle.PointerCaptureLost += (_, _) => isResizing = false;
+        return handle;
     }
 
     private Border CreateHardwareElementSettingsSection(HardwareMonitorConfig config)

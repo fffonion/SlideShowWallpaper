@@ -35,6 +35,11 @@ public sealed partial class MainWindow : Window
     private const double HardwareEditorPreviewDefaultHeight = 210;
     private const double HardwareEditorPreviewMaxWidth = 360;
     private const double HardwareEditorPreviewMaxHeight = 520;
+    private const double HardwareEditorPreviewResizeHandleSize = 22;
+    private const double HardwareEditorPreviewResizeMinWidth = 240;
+    private const double HardwareEditorPreviewResizeMinHeight = 160;
+    private const double HardwareEditorPreviewResizeMaxWidth = 900;
+    private const double HardwareEditorPreviewResizeMaxHeight = 720;
     private const double PreviewPopupWidth = 420;
     private const double PreviewPopupHeight = 260;
     private const double PreviewPopupPortraitWidth = 300;
@@ -152,6 +157,8 @@ public sealed partial class MainWindow : Window
     private bool _settingsUiUnloadedForBackground;
     private bool _backgroundStartupTrimPending;
     private bool _contentHeightAdjusted;
+    private double _hardwareEditorPreviewWidth = HardwareEditorPreviewMaxWidth;
+    private double _hardwareEditorPreviewHeight = HardwareEditorPreviewDefaultHeight;
     private double _previewPopupCurrentWidth = PreviewPopupWidth;
     private double _previewPopupCurrentHeight = PreviewPopupHeight;
     private int _thumbnailCacheSizeLoadVersion;
