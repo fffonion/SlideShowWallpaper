@@ -295,6 +295,31 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void MeasuredWindowHeight_UsesMeasuredContentInsteadOfGrowingFromEstimate()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string configureMethod = source[
+            source.IndexOf("private void ConfigureSettingsWindow", StringComparison.Ordinal)..
+            source.IndexOf("private int CalculatePreferredWindowHeight", StringComparison.Ordinal)];
+        string resizeMethod = source[
+            source.IndexOf("private void ResizeToMeasuredContentHeight", StringComparison.Ordinal)..
+            source.IndexOf("private int CalculateMeasuredWindowHeight", StringComparison.Ordinal)];
+        string measuredMethod = source[
+            source.IndexOf("private int CalculateMeasuredWindowHeight", StringComparison.Ordinal)..
+            source.IndexOf("private void MoveAndResizeSettingsWindow", StringComparison.Ordinal)];
+
+        Assert.Contains("PreferredSettingsWindowWidth = 1178", source);
+        Assert.Contains("int width = GetPreferredSettingsWindowWidth(workArea);", configureMethod);
+        Assert.Contains("AppWindow.Size.Width > 0 ? AppWindow.Size.Width : GetPreferredSettingsWindowWidth(workArea)", resizeMethod);
+        Assert.Contains("Math.Ceiling(PreferredSettingsWindowWidth * GetWindowScale())", source);
+        Assert.DoesNotContain("Math.Min(1540, workArea.Width)", source);
+        Assert.Contains("Root.Measure(new global::Windows.Foundation.Size(targetWidth / scale, maximumHeight / scale));", measuredMethod);
+        Assert.DoesNotContain("Math.Max(measuredHeight, estimatedHeight)", measuredMethod);
+        Assert.Contains("return Math.Clamp(measuredHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);", measuredMethod);
+    }
+
+    [Fact]
     public void HardwareEditorPreviewSection_UsesTightPreviewPadding()
     {
         string root = FindProjectRoot();

@@ -8,11 +8,12 @@ namespace SlideShowWallpaper;
 
 public sealed partial class MainWindow
 {
+    private const int PreferredSettingsWindowWidth = 1178;
+
     private void ConfigureSettingsWindow()
     {
-        const int preferredWidth = 1540;
         RectInt32 workArea = GetPreferredSettingsWorkArea();
-        int width = Math.Min(preferredWidth, workArea.Width);
+        int width = GetPreferredSettingsWindowWidth(workArea);
         int height = CalculatePreferredWindowHeight(width, workArea.Height);
         MoveAndResizeSettingsWindow(workArea, width, height);
 
@@ -27,11 +28,12 @@ public sealed partial class MainWindow
     {
         const int minimumHeight = 720;
         double scale = GetWindowScale();
+        int logicalWidth = (int)Math.Ceiling(targetWidth / scale);
         int measuredHeight = _isHardwareEditorSelected
             ? EstimateWindowHeightForHardwareEditorPage()
             : _isSettingsSelected
                 ? EstimateWindowHeightForSettingsPage()
-                : EstimateWindowHeightForMonitorPage(targetWidth);
+                : EstimateWindowHeightForMonitorPage(logicalWidth);
 
         int physicalHeight = (int)Math.Ceiling(measuredHeight * scale);
         return Math.Clamp(physicalHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);
@@ -51,7 +53,7 @@ public sealed partial class MainWindow
     private void ResizeToMeasuredContentHeight()
     {
         RectInt32 workArea = GetPreferredSettingsWorkArea();
-        int width = AppWindow.Size.Width > 0 ? AppWindow.Size.Width : Math.Min(1540, workArea.Width);
+        int width = AppWindow.Size.Width > 0 ? AppWindow.Size.Width : GetPreferredSettingsWindowWidth(workArea);
         int height = CalculateMeasuredWindowHeight(width, workArea.Height);
         MoveAndResizeSettingsWindow(workArea, width, height);
     }
@@ -64,10 +66,13 @@ public sealed partial class MainWindow
         try
         {
             Root.Measure(new global::Windows.Foundation.Size(targetWidth / scale, maximumHeight / scale));
-            int measuredHeight = double.IsFinite(Root.DesiredSize.Height) && Root.DesiredSize.Height > 0
-                ? (int)Math.Ceiling(Root.DesiredSize.Height * scale)
-                : estimatedHeight;
-            return Math.Clamp(Math.Max(measuredHeight, estimatedHeight), Math.Min(minimumHeight, maximumHeight), maximumHeight);
+            if (!double.IsFinite(Root.DesiredSize.Height) || Root.DesiredSize.Height <= 0)
+            {
+                return estimatedHeight;
+            }
+
+            int measuredHeight = (int)Math.Ceiling(Root.DesiredSize.Height * scale);
+            return Math.Clamp(measuredHeight, Math.Min(minimumHeight, maximumHeight), maximumHeight);
         }
         catch (Exception exception)
         {
@@ -83,6 +88,11 @@ public sealed partial class MainWindow
         AppWindow.Resize(new SizeInt32(width, height));
         AppWindow.Move(new PointInt32(x, y));
         NativeMethods.SetWindowPos(_hwnd, IntPtr.Zero, x, y, width, height, NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+    }
+
+    private int GetPreferredSettingsWindowWidth(RectInt32 workArea)
+    {
+        return Math.Min((int)Math.Ceiling(PreferredSettingsWindowWidth * GetWindowScale()), workArea.Width);
     }
 
     private double GetWindowScale()
