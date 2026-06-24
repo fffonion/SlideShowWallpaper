@@ -183,6 +183,22 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void CreateHardwareSensorSelectionContent_UsesIconAndNameOnly()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)..
+            source.IndexOf("private static HardwareOverlayIconKind GetHardwareMetricKindIcon", StringComparison.Ordinal)];
+
+        Assert.Contains("ColumnSpacing = 0", method);
+        Assert.Contains("GetHardwareMetricKindIcon(sensor.Kind)", method);
+        Assert.Contains("Text = $\" {GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}\"", method);
+        Assert.DoesNotContain("GetHardwareMetricKindLabel", method);
+        Assert.DoesNotContain("MinWidth = 58", method);
+    }
+
+    [Fact]
     public void HardwareMonitorService_EnablesControllerAndPsuCollectors()
     {
         string root = FindProjectRoot();

@@ -426,9 +426,8 @@ public sealed partial class MainWindow
     {
         var row = new Grid
         {
-            ColumnSpacing = 8,
+            ColumnSpacing = 0,
         };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -440,23 +439,13 @@ public sealed partial class MainWindow
         Grid.SetColumn(icon, 0);
         row.Children.Add(icon);
 
-        var kindText = new TextBlock
-        {
-            Text = GetHardwareMetricKindLabel(sensor.Kind),
-            MinWidth = 58,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = GetThemeBrush("TextFillColorSecondaryBrush"),
-        };
-        Grid.SetColumn(kindText, 1);
-        row.Children.Add(kindText);
-
         var sensorText = new TextBlock
         {
-            Text = $"{GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}",
+            Text = $" {GetHardwareMetricGroupLabel(sensor.Group)} - {sensor.DisplayName}",
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
-        Grid.SetColumn(sensorText, 2);
+        Grid.SetColumn(sensorText, 1);
         row.Children.Add(sensorText);
         return row;
     }
@@ -471,19 +460,6 @@ public sealed partial class MainWindow
             HardwareMetricKind.VramAvailable => HardwareOverlayIconKind.Vram,
             HardwareMetricKind.Power => HardwareOverlayIconKind.Power,
             _ => HardwareOverlayIconKind.Generic,
-        };
-    }
-
-    private static string GetHardwareMetricKindLabel(HardwareMetricKind kind)
-    {
-        return kind switch
-        {
-            HardwareMetricKind.Temperature => LocalizedStrings.Get("HardwareMetricKindTemperature"),
-            HardwareMetricKind.FanRpm => LocalizedStrings.Get("HardwareMetricKindFanRpm"),
-            HardwareMetricKind.MemoryAvailable => LocalizedStrings.Get("HardwareMetricKindMemoryAvailable"),
-            HardwareMetricKind.VramAvailable => LocalizedStrings.Get("HardwareMetricKindVramAvailable"),
-            HardwareMetricKind.Power => LocalizedStrings.Get("HardwareMetricKindPower"),
-            _ => LocalizedStrings.Get("HardwareMetricKindOther"),
         };
     }
 
