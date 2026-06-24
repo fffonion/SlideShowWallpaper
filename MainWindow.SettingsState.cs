@@ -256,6 +256,7 @@ public sealed partial class MainWindow
         _thumbnailCacheSizeText = null;
         _thumbnailCacheSizeProgress = null;
         _clearThumbnailCacheButton = null;
+        FontCatalogService.ClearCache();
         _settingsUiUnloadedForBackground = true;
         TrimBackgroundMemory();
     }

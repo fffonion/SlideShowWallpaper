@@ -190,7 +190,7 @@ public sealed partial class MainWindow
         return CreateSettingsSection(
             LocalizedStrings.Get("HardwareMonitorStyle"),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareTextBox(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value => config.FontSize = Math.Max(10, value), LocalizedStrings.Get("HardwareMonitorFontSize"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateNumberBox(config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1), LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
@@ -717,9 +717,9 @@ public sealed partial class MainWindow
 
         if (element.Kind != HardwareOverlayElementKind.Image)
         {
-            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareTextBox(element.FontFamily, value => element.FontFamily = value, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontFamily"), CreateHardwareFontCombo(string.IsNullOrWhiteSpace(element.FontFamily) ? config.FontFamily : element.FontFamily, value => element.FontFamily = value, LocalizedStrings.Get("HardwareMonitorElementFontFamily"))));
             stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementFontSize"), CreateNumberBox(element.FontSize, value => element.FontSize = Math.Max(8, value), LocalizedStrings.Get("HardwareMonitorElementFontSize"))));
-            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareTextBox(element.Foreground, value => element.Foreground = value, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
+            stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorElementForeground"), CreateHardwareColorPicker(element.Foreground, value => element.Foreground = value, LocalizedStrings.Get("HardwareMonitorElementForeground"))));
         }
 
         stack.Children.Add(CreateCompactEditorRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwareElementPositionControls(element)));
@@ -798,6 +798,178 @@ public sealed partial class MainWindow
             ScheduleApplySettings();
         };
         return textBox;
+    }
+
+    private static ComboBoxItem CreateHardwareFontComboItem(string font)
+    {
+        return new ComboBoxItem
+        {
+            Tag = font,
+            Content = new TextBlock
+            {
+                Text = font,
+                FontFamily = new FontFamily(font),
+                FontSize = 16,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            },
+        };
+    }
+
+    private static IEnumerable<string> MergeSelectedFont(string selectedFont, IReadOnlyList<string> fonts)
+    {
+        if (!fonts.Contains(selectedFont, StringComparer.OrdinalIgnoreCase))
+        {
+            yield return selectedFont;
+        }
+
+        foreach (string font in fonts)
+        {
+            yield return font;
+        }
+    }
+
+    private FrameworkElement CreateHardwareFontCombo(string value, Action<string> changed, string automationName)
+    {
+        var grid = new Grid
+        {
+            ColumnSpacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        string selectedFont = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value;
+        var combo = new ComboBox
+        {
+            MinWidth = 160,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        combo.Items.Add(CreateHardwareFontComboItem(selectedFont));
+        combo.SelectedIndex = 0;
+        AutomationProperties.SetName(combo, automationName);
+        Grid.SetColumn(combo, 0);
+        grid.Children.Add(combo);
+
+        var progress = new ProgressRing
+        {
+            Width = 18,
+            Height = 18,
+            IsActive = false,
+            Visibility = Visibility.Collapsed,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(progress, automationName);
+        Grid.SetColumn(progress, 1);
+        grid.Children.Add(progress);
+
+        bool loaded = false;
+        bool loading = false;
+        combo.DropDownOpened += async (_, _) =>
+        {
+            if (loaded || loading)
+            {
+                return;
+            }
+
+            loading = true;
+            progress.IsActive = true;
+            progress.Visibility = Visibility.Visible;
+            try
+            {
+                IReadOnlyList<string> fonts = await Task.Run(FontCatalogService.GetInstalledFontFamilies);
+                combo.Items.Clear();
+                foreach (string font in MergeSelectedFont(selectedFont, fonts))
+                {
+                    combo.Items.Add(CreateHardwareFontComboItem(font));
+                }
+
+                combo.SelectedItem = combo.Items
+                    .OfType<ComboBoxItem>()
+                    .FirstOrDefault(item => string.Equals(item.Tag as string, selectedFont, StringComparison.OrdinalIgnoreCase));
+                loaded = true;
+            }
+            catch (Exception exception)
+            {
+                AppLog.Write(exception);
+            }
+            finally
+            {
+                loading = false;
+                progress.IsActive = false;
+                progress.Visibility = Visibility.Collapsed;
+            }
+        };
+        combo.SelectionChanged += (_, _) =>
+        {
+            if (combo.SelectedItem is ComboBoxItem { Tag: string font }
+                && !string.Equals(font, selectedFont, StringComparison.Ordinal))
+            {
+                selectedFont = font;
+                changed(font);
+                ScheduleApplySettings();
+            }
+        };
+        return grid;
+    }
+
+    private FrameworkElement CreateHardwareColorPicker(string value, Action<string> changed, string automationName)
+    {
+        global::Windows.UI.Color color = ParseSettingsColor(value);
+        var swatch = new Border
+        {
+            Width = 24,
+            Height = 24,
+            CornerRadius = new CornerRadius(3),
+            BorderThickness = new Thickness(1),
+            BorderBrush = GetThemeBrush("CardStrokeColorDefaultBrush"),
+            Background = new SolidColorBrush(color),
+        };
+        var colorText = new TextBlock
+        {
+            Text = FormatSettingsColor(color),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var buttonContent = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+        };
+        buttonContent.Children.Add(swatch);
+        buttonContent.Children.Add(colorText);
+
+        var picker = new ColorPicker
+        {
+            Color = color,
+            IsAlphaEnabled = true,
+            IsAlphaSliderVisible = true,
+            IsColorChannelTextInputVisible = true,
+            IsHexInputVisible = true,
+            IsMoreButtonVisible = false,
+            MinWidth = 320,
+        };
+        AutomationProperties.SetName(picker, automationName);
+        picker.ColorChanged += (_, args) =>
+        {
+            string hex = FormatSettingsColor(args.NewColor);
+            swatch.Background = new SolidColorBrush(args.NewColor);
+            colorText.Text = hex;
+            changed(hex);
+            ScheduleApplySettings();
+        };
+
+        var button = new Button
+        {
+            Content = buttonContent,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Flyout = new Flyout
+            {
+                Content = picker,
+                Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft,
+            },
+        };
+        AutomationProperties.SetName(button, automationName);
+        return button;
     }
 
     private FrameworkElement CreateHardwareElementPositionControls(HardwareOverlayElement element)
@@ -1221,6 +1393,11 @@ public sealed partial class MainWindow
 
     private static SolidColorBrush CreateSettingsColorBrush(string value)
     {
+        return new SolidColorBrush(ParseSettingsColor(value));
+    }
+
+    private static global::Windows.UI.Color ParseSettingsColor(string value)
+    {
         string hex = value.Trim().TrimStart('#');
         if (hex.Length == 6)
         {
@@ -1229,14 +1406,19 @@ public sealed partial class MainWindow
 
         if (hex.Length == 8 && uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out uint argb))
         {
-            return new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(
+            return Microsoft.UI.ColorHelper.FromArgb(
                 (byte)((argb >> 24) & 0xFF),
                 (byte)((argb >> 16) & 0xFF),
                 (byte)((argb >> 8) & 0xFF),
-                (byte)(argb & 0xFF)));
+                (byte)(argb & 0xFF));
         }
 
-        return new SolidColorBrush(Microsoft.UI.Colors.White);
+        return Microsoft.UI.Colors.White;
+    }
+
+    private static string FormatSettingsColor(global::Windows.UI.Color color)
+    {
+        return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
     private FrameworkElement CreateHardwareTemplateButtons(HardwareMonitorConfig config)

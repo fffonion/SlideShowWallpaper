@@ -61,6 +61,18 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void UnloadSettingsUiForBackground_ClearsFontCatalogCache()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsState.cs"));
+        string unloadMethod = source[
+            source.IndexOf("private void UnloadSettingsUiForBackground", StringComparison.Ordinal)..
+            source.IndexOf("private void EnsureSettingsUiLoaded", StringComparison.Ordinal)];
+
+        Assert.Contains("FontCatalogService.ClearCache();", unloadMethod);
+    }
+
+    [Fact]
     public void EnsureSettingsUiLoaded_CancelsPendingBackgroundStartupTrim()
     {
         string root = FindProjectRoot();
@@ -197,6 +209,33 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("HardwareMonitorRefreshInterval", method);
         Assert.Contains("config.RefreshIntervalSeconds", method);
+    }
+
+    [Fact]
+    public void CreateHardwareOverlayFormatSection_UsesFontCombo()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private Border CreateHardwareOverlayFormatSection", StringComparison.Ordinal)..
+            source.IndexOf("private IReadOnlyList<Choice<string>> CreateHardwareMonitorTargetChoices", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateHardwareFontCombo(config.FontFamily", method);
+        Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
+    }
+
+    [Fact]
+    public void CreateHardwareElementSettings_UsesFontComboAndColorPicker()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private FrameworkElement CreateHardwareElementSettings", StringComparison.Ordinal)..
+            source.IndexOf("private string GetHardwareElementSensorDisplayName", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateHardwareFontCombo", method);
+        Assert.Contains("CreateHardwareColorPicker", method);
+        Assert.DoesNotContain("CreateHardwareTextBox(element.Foreground", method);
     }
 
     [Fact]
