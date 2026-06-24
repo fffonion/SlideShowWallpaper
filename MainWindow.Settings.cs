@@ -142,15 +142,27 @@ public sealed partial class MainWindow
 
         var root = new Grid
         {
-            ColumnSpacing = 14,
+            ColumnSpacing = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 640 });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(430), MinWidth = 390 });
+        var editorColumn = new ColumnDefinition
+        {
+            Width = new GridLength(DefaultHardwareEditorPaneWidth),
+            MinWidth = MinimumHardwareEditorPaneWidth,
+            MaxWidth = MaximumHardwareEditorPaneWidth,
+        };
+        root.ColumnDefinitions.Add(editorColumn);
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = MinimumHardwareEditorSettingsWidth });
 
         FrameworkElement previewSection = CreateHardwareEditorPreviewSection(config);
+        previewSection.Margin = new Thickness(0, 0, 8, 0);
         Grid.SetColumn(previewSection, 0);
         root.Children.Add(previewSection);
+
+        FrameworkElement resizeHandle = CreateHardwareEditorResizeHandle(root, editorColumn);
+        Grid.SetColumn(resizeHandle, 1);
+        root.Children.Add(resizeHandle);
 
         var formatStack = new StackPanel
         {
@@ -165,7 +177,7 @@ public sealed partial class MainWindow
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
-        Grid.SetColumn(formatScrollViewer, 1);
+        Grid.SetColumn(formatScrollViewer, 2);
         root.Children.Add(formatScrollViewer);
         return root;
     }
@@ -1621,6 +1633,16 @@ public sealed partial class MainWindow
 
     private static FrameworkElement CreatePreviewResizeHandle(Grid root, ColumnDefinition previewColumn)
     {
+        return CreateColumnResizeHandle(root, previewColumn, MinimumPreviewPaneWidth, MaximumPreviewPaneWidth);
+    }
+
+    private static FrameworkElement CreateHardwareEditorResizeHandle(Grid root, ColumnDefinition editorColumn)
+    {
+        return CreateColumnResizeHandle(root, editorColumn, MinimumHardwareEditorPaneWidth, MaximumHardwareEditorPaneWidth);
+    }
+
+    private static FrameworkElement CreateColumnResizeHandle(Grid root, ColumnDefinition resizedColumn, double minimumWidth, double maximumWidth)
+    {
         var line = new Border
         {
             Width = 2,
@@ -1653,7 +1675,7 @@ public sealed partial class MainWindow
         {
             isDragging = true;
             startX = args.GetCurrentPoint(root).Position.X;
-            startWidth = previewColumn.ActualWidth;
+            startWidth = resizedColumn.ActualWidth;
             handle.CapturePointer(args.Pointer);
             line.Opacity = 1;
             args.Handled = true;
@@ -1666,8 +1688,8 @@ public sealed partial class MainWindow
             }
 
             double currentX = args.GetCurrentPoint(root).Position.X;
-            double width = Math.Clamp(startWidth + currentX - startX, MinimumPreviewPaneWidth, MaximumPreviewPaneWidth);
-            previewColumn.Width = new GridLength(width);
+            double width = Math.Clamp(startWidth + currentX - startX, minimumWidth, maximumWidth);
+            resizedColumn.Width = new GridLength(width);
             args.Handled = true;
         };
         handle.PointerReleased += (_, args) =>

@@ -163,8 +163,27 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
 
         Assert.Contains("CreateHardwareEditorPreviewSection(config)", method);
+        Assert.Contains("new GridLength(DefaultHardwareEditorPaneWidth)", method);
+        Assert.Contains("CreateHardwareEditorResizeHandle(root, editorColumn)", method);
+        Assert.Contains("MinimumHardwareEditorSettingsWidth", method);
         Assert.Contains("CreateHardwareOverlayFormatSection(config)", method);
         Assert.Contains("CreateHardwareElementSettingsSection(config)", method);
+        Assert.Contains("Grid.SetColumn(formatScrollViewer, 2)", method);
+    }
+
+    [Fact]
+    public void HardwareEditorResizeHandle_UsesSharedColumnResizeHandle()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private static FrameworkElement CreateHardwareEditorResizeHandle", StringComparison.Ordinal)..
+            source.IndexOf("private UIElement BuildMonitorSettings", StringComparison.Ordinal)];
+
+        Assert.Contains("CreateColumnResizeHandle(root, editorColumn, MinimumHardwareEditorPaneWidth, MaximumHardwareEditorPaneWidth)", method);
+        Assert.Contains("resizedColumn.Width = new GridLength(width);", method);
+        Assert.Contains("handle.CapturePointer(args.Pointer);", method);
+        Assert.Contains("handle.ReleasePointerCapture(args.Pointer);", method);
     }
 
     [Fact]

@@ -30,6 +30,10 @@ public sealed partial class MainWindow : Window
     private const double DefaultPreviewPaneWidth = 250;
     private const double MinimumPreviewPaneWidth = 160;
     private const double MaximumPreviewPaneWidth = 520;
+    private const double DefaultHardwareEditorPaneWidth = 820;
+    private const double MinimumHardwareEditorPaneWidth = 560;
+    private const double MaximumHardwareEditorPaneWidth = 1100;
+    private const double MinimumHardwareEditorSettingsWidth = 360;
     private const double PreviewPopupWidth = 420;
     private const double PreviewPopupHeight = 260;
     private const double PreviewPopupPortraitWidth = 300;
