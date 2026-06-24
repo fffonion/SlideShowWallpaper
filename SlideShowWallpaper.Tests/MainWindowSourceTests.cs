@@ -86,6 +86,20 @@ public sealed class MainWindowSourceTests
         Assert.DoesNotContain("_settingsUiUnloadedForBackground", method);
     }
 
+    [Fact]
+    public void BuildAppSettingsPage_WrapsContentInScrollViewer()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string method = source[
+            source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
+
+        Assert.Contains("new ScrollViewer", method);
+        Assert.Contains("VerticalScrollBarVisibility = ScrollBarVisibility.Auto", method);
+        Assert.Contains("HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled", method);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

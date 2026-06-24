@@ -57,7 +57,12 @@ public sealed partial class MainWindow
         Grid.SetRow(form, 0);
         root.Children.Add(form);
         StartThumbnailCacheSizeLoad();
-        return root;
+        return new ScrollViewer
+        {
+            Content = root,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
     }
 
     private Border CreateHardwareMonitorSettingsSection()
