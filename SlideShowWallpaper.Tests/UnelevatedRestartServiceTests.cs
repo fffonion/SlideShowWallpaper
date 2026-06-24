@@ -15,6 +15,7 @@ public sealed class UnelevatedRestartServiceTests
 
         Assert.Contains("\"/q\"", arguments);
         Assert.Contains("\"/custom value\"", arguments);
+        Assert.Contains($"\"{LaunchOptions.ElevatedBrokerArgument}\"", arguments);
         Assert.Contains($"\"{UnelevatedRestartService.NoDemoteArgument}\"", arguments);
         Assert.DoesNotContain(AdministratorRestartService.RestartArgument, arguments);
     }
@@ -27,5 +28,18 @@ public sealed class UnelevatedRestartServiceTests
         ]);
 
         Assert.Equal($"\"{UnelevatedRestartService.NoDemoteArgument}\"", arguments);
+    }
+
+    [Fact]
+    public void BuildDemotedArguments_DoesNotDuplicateElevatedBroker()
+    {
+        string arguments = UnelevatedRestartService.BuildDemotedArguments([
+            AdministratorRestartService.RestartArgument,
+            LaunchOptions.ElevatedBrokerArgument,
+        ]);
+
+        Assert.Equal(
+            $"\"{LaunchOptions.ElevatedBrokerArgument}\" \"{UnelevatedRestartService.NoDemoteArgument}\"",
+            arguments);
     }
 }

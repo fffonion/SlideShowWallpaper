@@ -12,9 +12,18 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private readonly object _syncRoot = new();
     private readonly string _pipeName = HardwareMonitorBrokerProtocol.CreatePipeName();
     private Process? _brokerProcess;
+    private bool _startElevated;
     private bool _disposed;
 
     public event EventHandler? BrokerProcessStarted;
+
+    public void SetStartElevated(bool startElevated)
+    {
+        lock (_syncRoot)
+        {
+            _startElevated = startElevated;
+        }
+    }
 
     public bool StartBroker()
     {
@@ -118,6 +127,10 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Hidden,
         };
+        if (_startElevated && !CurrentProcessPrivilege.IsAdministrator())
+        {
+            startInfo.Verb = "runas";
+        }
 
         _brokerProcess = Process.Start(startInfo);
         if (_brokerProcess is null)

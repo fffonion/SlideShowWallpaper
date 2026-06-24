@@ -20,6 +20,11 @@ public sealed class HardwareMonitorService : IDisposable
 
     public event EventHandler? BrokerProcessStarted;
 
+    public void SetBrokerElevation(bool startElevated)
+    {
+        _brokerClient.SetStartElevated(startElevated);
+    }
+
     public void StartBroker()
     {
         _brokerClient.StartBroker();

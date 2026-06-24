@@ -37,11 +37,11 @@ public sealed class LaunchOptionsTests
     }
 
     [Fact]
-    public void FromArguments_WithMultipleSwitch_SkipsElevationDemotion()
+    public void FromArguments_WithMultipleSwitch_DoesNotSkipElevationDemotion()
     {
         LaunchOptions options = LaunchOptions.FromArguments(["/multiple"]);
 
-        Assert.True(options.SkipElevationDemotion);
+        Assert.False(options.SkipElevationDemotion);
     }
 
     [Fact]
@@ -51,6 +51,15 @@ public sealed class LaunchOptionsTests
 
         Assert.True(options.AllowMultipleInstances);
         Assert.False(options.DisableCloseToTray);
+        Assert.False(options.SkipElevationDemotion);
+    }
+
+    [Fact]
+    public void FromArguments_WithElevatedBrokerSwitch_StartsBrokerElevated()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments([LaunchOptions.ElevatedBrokerArgument]);
+
+        Assert.True(options.StartHardwareBrokerElevated);
     }
 
     [Fact]

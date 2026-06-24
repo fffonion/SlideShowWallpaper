@@ -120,6 +120,24 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void AppLaunch_ConfiguresHardwareBrokerElevationBeforeCreatingCoordinator()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "App.xaml.cs"));
+        string method = source[
+            source.IndexOf("protected override void OnLaunched", StringComparison.Ordinal)..
+            source.IndexOf("private void ShowExistingInstanceWindow", StringComparison.Ordinal)];
+
+        int optionsIndex = method.IndexOf("LaunchOptions.FromArguments", StringComparison.Ordinal);
+        int elevationIndex = method.IndexOf("_hardwareMonitorService.SetBrokerElevation(launchOptions.StartHardwareBrokerElevated);", StringComparison.Ordinal);
+        int coordinatorIndex = method.IndexOf("new WallpaperPlaybackCoordinator", StringComparison.Ordinal);
+
+        Assert.True(optionsIndex >= 0);
+        Assert.True(elevationIndex > optionsIndex);
+        Assert.True(coordinatorIndex > elevationIndex);
+    }
+
+    [Fact]
     public void CurrentWallpaperChanged_WhenBackgroundStartupTrimIsPending_ReschedulesTrimAfterWallpaperReady()
     {
         string root = FindProjectRoot();
@@ -1044,8 +1062,10 @@ public sealed class MainWindowSourceTests
         Assert.Contains("_brokerClient.GetSnapshot()", source);
         Assert.Contains("public bool StartBroker()", clientSource);
         Assert.Contains("public void StopBroker()", clientSource);
+        Assert.Contains("public void SetBrokerElevation(bool startElevated)", source);
+        Assert.Contains("public void SetStartElevated(bool startElevated)", clientSource);
+        Assert.Contains("startInfo.Verb = \"runas\";", clientSource);
         Assert.Contains("TryGetSnapshot(restartBroker: true)", clientSource);
-        Assert.DoesNotContain("Verb = \"runas\"", clientSource);
         Assert.DoesNotContain("LibreHardwareMonitor", source);
         Assert.DoesNotContain("new Computer", source);
         Assert.DoesNotContain("new HardwareMonitorReader", appSource);
