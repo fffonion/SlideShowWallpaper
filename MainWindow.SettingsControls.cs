@@ -342,6 +342,58 @@ public sealed partial class MainWindow
         return numberBox;
     }
 
+    private Grid CreateOpacitySlider(double value, Action<double> changed, string automationName)
+    {
+        var panel = new Grid
+        {
+            ColumnSpacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var slider = new Slider
+        {
+            Minimum = 10,
+            Maximum = 100,
+            StepFrequency = 1,
+            SmallChange = 1,
+            LargeChange = 10,
+            Value = Math.Clamp(value, 0.1, 1) * 100,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        AutomationProperties.SetName(slider, automationName);
+
+        var valueText = new TextBlock
+        {
+            MinWidth = 42,
+            TextAlignment = TextAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(valueText, automationName);
+
+        void UpdateText(double sliderValue)
+        {
+            double percentage = Math.Clamp(sliderValue, 10, 100);
+            valueText.Text = $"{percentage:0}%";
+        }
+
+        UpdateText(slider.Value);
+        slider.ValueChanged += (_, args) =>
+        {
+            double percentage = Math.Clamp(args.NewValue, 10, 100);
+            valueText.Text = $"{percentage:0}%";
+            changed(percentage / 100);
+            ScheduleApplySettings();
+        };
+
+        Grid.SetColumn(slider, 0);
+        panel.Children.Add(slider);
+        Grid.SetColumn(valueText, 1);
+        panel.Children.Add(valueText);
+        return panel;
+    }
+
     private Grid CreateTimedNumberBox(double value, TimeUnit unit, Action<double, TimeUnit> changed, string automationName, bool isEnabled = true)
     {
         var panel = new Grid

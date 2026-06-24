@@ -192,7 +192,7 @@ public sealed partial class MainWindow
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorPosition"), CreateHardwarePositionControls(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontFamily"), CreateHardwareFontCombo(config.FontFamily, value => config.FontFamily = string.IsNullOrWhiteSpace(value) ? "Segoe UI" : value, LocalizedStrings.Get("HardwareMonitorFontFamily"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorFontSize"), CreateNumberBox(config.FontSize, value => config.FontSize = Math.Max(10, value), LocalizedStrings.Get("HardwareMonitorFontSize"))),
-            new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateNumberBox(config.Opacity, value => config.Opacity = Math.Clamp(value, 0.1, 1), LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
+            new SettingsRow(LocalizedStrings.Get("HardwareMonitorOpacityShort"), CreateOpacitySlider(config.Opacity, value => config.Opacity = value, LocalizedStrings.Get("HardwareMonitorOpacityShort"))),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorBackground"), CreateHardwareBackgroundControls(config)),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplate"), templateBox),
             new SettingsRow(LocalizedStrings.Get("HardwareMonitorTemplateActions"), buttonRow));

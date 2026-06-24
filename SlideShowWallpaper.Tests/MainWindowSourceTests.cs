@@ -270,7 +270,26 @@ public sealed class MainWindowSourceTests
         Assert.Contains("CreateHardwareFontCombo(config.FontFamily", method);
         Assert.Contains("HardwareMonitorBackground", method);
         Assert.Contains("CreateHardwareBackgroundControls(config)", method);
+        Assert.Contains("CreateOpacitySlider(config.Opacity", method);
+        Assert.DoesNotContain("CreateNumberBox(config.Opacity", method);
         Assert.DoesNotContain("CreateHardwareTextBox(config.FontFamily", method);
+    }
+
+    [Fact]
+    public void CreateOpacitySlider_UsesPercentRangeForStoredOpacity()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.SettingsControls.cs"));
+        string method = source[
+            source.IndexOf("private Grid CreateOpacitySlider", StringComparison.Ordinal)..
+            source.IndexOf("private Grid CreateTimedNumberBox", StringComparison.Ordinal)];
+
+        Assert.Contains("Minimum = 10", method);
+        Assert.Contains("Maximum = 100", method);
+        Assert.Contains("Value = Math.Clamp(value, 0.1, 1) * 100", method);
+        Assert.Contains("valueText.Text = $\"{percentage:0}%\";", method);
+        Assert.Contains("changed(percentage / 100);", method);
+        Assert.Contains("ScheduleApplySettings();", method);
     }
 
     [Fact]
