@@ -13,6 +13,7 @@ public static partial class NativeMethods
     public static readonly nint WS_THICKFRAME = 0x00040000;
     public static readonly nint WS_VISIBLE = 0x10000000;
     public static readonly nint WS_EX_APPWINDOW = 0x00040000;
+    public static readonly nint WS_EX_LAYERED = 0x00080000;
     public static readonly nint WS_EX_TOOLWINDOW = 0x00000080;
 
     internal const int GWL_EXSTYLE = -20;
@@ -21,6 +22,8 @@ public static partial class NativeMethods
     internal const int LVM_FIRST = 0x1000;
     internal const int LVM_SETBKCOLOR = LVM_FIRST + 1;
     internal const int LVM_SETTEXTBKCOLOR = LVM_FIRST + 38;
+    internal const uint LWA_ALPHA = 0x00000002;
+    internal const uint LWA_COLORKEY = 0x00000001;
     internal const int MF_GRAYED = 0x0001;
     internal const int MF_SEPARATOR = 0x0800;
     internal const int MF_STRING = 0x0000;
@@ -155,6 +158,9 @@ public static partial class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool SetForegroundWindow(IntPtr hWnd);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
     [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern bool GetOpenFileName(ref OPENFILENAME openFileName);
 
@@ -228,6 +234,18 @@ public static partial class NativeMethods
             0,
             0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
+    internal static void SetLayeredTransparentWindow(IntPtr hWnd, byte alpha)
+    {
+        nint extendedStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+        SetWindowStyleLongPtr(hWnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED);
+        SetLayeredWindowAttributes(hWnd, ComposeColorRef(1, 2, 3), alpha, LWA_COLORKEY | LWA_ALPHA);
+    }
+
+    internal static uint ComposeColorRef(byte red, byte green, byte blue)
+    {
+        return (uint)(red | (green << 8) | (blue << 16));
     }
 
     [DllImport("user32.dll", SetLastError = true)]

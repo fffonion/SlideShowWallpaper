@@ -48,6 +48,20 @@ public sealed class HardwareOverlayWindowSourceTests
     }
 
     [Fact]
+    public void HardwareOverlayWindow_UsesLayeredWindowOpacityForDesktopTransparency()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml.cs"));
+        string xaml = File.ReadAllText(Path.Combine(root, "Windows", "HardwareOverlayWindow.xaml"));
+
+        Assert.Contains("Background=\"#FF010203\"", xaml);
+        Assert.Contains("NativeMethods.SetLayeredTransparentWindow(_hwnd, byte.MaxValue);", source);
+        Assert.Contains("SetOverlayWindowOpacity(state.Opacity);", source);
+        Assert.Contains("HardwareOverlay.Opacity = 1;", source);
+        Assert.DoesNotContain("HardwareOverlay.Opacity = Math.Clamp(state.Opacity", source);
+    }
+
+    [Fact]
     public void HardwareOverlayWindow_UsesSharedVisualFactory()
     {
         string root = FindProjectRoot();

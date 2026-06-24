@@ -61,7 +61,8 @@ public sealed partial class HardwareOverlayWindow : Window
             RenderHardwareOverlayRows(state, fontFamily, fontSize);
         }
 
-        HardwareOverlay.Opacity = Math.Clamp(state.Opacity, 0.1, 1);
+        HardwareOverlay.Opacity = 1;
+        SetOverlayWindowOpacity(state.Opacity);
         ResizeToOverlay();
         SetOverlayPosition(state.X, state.Y);
         if (!_isVisible)
@@ -97,6 +98,7 @@ public sealed partial class HardwareOverlayWindow : Window
 
         NativeMethods.RemoveWindowFrame(_hwnd);
         NativeMethods.SetToolWindow(_hwnd);
+        NativeMethods.SetLayeredTransparentWindow(_hwnd, byte.MaxValue);
     }
 
     private void ConfigureDrag()
@@ -315,6 +317,12 @@ public sealed partial class HardwareOverlayWindow : Window
             0,
             0,
             (uint)(NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE));
+    }
+
+    private void SetOverlayWindowOpacity(double opacity)
+    {
+        byte alpha = (byte)Math.Round(Math.Clamp(opacity, 0.1, 1) * byte.MaxValue);
+        NativeMethods.SetLayeredTransparentWindow(_hwnd, alpha);
     }
 
     private double GetWindowScale()
