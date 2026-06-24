@@ -86,12 +86,11 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             return false;
         }
 
-        string brokerPath = HardwareMonitorBrokerExecutable.GetBrokerExecutablePath(processPath);
         var startInfo = new ProcessStartInfo
         {
-            FileName = brokerPath,
+            FileName = processPath,
             Arguments = BuildBrokerArguments(_pipeName),
-            WorkingDirectory = Path.GetDirectoryName(brokerPath) ?? AppContext.BaseDirectory,
+            WorkingDirectory = Path.GetDirectoryName(processPath) ?? AppContext.BaseDirectory,
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Hidden,
         };

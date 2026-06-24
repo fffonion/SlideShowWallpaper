@@ -7,6 +7,8 @@ namespace SlideShowWallpaper.Services;
 
 public static class HardwareMonitorBrokerHost
 {
+    public const string BrokerProcessTitle = "SlideShowWallpaper Hardware Broker";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public static bool IsBrokerMode(IEnumerable<string> arguments)
@@ -18,6 +20,7 @@ public static class HardwareMonitorBrokerHost
     {
         try
         {
+            SetBrokerProcessTitle();
             IReadOnlyList<string> args = arguments;
             if (!HardwareMonitorBrokerProtocol.TryGetOption(args, HardwareMonitorBrokerProtocol.PipeArgument, out string pipeName))
             {
@@ -32,6 +35,20 @@ public static class HardwareMonitorBrokerHost
         catch (Exception)
         {
             return 1;
+        }
+    }
+
+    public static void SetBrokerProcessTitle()
+    {
+        try
+        {
+            Console.Title = BrokerProcessTitle;
+        }
+        catch (IOException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
         }
     }
 
