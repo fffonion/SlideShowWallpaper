@@ -84,22 +84,26 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void ShowVideoAsync_RemembersResolvedPlaybackPathForCoverageResume()
+    public void ShowVideoAsync_KeepsVideoLoadedWhenCoveragePaused()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
         string showVideoAsync = source[
             source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)..
             source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)];
-        string suspendVideo = source[
-            source.IndexOf("private void SuspendVideoForCoverage", StringComparison.Ordinal)..
-            source.IndexOf("private async Task ResumeVideoAfterCoverageAsync", StringComparison.Ordinal)];
 
         Assert.Contains("_currentPlaybackPath = playbackPath;", showVideoAsync);
-        Assert.Matches(
-            "StorageFile file = await StorageFile.GetFileFromPathAsync\\(playbackPath\\);[\\s\\S]*if \\(_videoPausedByCoverage\\)[\\s\\S]*StoreCoverageSuspendedVideo\\(playbackPath, TimeSpan.Zero\\);[\\s\\S]*player.Source = MediaSource.CreateFromStorageFile\\(file\\);",
-            showVideoAsync);
-        Assert.Contains("string.IsNullOrWhiteSpace(_currentPlaybackPath) ? _currentImagePath : _currentPlaybackPath", suspendVideo);
+        Assert.Contains("player.Source = MediaSource.CreateFromStorageFile(file);", showVideoAsync);
+        Assert.Contains("VideoPlayer.Visibility = Visibility.Visible;", showVideoAsync);
+        int sourceIndex = showVideoAsync.IndexOf("player.Source = MediaSource.CreateFromStorageFile(file);", StringComparison.Ordinal);
+        int visibleIndex = showVideoAsync.IndexOf("VideoPlayer.Visibility = Visibility.Visible;", sourceIndex, StringComparison.Ordinal);
+        int pauseBranchIndex = showVideoAsync.IndexOf("if (_videoPausedByCoverage)", visibleIndex, StringComparison.Ordinal);
+        int pauseIndex = showVideoAsync.IndexOf("player.Pause();", pauseBranchIndex, StringComparison.Ordinal);
+
+        Assert.True(sourceIndex >= 0);
+        Assert.True(visibleIndex > sourceIndex);
+        Assert.True(pauseBranchIndex > visibleIndex);
+        Assert.True(pauseIndex > pauseBranchIndex);
     }
 
     [Fact]
@@ -127,18 +131,23 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void CoveragePause_ReleasesVideoSourceUntilCoverageEnds()
+    public void CoveragePause_PausesVideoWithoutClearingSource()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
         string setPaused = source[
             source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)..
             source.IndexOf("public async Task UpdateProfileWithTransitionAsync", StringComparison.Ordinal)];
+        string pauseVideo = source[
+            source.IndexOf("private void PauseVideoForCoverage", StringComparison.Ordinal)..
+            source.IndexOf("private void MediaPlayer_MediaEnded", StringComparison.Ordinal)];
 
-        Assert.Contains("SuspendVideoForCoverage();", setPaused);
-        Assert.Contains("ResumeVideoAfterCoverageAsync", setPaused);
-        Assert.Contains("ResetMediaPlayerSource(_mediaPlayer);", source);
-        Assert.Contains("VideoPlayer.Visibility = Visibility.Collapsed;", source);
+        Assert.Contains("PauseVideoForCoverage();", setPaused);
+        Assert.Contains("_mediaPlayer.Play();", setPaused);
+        Assert.Contains("_mediaPlayer.Pause();", pauseVideo);
+        Assert.DoesNotContain("ResetMediaPlayerSource(_mediaPlayer);", pauseVideo);
+        Assert.DoesNotContain("VideoPlayer.Visibility = Visibility.Collapsed;", pauseVideo);
+        Assert.DoesNotContain("ResumeVideoAfterCoverageAsync", source);
     }
 
     [Fact]

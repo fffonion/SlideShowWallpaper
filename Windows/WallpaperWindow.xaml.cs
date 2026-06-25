@@ -28,8 +28,6 @@ public sealed partial class WallpaperWindow : Window
     private string _currentImagePath = string.Empty;
     private string _currentPlaybackPath = string.Empty;
     private MediaKind _currentKind = MediaKind.Image;
-    private string _coverageSuspendedPlaybackPath = string.Empty;
-    private TimeSpan _coverageSuspendedPosition;
     private int _mediaRequestVersion;
     private bool _isClosed;
     private bool _isShowingWallpaper;
@@ -578,20 +576,11 @@ public sealed partial class WallpaperWindow : Window
         _currentKind = MediaKind.Video;
         _currentImagePath = path;
         _currentPlaybackPath = string.Empty;
-        _coverageSuspendedPlaybackPath = string.Empty;
-        _coverageSuspendedPosition = TimeSpan.Zero;
         VideoPlayer.Visibility = Visibility.Collapsed;
         try
         {
             string playbackPath = FileLinkResolver.GetFinalPath(path);
             _currentPlaybackPath = playbackPath;
-            if (_videoPausedByCoverage)
-            {
-                StoreCoverageSuspendedVideo(playbackPath, TimeSpan.Zero);
-                ResetMediaPlayerSource(player);
-                _isShowingWallpaper = true;
-                return;
-            }
 
             StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath);
             if (!IsCurrentMediaRequest(requestVersion) || !ReferenceEquals(player, _mediaPlayer))
@@ -600,19 +589,18 @@ public sealed partial class WallpaperWindow : Window
                 return;
             }
 
-            if (_videoPausedByCoverage)
-            {
-                StoreCoverageSuspendedVideo(playbackPath, TimeSpan.Zero);
-                ResetMediaPlayerSource(player);
-                _isShowingWallpaper = true;
-                return;
-            }
-
             player.Source = MediaSource.CreateFromStorageFile(file);
             VideoPlayer.Visibility = Visibility.Visible;
             ApplyProfile(_profile);
             _isShowingWallpaper = true;
-            player.Play();
+            if (_videoPausedByCoverage)
+            {
+                player.Pause();
+            }
+            else
+            {
+                player.Play();
+            }
         }
         catch (Exception exception)
         {
@@ -634,18 +622,12 @@ public sealed partial class WallpaperWindow : Window
         _videoPausedByCoverage = isPaused;
         if (_currentKind != MediaKind.Video || VideoPlayer.Visibility != Visibility.Visible)
         {
-            if (!isPaused && _currentKind == MediaKind.Video && !string.IsNullOrWhiteSpace(_coverageSuspendedPlaybackPath))
-            {
-                int requestVersion = BeginMediaRequest();
-                _ = ResumeVideoAfterCoverageAsync(requestVersion);
-            }
-
             return;
         }
 
         if (isPaused)
         {
-            SuspendVideoForCoverage();
+            PauseVideoForCoverage();
         }
         else
         {
@@ -780,90 +762,17 @@ public sealed partial class WallpaperWindow : Window
     private void StopVideo()
     {
         CancelMediaRequest();
-        _coverageSuspendedPlaybackPath = string.Empty;
-        _coverageSuspendedPosition = TimeSpan.Zero;
         _currentPlaybackPath = string.Empty;
         ResetMediaPlayerSource(_mediaPlayer);
         VideoPlayer.Visibility = Visibility.Collapsed;
         _currentKind = MediaKind.Image;
     }
 
-    private void SuspendVideoForCoverage()
-    {
-        StoreCoverageSuspendedVideo(
-            string.IsNullOrWhiteSpace(_currentPlaybackPath) ? _currentImagePath : _currentPlaybackPath,
-            GetPlaybackPosition());
-        CancelMediaRequest();
-        ResetMediaPlayerSource(_mediaPlayer);
-        VideoPlayer.Visibility = Visibility.Collapsed;
-    }
-
-    private async Task ResumeVideoAfterCoverageAsync(int requestVersion)
-    {
-        string playbackPath = _coverageSuspendedPlaybackPath;
-        TimeSpan resumePosition = _coverageSuspendedPosition;
-        if (string.IsNullOrWhiteSpace(playbackPath))
-        {
-            return;
-        }
-
-        MediaPlayer player = ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));
-        try
-        {
-            StorageFile file = await StorageFile.GetFileFromPathAsync(playbackPath);
-            if (!IsCurrentMediaRequest(requestVersion) || !ReferenceEquals(player, _mediaPlayer) || _videoPausedByCoverage)
-            {
-                ResetMediaPlayerSource(player);
-                return;
-            }
-
-            player.Source = MediaSource.CreateFromStorageFile(file);
-            VideoPlayer.Visibility = Visibility.Visible;
-            ApplyProfile(_profile);
-            TrySetPlaybackPosition(player, resumePosition);
-            _coverageSuspendedPlaybackPath = string.Empty;
-            _coverageSuspendedPosition = TimeSpan.Zero;
-            player.Play();
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-            if (IsCurrentMediaRequest(requestVersion))
-            {
-                ShowVideoError(_currentImagePath, exception.Message);
-            }
-        }
-    }
-
-    private void StoreCoverageSuspendedVideo(string playbackPath, TimeSpan position)
-    {
-        _coverageSuspendedPlaybackPath = playbackPath;
-        _coverageSuspendedPosition = position > TimeSpan.Zero ? position : TimeSpan.Zero;
-    }
-
-    private TimeSpan GetPlaybackPosition()
+    private void PauseVideoForCoverage()
     {
         try
         {
-            return _mediaPlayer.PlaybackSession.Position;
-        }
-        catch (Exception exception)
-        {
-            AppLog.Write(exception);
-            return TimeSpan.Zero;
-        }
-    }
-
-    private static void TrySetPlaybackPosition(MediaPlayer player, TimeSpan position)
-    {
-        if (position <= TimeSpan.Zero)
-        {
-            return;
-        }
-
-        try
-        {
-            player.PlaybackSession.Position = position;
+            _mediaPlayer.Pause();
         }
         catch (Exception exception)
         {
