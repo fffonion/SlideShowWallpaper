@@ -154,9 +154,11 @@ public sealed class HardwareMonitorBrokerSourceTests
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
 
-        Assert.Contains("PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly", source);
-        Assert.DoesNotContain("NamedPipeServerStreamAcl.Create", source);
-        Assert.DoesNotContain("PipeSecurity", source);
+        Assert.Contains("NamedPipeServerStreamAcl.Create", source);
+        Assert.Contains("WindowsIdentity.GetCurrent().User", source);
+        Assert.Contains("WellKnownSidType.BuiltinAdministratorsSid", source);
+        Assert.Contains("WellKnownSidType.LocalSystemSid", source);
+        Assert.DoesNotContain("PipeOptions.CurrentUserOnly", source);
     }
 
     [Fact]

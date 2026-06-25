@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text.Json;
 using SlideShowWallpaper.Models;
 
@@ -64,12 +66,38 @@ public static class HardwareMonitorBrokerHost
 
     private static NamedPipeServerStream CreateServer(string pipeName)
     {
-        return new NamedPipeServerStream(
+        return NamedPipeServerStreamAcl.Create(
             pipeName,
             PipeDirection.InOut,
             maxNumberOfServerInstances: 1,
             PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+            PipeOptions.Asynchronous,
+            inBufferSize: 0,
+            outBufferSize: 0,
+            CreatePipeSecurity());
+    }
+
+    private static PipeSecurity CreatePipeSecurity()
+    {
+        var security = new PipeSecurity();
+        SecurityIdentifier? currentUser = WindowsIdentity.GetCurrent().User;
+        if (currentUser is not null)
+        {
+            security.AddAccessRule(new PipeAccessRule(
+                currentUser,
+                PipeAccessRights.FullControl,
+                AccessControlType.Allow));
+        }
+
+        security.AddAccessRule(new PipeAccessRule(
+            new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+            PipeAccessRights.FullControl,
+            AccessControlType.Allow));
+        security.AddAccessRule(new PipeAccessRule(
+            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+            PipeAccessRights.FullControl,
+            AccessControlType.Allow));
+        return security;
     }
 
     private static void DisconnectServer(NamedPipeServerStream server)
