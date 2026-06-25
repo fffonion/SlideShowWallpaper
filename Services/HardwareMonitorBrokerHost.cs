@@ -29,8 +29,9 @@ public static class HardwareMonitorBrokerHost
             RunServer(pipeName, reader, cancellation.Token);
             return 0;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            AppLog.Write(exception);
             return 1;
         }
     }
@@ -68,7 +69,7 @@ public static class HardwareMonitorBrokerHost
             PipeDirection.InOut,
             maxNumberOfServerInstances: 1,
             PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous);
+            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
     }
 
     private static void DisconnectServer(NamedPipeServerStream server)

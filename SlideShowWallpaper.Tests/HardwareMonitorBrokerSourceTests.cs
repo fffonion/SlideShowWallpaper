@@ -149,6 +149,17 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
+    public void BrokerHost_CreatesPipeForCurrentUserSoUnelevatedMainProcessCanConnect()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerHost.cs"));
+
+        Assert.Contains("PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly", source);
+        Assert.DoesNotContain("NamedPipeServerStreamAcl.Create", source);
+        Assert.DoesNotContain("PipeSecurity", source);
+    }
+
+    [Fact]
     public void HardwareBrokerProject_IsConsoleBrokerProjectWithDistinctDescriptionAndNoWinUi()
     {
         string root = FindProjectRoot();
