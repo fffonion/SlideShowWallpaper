@@ -17,6 +17,24 @@ public sealed class ReleaseWorkflowTests
         Assert.Contains("RELEASE_FILE_VERSION=$fileVersion", workflow);
         Assert.Contains("-p:Version=$env:RELEASE_VERSION", workflow);
         Assert.Contains("-p:InformationalVersion=$env:RELEASE_TAG", workflow);
+        Assert.Contains("-p:IncludeSourceRevisionInInformationalVersion=false", workflow);
+    }
+
+    [Fact]
+    public void Project_StampsLocalBuildVersionFromGitTag()
+    {
+        string root = FindProjectRoot();
+        string project = File.ReadAllText(Path.Combine(root, "SlideShowWallpaper.csproj"));
+
+        Assert.Contains("ResolveGitTagVersion", project);
+        Assert.Contains("BeforeTargets=\"GetAssemblyVersion;GenerateAssemblyInfo\"", project);
+        Assert.Contains("git describe --tags --abbrev=0 --match v[0-9]*", project);
+        Assert.Contains("<Version>$(GitReleaseVersion)</Version>", project);
+        Assert.Contains("<AssemblyVersion>$(GitReleaseFileVersion)</AssemblyVersion>", project);
+        Assert.Contains("<FileVersion>$(GitReleaseFileVersion)</FileVersion>", project);
+        Assert.Contains("<InformationalVersion>$(GitReleaseTag)</InformationalVersion>", project);
+        Assert.Contains("<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>", project);
+        Assert.Contains("DisableGitVersionStamp", project);
     }
 
     [Fact]
