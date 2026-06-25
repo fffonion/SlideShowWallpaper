@@ -133,7 +133,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Hidden,
         };
-        if (_startElevated && !CurrentProcessPrivilege.IsAdministrator())
+        if (_startElevated && !CurrentProcessPrivilege.IsElevated())
         {
             startInfo.Verb = "runas";
         }

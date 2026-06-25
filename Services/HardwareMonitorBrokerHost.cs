@@ -103,7 +103,7 @@ public static class HardwareMonitorBrokerHost
         HardwareMonitorBrokerRequest? request = JsonSerializer.Deserialize<HardwareMonitorBrokerRequest>(requestJson, JsonOptions);
         if (string.Equals(request?.Command, HardwareMonitorBrokerProtocol.ShutdownCommand, StringComparison.OrdinalIgnoreCase))
         {
-            WriteResponse(output, new HardwareMonitorBrokerResponse { IsElevated = CurrentProcessPrivilege.IsAdministrator() });
+            WriteResponse(output, new HardwareMonitorBrokerResponse { IsElevated = CurrentProcessPrivilege.IsElevated() });
             return true;
         }
 

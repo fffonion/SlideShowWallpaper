@@ -24,6 +24,7 @@
     <Compile Include="..\Models\HardwareMonitorConfig.cs" Link="Models\HardwareMonitorConfig.cs" />
     <Compile Include="..\Services\AppLog.cs" Link="Services\AppLog.cs" />
     <Compile Include="..\Services\CurrentProcessPrivilege.cs" Link="Services\CurrentProcessPrivilege.cs" />
+    <Compile Include="..\Services\ProcessPrivilegeNativeMethods.cs" Link="Services\ProcessPrivilegeNativeMethods.cs" />
     <Compile Include="..\Services\HardwareMonitorBrokerHost.cs" Link="Services\HardwareMonitorBrokerHost.cs" />
     <Compile Include="..\Services\HardwareMonitorBrokerProtocol.cs" Link="Services\HardwareMonitorBrokerProtocol.cs" />
     <Compile Include="..\Services\HardwareMonitorReader.cs" Link="Services\HardwareMonitorReader.cs" />

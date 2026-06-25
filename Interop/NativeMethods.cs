@@ -27,6 +27,7 @@ public static partial class NativeMethods
     internal const uint LWA_COLORKEY = 0x00000001;
     internal const int TokenLinkedToken = 19;
     internal const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
+    internal const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     internal const uint TOKEN_ASSIGN_PRIMARY = 0x0001;
     internal const uint TOKEN_DUPLICATE = 0x0002;
     internal const uint TOKEN_QUERY = 0x0008;
@@ -112,6 +113,9 @@ public static partial class NativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, uint processId);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     internal static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
@@ -215,6 +219,9 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr GetShellWindow();
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern bool Shell_NotifyIcon(uint dwMessage, ref NOTIFYICONDATA lpData);

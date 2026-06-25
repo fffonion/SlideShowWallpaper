@@ -16,7 +16,7 @@ public sealed class HardwareMonitorReader : IDisposable
         {
             if (_disposed)
             {
-                return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
+                return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsElevated());
             }
 
             HashSet<string>? requestedSensorIds = CreateRequestedSensorSet(sensorIds);
@@ -29,7 +29,7 @@ public sealed class HardwareMonitorReader : IDisposable
                 CollectHardware(readings, hardware, updated, requestedSensorIds);
             }
 
-            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
+            return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, CurrentProcessPrivilege.IsElevated());
         }
     }
 

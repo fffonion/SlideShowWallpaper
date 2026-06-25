@@ -86,7 +86,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void ProgramMain_DemotesElevatedProcessBeforeStartingWinUi()
+    public void ProgramMain_HandlesElevationDemotionBeforeStartingWinUi()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Program.cs"));
@@ -95,13 +95,36 @@ public sealed class MainWindowSourceTests
             source.LastIndexOf('}')];
 
         int skipCheckIndex = method.IndexOf("!launchOptions.SkipElevationDemotion", StringComparison.Ordinal);
-        int demoteIndex = method.IndexOf("TryRestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
+        int demoteIndex = method.IndexOf("RestartIfCurrentProcessIsElevated", StringComparison.Ordinal);
+        int failedIndex = method.IndexOf("case UnelevatedRestartResult.Failed:", StringComparison.Ordinal);
         int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
 
         Assert.True(skipCheckIndex >= 0);
         Assert.True(demoteIndex > skipCheckIndex);
+        Assert.True(failedIndex > demoteIndex);
         Assert.True(startIndex > demoteIndex);
+        Assert.True(startIndex > failedIndex);
+        Assert.Contains("case UnelevatedRestartResult.Restarted:", method);
+        Assert.Contains("return 1;", method);
         Assert.Contains("return 0;", method);
+    }
+
+    [Fact]
+    public void ProgramMain_DoesNotStartWinUiWhenNoDemoteProcessIsStillElevated()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Program.cs"));
+        string method = source[
+            source.IndexOf("public static int Main", StringComparison.Ordinal)..
+            source.LastIndexOf('}')];
+
+        int guardIndex = method.IndexOf("launchOptions.SkipElevationDemotion && CurrentProcessPrivilege.IsElevated()", StringComparison.Ordinal);
+        int startIndex = method.IndexOf("WinUiAppHost.Start();", StringComparison.Ordinal);
+
+        Assert.True(guardIndex >= 0);
+        Assert.True(startIndex > guardIndex);
+        Assert.Contains("AppLog.Write(\"Process is still elevated after elevation demotion was marked complete.\");", method);
+        Assert.Contains("return 1;", method[guardIndex..startIndex]);
     }
 
     [Fact]

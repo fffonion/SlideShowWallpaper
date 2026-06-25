@@ -158,7 +158,7 @@ internal sealed class WindowsScheduledTaskService : IScheduledTaskService
         try
         {
             File.WriteAllText(xmlPath, CreateTaskXml(targetPath, arguments, workingDirectory), Encoding.Unicode);
-            RunSchTasks(["/Create", "/TN", taskName, "/XML", xmlPath, "/F"], elevate: !CurrentProcessPrivilege.IsAdministrator());
+            RunSchTasks(["/Create", "/TN", taskName, "/XML", xmlPath, "/F"], elevate: !CurrentProcessPrivilege.IsElevated());
         }
         finally
         {
@@ -169,7 +169,7 @@ internal sealed class WindowsScheduledTaskService : IScheduledTaskService
     public void Delete(string taskName)
     {
         SchTasksResult result = RunSchTasks(["/Delete", "/TN", taskName, "/F"], elevate: false, ignoreFailure: true);
-        if (result.ExitCode != 0 && !CurrentProcessPrivilege.IsAdministrator() && Exists(taskName))
+        if (result.ExitCode != 0 && !CurrentProcessPrivilege.IsElevated() && Exists(taskName))
         {
             RunSchTasks(["/Delete", "/TN", taskName, "/F"], elevate: true, ignoreFailure: true);
         }

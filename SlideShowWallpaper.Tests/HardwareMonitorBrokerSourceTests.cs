@@ -47,7 +47,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("string.IsNullOrWhiteSpace(brokerPath)", clientSource);
         Assert.Contains("FileName = brokerPath", clientSource);
         Assert.Contains("WorkingDirectory = Path.GetDirectoryName(brokerPath)", clientSource);
-        Assert.Contains("if (_startElevated && !CurrentProcessPrivilege.IsAdministrator())", clientSource);
+        Assert.Contains("if (_startElevated && !CurrentProcessPrivilege.IsElevated())", clientSource);
         Assert.Contains("startInfo.Verb = \"runas\";", clientSource);
     }
 
