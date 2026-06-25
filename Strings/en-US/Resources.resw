@@ -159,7 +159,7 @@
   <data name="HardwareMonitorAllDisplays" xml:space="preserve"><value>All displays</value></data>
   <data name="HardwareMonitorNoSensors" xml:space="preserve"><value>No sensors detected. Some sensors may require administrator access.</value></data>
   <data name="HardwareMonitorLimitedAccess" xml:space="preserve"><value>Running without administrator access. CPU, motherboard fan, and storage temperature sensors may be unavailable.</value></data>
-  <data name="HardwareMonitorRestartAsAdministrator" xml:space="preserve"><value>Restart as administrator</value></data>
+  <data name="HardwareMonitorRestartBrokerAsAdministrator" xml:space="preserve"><value>Restart hardware reader as administrator</value></data>
   <data name="HardwareMonitorFontFamily" xml:space="preserve"><value>Font family</value></data>
   <data name="HardwareMonitorFontSize" xml:space="preserve"><value>Font size</value></data>
   <data name="HardwareMonitorFontSizeShort" xml:space="preserve"><value>Font</value></data>

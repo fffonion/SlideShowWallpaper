@@ -204,7 +204,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
 
     private static HardwareMonitorSnapshot EmptySnapshot()
     {
-        return new HardwareMonitorSnapshot([], DateTimeOffset.Now, CurrentProcessPrivilege.IsAdministrator());
+        return new HardwareMonitorSnapshot([], DateTimeOffset.Now, IsElevated: false);
     }
 
     private static IReadOnlyList<string> CreateRuntimeSensorIds(HardwareMonitorConfig? config)

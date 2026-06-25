@@ -66,6 +66,19 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
+    public void BrokerClient_EmptySnapshotDoesNotReportMainProcessElevation()
+    {
+        string root = FindProjectRoot();
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
+        string method = clientSource[
+            clientSource.IndexOf("private static HardwareMonitorSnapshot EmptySnapshot", StringComparison.Ordinal)..
+            clientSource.IndexOf("private static IReadOnlyList<string> CreateRuntimeSensorIds", StringComparison.Ordinal)];
+
+        Assert.Contains("new HardwareMonitorSnapshot([], DateTimeOffset.Now, IsElevated: false)", method);
+        Assert.DoesNotContain("CurrentProcessPrivilege.IsAdministrator", method);
+    }
+
+    [Fact]
     public void HardwareMonitorService_ForwardsBrokerProcessStarted()
     {
         string root = FindProjectRoot();

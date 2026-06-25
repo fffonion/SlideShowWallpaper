@@ -598,9 +598,9 @@ public sealed partial class MainWindow
             .OrderBy(sensor => sensor.Group)
             .ThenBy(sensor => sensor.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
-        if (snapshot is { IsElevated: false })
+        if (snapshot is not { IsElevated: true })
         {
-            root.Children.Add(CreateHardwareSensorNotice());
+            root.Children.Add(CreateHardwareBrokerElevationNotice(refreshRequested));
         }
 
         if (sensors.Count == 0)
@@ -752,7 +752,7 @@ public sealed partial class MainWindow
         return root;
     }
 
-    private FrameworkElement CreateHardwareSensorNotice()
+    private FrameworkElement CreateHardwareBrokerElevationNotice(Action? refreshRequested)
     {
         var grid = new Grid
         {
@@ -774,24 +774,35 @@ public sealed partial class MainWindow
 
         var restartButton = new Button
         {
-            Content = LocalizedStrings.Get("HardwareMonitorRestartAsAdministrator"),
+            Content = LocalizedStrings.Get("HardwareMonitorRestartBrokerAsAdministrator"),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        AutomationProperties.SetName(restartButton, LocalizedStrings.Get("HardwareMonitorRestartAsAdministrator"));
-        restartButton.Click += (_, _) => RestartAsAdministrator();
+        AutomationProperties.SetName(restartButton, LocalizedStrings.Get("HardwareMonitorRestartBrokerAsAdministrator"));
+        restartButton.Click += (_, _) => RestartHardwareBrokerAsAdministrator(refreshRequested);
         Grid.SetColumn(restartButton, 1);
         grid.Children.Add(restartButton);
         return grid;
     }
 
-    private void RestartAsAdministrator()
+    private void RestartHardwareBrokerAsAdministrator(Action? refreshRequested)
     {
-        if (!_administratorRestartService.TryRestart())
+        try
         {
-            return;
-        }
+            _hardwareMonitorService.SetBrokerElevation(true);
+            _hardwareMonitorService.StopBroker();
+            refreshRequested?.Invoke();
+            if (refreshRequested is not null)
+            {
+                return;
+            }
 
-        ExitApplication();
+            RefreshHardwareSnapshot();
+            RenderTabs(_selectedMonitorId);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private static FrameworkElement CreateHardwareSensorSelectionContent(HardwareSensorReading sensor)

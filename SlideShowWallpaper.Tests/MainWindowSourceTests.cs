@@ -105,18 +105,34 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void RestartAsAdministrator_RestartsMainAppAsAdministrator()
+    public void RestartHardwareBrokerAsAdministrator_RestartsOnlyHardwareBroker()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
-            source.IndexOf("private void RestartAsAdministrator", StringComparison.Ordinal)..
+            source.IndexOf("private void RestartHardwareBrokerAsAdministrator", StringComparison.Ordinal)..
             source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)];
 
-        Assert.Contains("_administratorRestartService.TryRestart()", method);
-        Assert.Contains("ExitApplication();", method);
-        Assert.DoesNotContain("_hardwareMonitorService.TryStartElevatedReader()", method);
-        Assert.DoesNotContain("RefreshHardwareSnapshot();", method);
+        Assert.Contains("_hardwareMonitorService.SetBrokerElevation(true);", method);
+        Assert.Contains("_hardwareMonitorService.StopBroker();", method);
+        Assert.Contains("RefreshHardwareSnapshot();", method);
+        Assert.Contains("refreshRequested?.Invoke();", method);
+        Assert.DoesNotContain("_administratorRestartService.TryRestart()", method);
+        Assert.DoesNotContain("ExitApplication();", method);
+        Assert.DoesNotContain("CurrentProcessPrivilege.IsAdministrator", method);
+    }
+
+    [Fact]
+    public void RestartAsAdministrator_IsNotUsedByHardwareSensorDialog()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string dialogRegion = source[
+            source.IndexOf("private async Task ShowHardwareSensorSelectionDialogAsync", StringComparison.Ordinal)..
+            source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)];
+
+        Assert.DoesNotContain("RestartAsAdministrator", dialogRegion);
+        Assert.DoesNotContain("_administratorRestartService.TryRestart()", dialogRegion);
     }
 
     [Fact]
@@ -1064,7 +1080,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void CreateHardwareSensorSelectionList_ShowsLimitedAccessNotice()
+    public void CreateHardwareSensorSelectionList_ShowsBrokerElevationNotice()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
@@ -1072,9 +1088,10 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private FrameworkElement CreateHardwareSensorSelectionList", StringComparison.Ordinal)..
             source.IndexOf("private FrameworkElement CreateHardwarePositionControls", StringComparison.Ordinal)];
 
-        Assert.Contains("IsElevated: false", method);
-        Assert.Contains("CreateHardwareSensorNotice()", method);
-        Assert.Contains("HardwareMonitorRestartAsAdministrator", method);
+        Assert.Contains("snapshot is not { IsElevated: true }", method);
+        Assert.Contains("CreateHardwareBrokerElevationNotice(refreshRequested)", method);
+        Assert.Contains("HardwareMonitorRestartBrokerAsAdministrator", method);
+        Assert.DoesNotContain("CurrentProcessPrivilege.IsAdministrator", method);
     }
 
     [Fact]

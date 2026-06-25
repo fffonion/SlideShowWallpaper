@@ -10,7 +10,6 @@ public partial class App : Application
     private readonly DesktopHostService _desktopHostService = new();
     private readonly SettingsStore _settingsStore = new();
     private readonly AutostartService _autostartService = new();
-    private readonly AdministratorRestartService _administratorRestartService = new();
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ImageOrderService _imageOrderService = new();
     private readonly FolderChangeWatcherService _folderChangeWatcherService = new();
@@ -65,7 +64,6 @@ public partial class App : Application
                 _coordinator,
                 _settingsStore,
                 _autostartService,
-                _administratorRestartService,
                 _folderPickerService,
                 _imageOrderService,
                 _hardwareMonitorService,
