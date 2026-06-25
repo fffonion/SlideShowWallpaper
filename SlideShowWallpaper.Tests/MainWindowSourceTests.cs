@@ -415,6 +415,67 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void StartPreviewLoad_PinsSelectedPreviewItemToFront()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Preview.cs"));
+
+        Assert.Contains("private void ApplyPreviewItems", source);
+        Assert.Contains("_previewOrderedImages[profile.Id] = images.ToArray();", source);
+        Assert.Contains("ImagePreviewCollectionUpdater.ApplyWithFirstItem", source);
+        Assert.Contains("profile.SelectedImagePath", source);
+        Assert.Contains("SelectCurrentPreviewItem(profile, scrollIntoView: false);", source);
+        Assert.Contains("previewList.Unloaded", source);
+    }
+
+    [Fact]
+    public void CurrentWallpaperChanged_MovesPreviewItemOnlyWhenSettingsUiIsLoaded()
+    {
+        string root = FindProjectRoot();
+        string previewSource = File.ReadAllText(Path.Combine(root, "MainWindow.Preview.cs"));
+        string playbackSource = File.ReadAllText(Path.Combine(root, "MainWindow.Playback.cs"));
+        string currentWallpaperMethod = playbackSource[
+            playbackSource.IndexOf("private void Coordinator_CurrentWallpaperChanged", StringComparison.Ordinal)..
+            playbackSource.IndexOf("private void Coordinator_HardwareOverlayMoved", StringComparison.Ordinal)];
+        string moveMethod = previewSource[
+            previewSource.IndexOf("private void MoveCurrentPreviewItemToFront", StringComparison.Ordinal)..
+            previewSource.IndexOf("private void SelectCurrentPreviewItem", StringComparison.Ordinal)];
+
+        Assert.Contains("MoveCurrentPreviewItemToFront(profile);", currentWallpaperMethod);
+        Assert.Contains("_settingsUiUnloadedForBackground", moveMethod);
+        Assert.Contains("ImagePreviewCollectionUpdater.MoveToFront", moveMethod);
+        Assert.Contains("SelectCurrentPreviewItem(profile, scrollIntoView: true);", moveMethod);
+    }
+
+    [Fact]
+    public void OrderedImagesChanged_DoesNotRefreshPreviewWhileSettingsUiIsUnloadedForTray()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Playback.cs"));
+        string method = source[
+            source.IndexOf("private void Coordinator_OrderedImagesChanged", StringComparison.Ordinal)..
+            source.IndexOf("private void Coordinator_CurrentWallpaperChanged", StringComparison.Ordinal)];
+
+        int unloadedIndex = method.IndexOf("if (_settingsUiUnloadedForBackground)", StringComparison.Ordinal);
+        int applyIndex = method.IndexOf("ApplyPreviewItems(profile, items, args.Images, reusableItems);", StringComparison.Ordinal);
+        Assert.True(unloadedIndex >= 0);
+        Assert.True(applyIndex > unloadedIndex);
+    }
+
+    [Fact]
+    public void PreviewSelection_UsesOriginalPreviewOrderInsteadOfPinnedDisplayOrder()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Playback.cs"));
+        string method = source[
+            source.IndexOf("private async void PreviewList_SelectionChanged", StringComparison.Ordinal)..
+            source.IndexOf("private void TogglePauseFromTray", StringComparison.Ordinal)];
+
+        Assert.Contains("GetOrderedPreviewPaths(profile, previewItems)", method);
+        Assert.DoesNotContain("previewItems.Select(previewItem => previewItem.Path).ToArray()", method);
+    }
+
+    [Fact]
     public void BuildHardwareEditorPage_ContainsPreviewAndFormatSections()
     {
         string root = FindProjectRoot();

@@ -74,6 +74,41 @@ public sealed class ImagePreviewCollectionUpdaterTests
     }
 
     [Fact]
+    public void ApplyWithFirstItem_MovesSelectedImageToFrontAndKeepsRelativeOrder()
+    {
+        var first = new ImageMetadata(@"C:\Wallpapers\a.png", "a.png", DateTime.UnixEpoch, 1);
+        var second = new ImageMetadata(@"C:\Wallpapers\b.png", "b.png", DateTime.UnixEpoch, 1);
+        var third = new ImageMetadata(@"C:\Wallpapers\c.png", "c.png", DateTime.UnixEpoch, 1);
+        var items = new ObservableCollection<ImagePreviewItem>();
+
+        ImagePreviewCollectionUpdater.ApplyWithFirstItem(items, [first, second, third], items, null, second.Path);
+
+        Assert.Equal(second.Path, items[0].Path);
+        Assert.Equal(first.Path, items[1].Path);
+        Assert.Equal(third.Path, items[2].Path);
+    }
+
+    [Fact]
+    public void MoveToFront_ReusesExistingItemAndMovesItToFirst()
+    {
+        var first = new ImageMetadata(@"C:\Wallpapers\a.png", "a.png", DateTime.UnixEpoch, 1);
+        var second = new ImageMetadata(@"C:\Wallpapers\b.png", "b.png", DateTime.UnixEpoch, 1);
+        var firstItem = new ImagePreviewItem(first);
+        var secondItem = new ImagePreviewItem(second);
+        var items = new ObservableCollection<ImagePreviewItem>
+        {
+            firstItem,
+            secondItem,
+        };
+
+        bool moved = ImagePreviewCollectionUpdater.MoveToFront(items, second.Path);
+
+        Assert.True(moved);
+        Assert.Same(secondItem, items[0]);
+        Assert.Same(firstItem, items[1]);
+    }
+
+    [Fact]
     public void Clear_RemovesPreviewItems()
     {
         var first = new ImageMetadata(@"C:\Wallpapers\a.png", "a.png", DateTime.UnixEpoch, 1);

@@ -10,18 +10,27 @@ public sealed partial class MainWindow
 {
     private void Coordinator_OrderedImagesChanged(object? sender, OrderedImagesChangedEventArgs args)
     {
+        if (_settingsUiUnloadedForBackground)
+        {
+            return;
+        }
+
         if (!_previewItems.TryGetValue(args.MonitorId, out ObservableCollection<ImagePreviewItem>? items))
         {
             return;
         }
 
         ImagePreviewItem[] reusableItems = [.. items];
-        ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems, CreateThumbnailLoader());
         MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
         if (profile is not null)
         {
+            ApplyPreviewItems(profile, items, args.Images, reusableItems);
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
+        }
+        else
+        {
+            ImagePreviewCollectionUpdater.Apply(items, args.Images, reusableItems, CreateThumbnailLoader());
         }
     }
 
@@ -38,6 +47,7 @@ public sealed partial class MainWindow
         profile.TotalMediaCount = args.TotalCount;
         profile.CurrentMediaStartedAt = DateTimeOffset.Now;
         UpdatePlaybackStatusText(profile);
+        MoveCurrentPreviewItemToFront(profile);
         if (_backgroundStartupTrimPending && _settingsUiUnloadedForBackground)
         {
             ScheduleBackgroundMemoryTrim(BackgroundWallpaperReadyTrimDelay);
@@ -68,7 +78,7 @@ public sealed partial class MainWindow
         try
         {
             IReadOnlyList<string> orderedPaths = sender is ListView { ItemsSource: IEnumerable<ImagePreviewItem> previewItems }
-                ? previewItems.Select(previewItem => previewItem.Path).ToArray()
+                ? GetOrderedPreviewPaths(profile, previewItems)
                 : [];
             await _coordinator.ShowImageAsync(profile, item.Path, orderedPaths);
         }
@@ -141,12 +151,14 @@ public sealed partial class MainWindow
         if (_previewItems.TryGetValue(profile.Id, out ObservableCollection<ImagePreviewItem>? items) && items.Count > 1)
         {
             IReadOnlyList<ImageMetadata> shuffled = ImageLibrary.SortImages(
-                items.Select(item => item.Metadata),
+                GetOrderedPreviewMetadata(profile, items),
                 PlaybackOrder.Random);
+            _previewOrderedImages[profile.Id] = shuffled;
             _suppressPreviewSelection = true;
             try
             {
-                ImagePreviewCollectionUpdater.Apply(items, shuffled, items, CreateThumbnailLoader());
+                ImagePreviewCollectionUpdater.ApplyWithFirstItem(items, shuffled, items, CreateThumbnailLoader(), profile.SelectedImagePath);
+                SelectCurrentPreviewItem(profile, scrollIntoView: false);
             }
             finally
             {
@@ -155,6 +167,13 @@ public sealed partial class MainWindow
         }
 
         _coordinator.Shuffle(profile.Id);
+    }
+
+    private IEnumerable<ImageMetadata> GetOrderedPreviewMetadata(MonitorProfile profile, IEnumerable<ImagePreviewItem> fallbackItems)
+    {
+        return _previewOrderedImages.TryGetValue(profile.Id, out IReadOnlyList<ImageMetadata>? images)
+            ? images
+            : fallbackItems.Select(item => item.Metadata);
     }
 
     private void RefreshProfileMedia(MonitorProfile profile)

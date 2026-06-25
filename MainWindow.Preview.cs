@@ -51,6 +51,14 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(previewList, LocalizedStrings.Format("MonitorPreviewsAutomationFormat", profile.DisplayName));
         previewList.ContainerContentChanging += PreviewList_ContainerContentChanging;
         previewList.SelectionChanged += PreviewList_SelectionChanged;
+        _previewLists[profile.Id] = previewList;
+        previewList.Unloaded += (_, _) =>
+        {
+            if (_previewLists.TryGetValue(profile.Id, out ListView? current) && ReferenceEquals(current, previewList))
+            {
+                _previewLists.Remove(profile.Id);
+            }
+        };
         previewHost.Children.Add(previewList);
 
         var loadingPanel = new StackPanel
@@ -549,7 +557,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            ImagePreviewCollectionUpdater.Apply(items, result.Images, reusableItems, CreateThumbnailLoader());
+            ApplyPreviewItems(profile, items, result.Images, reusableItems);
 
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
@@ -614,7 +622,7 @@ public sealed partial class MainWindow
             }
 
             ImagePreviewItem[] reusableItems = [.. items];
-            ImagePreviewCollectionUpdater.Apply(items, images, reusableItems, CreateThumbnailLoader());
+            ApplyPreviewItems(profile, items, images, reusableItems);
             profile.TotalMediaCount = items.Count;
             UpdatePlaybackStatusText(profile);
         }
@@ -675,7 +683,76 @@ public sealed partial class MainWindow
         }
 
         _previewItems.Clear();
+        _previewLists.Clear();
+        _previewOrderedImages.Clear();
         _previewMetadataTexts.Clear();
+    }
+
+    private void ApplyPreviewItems(
+        MonitorProfile profile,
+        ObservableCollection<ImagePreviewItem> items,
+        IReadOnlyList<ImageMetadata> images,
+        IEnumerable<ImagePreviewItem> reusableItems)
+    {
+        _previewOrderedImages[profile.Id] = images.ToArray();
+        ImagePreviewCollectionUpdater.ApplyWithFirstItem(
+            items,
+            images,
+            reusableItems,
+            CreateThumbnailLoader(),
+            profile.SelectedImagePath);
+        SelectCurrentPreviewItem(profile, scrollIntoView: false);
+    }
+
+    private void MoveCurrentPreviewItemToFront(MonitorProfile profile)
+    {
+        if (_settingsUiUnloadedForBackground
+            || !_previewItems.TryGetValue(profile.Id, out ObservableCollection<ImagePreviewItem>? items))
+        {
+            return;
+        }
+
+        if (ImagePreviewCollectionUpdater.MoveToFront(items, profile.SelectedImagePath))
+        {
+            SelectCurrentPreviewItem(profile, scrollIntoView: true);
+        }
+    }
+
+    private void SelectCurrentPreviewItem(MonitorProfile profile, bool scrollIntoView)
+    {
+        if (!_previewLists.TryGetValue(profile.Id, out ListView? previewList)
+            || !_previewItems.TryGetValue(profile.Id, out ObservableCollection<ImagePreviewItem>? items)
+            || string.IsNullOrWhiteSpace(profile.SelectedImagePath))
+        {
+            return;
+        }
+
+        ImagePreviewItem? current = items.FirstOrDefault(item => string.Equals(item.Path, profile.SelectedImagePath, StringComparison.OrdinalIgnoreCase));
+        if (current is null)
+        {
+            return;
+        }
+
+        _suppressPreviewSelection = true;
+        try
+        {
+            previewList.SelectedItem = current;
+            if (scrollIntoView)
+            {
+                previewList.ScrollIntoView(current);
+            }
+        }
+        finally
+        {
+            _suppressPreviewSelection = false;
+        }
+    }
+
+    private IReadOnlyList<string> GetOrderedPreviewPaths(MonitorProfile profile, IEnumerable<ImagePreviewItem> fallbackItems)
+    {
+        return _previewOrderedImages.TryGetValue(profile.Id, out IReadOnlyList<ImageMetadata>? images)
+            ? images.Select(image => image.Path).ToArray()
+            : fallbackItems.Select(item => item.Path).ToArray();
     }
 
     private void UpdateAllPlaybackStatusTexts()

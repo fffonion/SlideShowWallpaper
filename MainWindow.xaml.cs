@@ -121,6 +121,8 @@ public sealed partial class MainWindow : Window
     private readonly ImageOrderService _imageOrderService;
     private readonly HardwareMonitorService _hardwareMonitorService;
     private readonly Dictionary<string, ObservableCollection<ImagePreviewItem>> _previewItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ListView> _previewLists = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<ImageMetadata>> _previewOrderedImages = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextBlock> _previewMetadataTexts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CancellationTokenSource> _previewLoadTokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _hardwareEditorSelectedElementIds = new(StringComparer.OrdinalIgnoreCase);

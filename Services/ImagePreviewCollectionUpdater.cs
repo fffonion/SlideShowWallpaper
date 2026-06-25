@@ -22,8 +22,45 @@ public static class ImagePreviewCollectionUpdater
         IEnumerable<ImagePreviewItem> reusableItems,
         Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader)
     {
+        Apply(items, images, reusableItems, thumbnailLoader, firstPath: null);
+    }
+
+    public static void ApplyWithFirstItem(
+        ObservableCollection<ImagePreviewItem> items,
+        IReadOnlyList<ImageMetadata> images,
+        IEnumerable<ImagePreviewItem> reusableItems,
+        Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader,
+        string? firstPath)
+    {
+        Apply(items, images, reusableItems, thumbnailLoader, firstPath);
+    }
+
+    public static bool MoveToFront(ObservableCollection<ImagePreviewItem> items, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        int index = IndexOf(items, path);
+        if (index <= 0)
+        {
+            return index == 0;
+        }
+
+        items.Move(index, 0);
+        return true;
+    }
+
+    private static void Apply(
+        ObservableCollection<ImagePreviewItem> items,
+        IReadOnlyList<ImageMetadata> images,
+        IEnumerable<ImagePreviewItem> reusableItems,
+        Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader,
+        string? firstPath)
+    {
         var existing = reusableItems.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
-        ImagePreviewItem[] targetItems = images
+        ImagePreviewItem[] targetItems = MoveFirst(images, firstPath)
             .Select(image => existing.TryGetValue(image.Path, out ImagePreviewItem? item) ? item : CreatePreviewItem(image, thumbnailLoader))
             .ToArray();
 
@@ -76,5 +113,18 @@ public static class ImagePreviewCollectionUpdater
     private static ImagePreviewItem CreatePreviewItem(ImageMetadata image, Func<ImageMetadata, CancellationToken, Task<string>>? thumbnailLoader)
     {
         return thumbnailLoader is null ? new ImagePreviewItem(image) : new ImagePreviewItem(image, thumbnailLoader);
+    }
+
+    private static IEnumerable<ImageMetadata> MoveFirst(IReadOnlyList<ImageMetadata> images, string? firstPath)
+    {
+        if (string.IsNullOrWhiteSpace(firstPath))
+        {
+            return images;
+        }
+
+        ImageMetadata? first = images.FirstOrDefault(image => string.Equals(image.Path, firstPath, StringComparison.OrdinalIgnoreCase));
+        return first is null
+            ? images
+            : images.Where(image => !string.Equals(image.Path, firstPath, StringComparison.OrdinalIgnoreCase)).Prepend(first);
     }
 }
