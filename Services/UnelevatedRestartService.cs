@@ -36,30 +36,55 @@ public sealed class UnelevatedRestartService
             return UnelevatedRestartResult.Failed;
         }
 
-        bool started = TryStart(processPath, BuildDemotedArguments(arguments));
-        return started ? UnelevatedRestartResult.Restarted : UnelevatedRestartResult.Failed;
+        string brokerPipeName = HardwareMonitorBrokerProtocol.CreatePipeName();
+        PendingDemotedProcess? demotedProcess = TryStart(processPath, BuildDemotedArguments(arguments, brokerPipeName));
+        if (demotedProcess is null)
+        {
+            return UnelevatedRestartResult.Failed;
+        }
+
+        using (demotedProcess)
+        {
+            Process? brokerProcess = HardwareMonitorBrokerClient.StartBrokerProcess(
+                brokerPipeName,
+                demotedProcess.ProcessId,
+                requestElevation: false);
+            if (brokerProcess is null)
+            {
+                demotedProcess.Terminate();
+                AppLog.Write("Demoted main process was created, but the elevated hardware broker could not be started.");
+                return UnelevatedRestartResult.Failed;
+            }
+
+            brokerProcess.Dispose();
+            if (!demotedProcess.Resume())
+            {
+                return UnelevatedRestartResult.Failed;
+            }
+        }
+
+        return UnelevatedRestartResult.Restarted;
     }
 
-    public static string BuildDemotedArguments(IEnumerable<string> arguments)
+    public static string BuildDemotedArguments(IEnumerable<string> arguments, string? brokerPipeName = null)
     {
-        string[] sourceArguments = arguments.ToArray();
-        return string.Join(
-            " ",
-            sourceArguments
-                .Where(argument => !string.Equals(argument, AdministratorRestartService.RestartArgument, StringComparison.OrdinalIgnoreCase))
-                .Where(argument => !string.Equals(argument, NoDemoteArgument, StringComparison.OrdinalIgnoreCase))
-                .Where(argument => !string.Equals(argument, LaunchOptions.ElevatedBrokerArgument, StringComparison.OrdinalIgnoreCase))
-                .Append(LaunchOptions.ElevatedBrokerArgument)
-                .Append(NoDemoteArgument)
-                .Select(QuoteArgument));
+        List<string> demotedArguments = CreateDemotedArguments(arguments).ToList();
+        if (!string.IsNullOrWhiteSpace(brokerPipeName))
+        {
+            demotedArguments.Add(LaunchOptions.HardwareBrokerPipeArgument);
+            demotedArguments.Add(brokerPipeName);
+        }
+
+        demotedArguments.Add(NoDemoteArgument);
+        return string.Join(" ", demotedArguments.Select(QuoteArgument));
     }
 
-    private static bool TryStart(string processPath, string arguments)
+    private static PendingDemotedProcess? TryStart(string processPath, string arguments)
     {
-        return TryStartWithLinkedToken(processPath, arguments) || TryStartWithShellToken(processPath, arguments);
+        return TryStartWithLinkedToken(processPath, arguments) ?? TryStartWithShellToken(processPath, arguments);
     }
 
-    private static bool TryStartWithLinkedToken(string processPath, string arguments)
+    private static PendingDemotedProcess? TryStartWithLinkedToken(string processPath, string arguments)
     {
         IntPtr processToken = IntPtr.Zero;
         IntPtr linkedToken = IntPtr.Zero;
@@ -69,7 +94,8 @@ public sealed class UnelevatedRestartService
             using Process currentProcess = Process.GetCurrentProcess();
             if (!NativeMethods.OpenProcessToken(currentProcess.Handle, NativeMethods.TOKEN_QUERY, out processToken))
             {
-                return LogWin32Failure("OpenProcessToken(current)");
+                LogWin32Failure("OpenProcessToken(current)");
+                return null;
             }
 
             if (!NativeMethods.GetTokenInformation(
@@ -79,13 +105,15 @@ public sealed class UnelevatedRestartService
                 System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.TOKEN_LINKED_TOKEN>(),
                 out _))
             {
-                return LogWin32Failure("GetTokenInformation(TokenLinkedToken)");
+                LogWin32Failure("GetTokenInformation(TokenLinkedToken)");
+                return null;
             }
 
             linkedToken = linkedTokenInfo.LinkedToken;
             if (!NativeMethods.DuplicateTokenEx(linkedToken, PrimaryTokenAccess, IntPtr.Zero, NativeMethods.SecurityImpersonation, tokenType: 1, out primaryToken))
             {
-                return LogWin32Failure("DuplicateTokenEx(linked)");
+                LogWin32Failure("DuplicateTokenEx(linked)");
+                return null;
             }
 
             return TryCreateProcessWithToken(primaryToken, processPath, arguments, "CreateProcessWithTokenW(linked)");
@@ -93,7 +121,7 @@ public sealed class UnelevatedRestartService
         catch (Exception exception)
         {
             AppLog.Write(exception);
-            return false;
+            return null;
         }
         finally
         {
@@ -103,20 +131,20 @@ public sealed class UnelevatedRestartService
         }
     }
 
-    private static bool TryStartWithShellToken(string processPath, string arguments)
+    private static PendingDemotedProcess? TryStartWithShellToken(string processPath, string arguments)
     {
         IntPtr shellWindow = NativeMethods.GetShellWindow();
         if (shellWindow == IntPtr.Zero)
         {
             AppLog.Write("Cannot restart without elevation because the shell window is unavailable.");
-            return false;
+            return null;
         }
 
         _ = NativeMethods.GetWindowThreadProcessId(shellWindow, out uint shellProcessId);
         if (shellProcessId == 0)
         {
             AppLog.Write("Cannot restart without elevation because the shell process id is unavailable.");
-            return false;
+            return null;
         }
 
         IntPtr shellProcess = IntPtr.Zero;
@@ -127,17 +155,20 @@ public sealed class UnelevatedRestartService
             shellProcess = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_LIMITED_INFORMATION, inheritHandle: false, shellProcessId);
             if (shellProcess == IntPtr.Zero)
             {
-                return LogWin32Failure("OpenProcess(shell)");
+                LogWin32Failure("OpenProcess(shell)");
+                return null;
             }
 
             if (!NativeMethods.OpenProcessToken(shellProcess, NativeMethods.TOKEN_DUPLICATE | NativeMethods.TOKEN_QUERY, out shellToken))
             {
-                return LogWin32Failure("OpenProcessToken(shell)");
+                LogWin32Failure("OpenProcessToken(shell)");
+                return null;
             }
 
             if (!NativeMethods.DuplicateTokenEx(shellToken, PrimaryTokenAccess, IntPtr.Zero, NativeMethods.SecurityImpersonation, tokenType: 1, out primaryToken))
             {
-                return LogWin32Failure("DuplicateTokenEx(shell)");
+                LogWin32Failure("DuplicateTokenEx(shell)");
+                return null;
             }
 
             return TryCreateProcessWithToken(primaryToken, processPath, arguments, "CreateProcessWithTokenW(shell)");
@@ -145,7 +176,7 @@ public sealed class UnelevatedRestartService
         catch (Exception exception)
         {
             AppLog.Write(exception);
-            return false;
+            return null;
         }
         finally
         {
@@ -155,7 +186,7 @@ public sealed class UnelevatedRestartService
         }
     }
 
-    private static bool TryCreateProcessWithToken(IntPtr primaryToken, string processPath, string arguments, string operation)
+    private static PendingDemotedProcess? TryCreateProcessWithToken(IntPtr primaryToken, string processPath, string arguments, string operation)
     {
         var startupInfo = new NativeMethods.STARTUPINFO
         {
@@ -168,18 +199,43 @@ public sealed class UnelevatedRestartService
             logonFlags: 0,
             processPath,
             commandLine,
-            NativeMethods.CREATE_UNICODE_ENVIRONMENT,
+            NativeMethods.CREATE_UNICODE_ENVIRONMENT | NativeMethods.CREATE_SUSPENDED,
             IntPtr.Zero,
             workingDirectory,
             ref startupInfo,
             out NativeMethods.PROCESS_INFORMATION processInformation))
         {
-            return LogWin32Failure(operation);
+            LogWin32Failure(operation);
+            return null;
         }
 
-        NativeMethods.CloseHandle(processInformation.hThread);
-        NativeMethods.CloseHandle(processInformation.hProcess);
-        return true;
+        return new PendingDemotedProcess(
+            processInformation.dwProcessId,
+            processInformation.hProcess,
+            processInformation.hThread);
+    }
+
+    private static IEnumerable<string> CreateDemotedArguments(IEnumerable<string> arguments)
+    {
+        string[] sourceArguments = arguments.ToArray();
+        for (int index = 0; index < sourceArguments.Length; index++)
+        {
+            string argument = sourceArguments[index];
+            if (string.Equals(argument, AdministratorRestartService.RestartArgument, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(argument, NoDemoteArgument, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(argument, LaunchOptions.ElevatedBrokerArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (string.Equals(argument, LaunchOptions.HardwareBrokerPipeArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                index++;
+                continue;
+            }
+
+            yield return argument;
+        }
     }
 
     private static string QuoteArgument(string argument)
@@ -187,11 +243,10 @@ public sealed class UnelevatedRestartService
         return $"\"{argument.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
     }
 
-    private static bool LogWin32Failure(string operation)
+    private static void LogWin32Failure(string operation)
     {
         int error = Marshal.GetLastWin32Error();
         AppLog.Write($"{operation} failed with Win32 error {error}: {new Win32Exception(error).Message}");
-        return false;
     }
 
     private static void CloseIfNeeded(IntPtr handle)
@@ -199,6 +254,48 @@ public sealed class UnelevatedRestartService
         if (handle != IntPtr.Zero)
         {
             NativeMethods.CloseHandle(handle);
+        }
+    }
+
+    private sealed class PendingDemotedProcess(int processId, IntPtr processHandle, IntPtr threadHandle) : IDisposable
+    {
+        private IntPtr _processHandle = processHandle;
+        private IntPtr _threadHandle = threadHandle;
+
+        public int ProcessId { get; } = processId;
+
+        public bool Resume()
+        {
+            if (_threadHandle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            uint result = NativeMethods.ResumeThread(_threadHandle);
+            if (result == uint.MaxValue)
+            {
+                LogWin32Failure("ResumeThread(demoted)");
+                Terminate();
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Terminate()
+        {
+            if (_processHandle != IntPtr.Zero)
+            {
+                NativeMethods.TerminateProcess(_processHandle, 1);
+            }
+        }
+
+        public void Dispose()
+        {
+            CloseIfNeeded(_threadHandle);
+            CloseIfNeeded(_processHandle);
+            _threadHandle = IntPtr.Zero;
+            _processHandle = IntPtr.Zero;
         }
     }
 }

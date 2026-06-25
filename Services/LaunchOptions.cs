@@ -5,9 +5,11 @@ public sealed record LaunchOptions(
     bool AllowMultipleInstances,
     bool DisableCloseToTray,
     bool SkipElevationDemotion,
-    bool StartHardwareBrokerElevated)
+    bool StartHardwareBrokerElevated,
+    string HardwareBrokerPipeName)
 {
     public const string ElevatedBrokerArgument = "/elevated-broker";
+    public const string HardwareBrokerPipeArgument = "/hardware-broker-pipe";
 
     public static LaunchOptions FromArguments(IEnumerable<string> arguments)
     {
@@ -16,11 +18,13 @@ public sealed record LaunchOptions(
         bool restartElevated = normalizedArguments.Any(argument => string.Equals(argument, AdministratorRestartService.RestartArgument, StringComparison.OrdinalIgnoreCase));
         bool noDemote = normalizedArguments.Any(argument => string.Equals(argument, UnelevatedRestartService.NoDemoteArgument, StringComparison.OrdinalIgnoreCase));
         bool elevatedBroker = normalizedArguments.Any(argument => string.Equals(argument, ElevatedBrokerArgument, StringComparison.OrdinalIgnoreCase));
+        HardwareMonitorBrokerProtocol.TryGetOption(normalizedArguments, HardwareBrokerPipeArgument, out string brokerPipeName);
         return new LaunchOptions(
             normalizedArguments.Any(argument => string.Equals(argument, "/q", StringComparison.OrdinalIgnoreCase)),
             allowMultipleInstances || restartElevated || noDemote,
             allowMultipleInstances,
             noDemote,
-            elevatedBroker);
+            elevatedBroker,
+            brokerPipeName);
     }
 }

@@ -26,6 +26,7 @@ public static partial class NativeMethods
     internal const uint LWA_ALPHA = 0x00000002;
     internal const uint LWA_COLORKEY = 0x00000001;
     internal const int TokenLinkedToken = 19;
+    internal const uint CREATE_SUSPENDED = 0x00000004;
     internal const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     internal const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     internal const uint TOKEN_ASSIGN_PRIMARY = 0x0001;
@@ -116,6 +117,12 @@ public static partial class NativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, uint processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint ResumeThread(IntPtr hThread);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool TerminateProcess(IntPtr hProcess, uint exitCode);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     internal static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);

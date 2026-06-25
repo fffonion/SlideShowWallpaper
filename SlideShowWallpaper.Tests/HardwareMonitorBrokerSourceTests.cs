@@ -47,7 +47,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("string.IsNullOrWhiteSpace(brokerPath)", clientSource);
         Assert.Contains("FileName = brokerPath", clientSource);
         Assert.Contains("WorkingDirectory = Path.GetDirectoryName(brokerPath)", clientSource);
-        Assert.Contains("if (_startElevated && !CurrentProcessPrivilege.IsElevated())", clientSource);
+        Assert.Contains("if (requestElevation && !CurrentProcessPrivilege.IsElevated())", clientSource);
         Assert.Contains("startInfo.Verb = \"runas\";", clientSource);
     }
 
@@ -57,7 +57,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         string root = FindProjectRoot();
         string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
 
-        int processStartIndex = clientSource.IndexOf("_brokerProcess = Process.Start(startInfo);", StringComparison.Ordinal);
+        int processStartIndex = clientSource.IndexOf("_brokerProcess = StartBrokerProcess(", StringComparison.Ordinal);
         int eventIndex = clientSource.IndexOf("BrokerProcessStarted?.Invoke", processStartIndex, StringComparison.Ordinal);
 
         Assert.Contains("public event EventHandler? BrokerProcessStarted;", clientSource);
@@ -216,10 +216,24 @@ public sealed class HardwareMonitorBrokerSourceTests
 
         Assert.Contains("private string[] _lastSnapshotSensorIds = [];", clientSource);
         Assert.Contains("private bool _hasSnapshotSensorIds;", clientSource);
+        Assert.Contains("!_usesExternalBroker", clientSource);
         Assert.Contains("!normalizedSensorIds.SequenceEqual(_lastSnapshotSensorIds, StringComparer.OrdinalIgnoreCase)", clientSource);
         Assert.Contains("TrySendShutdown();", clientSource);
         Assert.Contains("DisposeBrokerProcess();", clientSource);
         Assert.Contains("_lastSnapshotSensorIds = normalizedSensorIds;", clientSource);
+    }
+
+    [Fact]
+    public void BrokerClient_CanAdoptPrestartedBrokerPipe()
+    {
+        string root = FindProjectRoot();
+        string clientSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorBrokerClient.cs"));
+
+        Assert.Contains("public void UseBrokerPipe(string brokerPipeName)", clientSource);
+        Assert.Contains("_usesExternalBroker = true;", clientSource);
+        Assert.Contains("if (_usesExternalBroker)", clientSource);
+        Assert.Contains("return true;", clientSource);
+        Assert.Contains("if (_usesExternalBroker || _brokerProcess is { HasExited: false })", clientSource);
     }
 
     [Fact]

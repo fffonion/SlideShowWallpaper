@@ -10,14 +10,75 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(8);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly object _syncRoot = new();
-    private readonly string _pipeName = HardwareMonitorBrokerProtocol.CreatePipeName();
     private Process? _brokerProcess;
+    private string _pipeName;
     private string[] _lastSnapshotSensorIds = [];
     private bool _hasSnapshotSensorIds;
     private bool _startElevated;
+    private bool _usesExternalBroker;
     private bool _disposed;
 
+    public HardwareMonitorBrokerClient()
+        : this(HardwareMonitorBrokerProtocol.CreatePipeName())
+    {
+    }
+
+    internal HardwareMonitorBrokerClient(string pipeName)
+    {
+        _pipeName = string.IsNullOrWhiteSpace(pipeName)
+            ? HardwareMonitorBrokerProtocol.CreatePipeName()
+            : pipeName;
+    }
+
     public event EventHandler? BrokerProcessStarted;
+
+    public static Process? StartBrokerProcess(string pipeName, int parentProcessId, bool requestElevation)
+    {
+        string? processPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(processPath))
+        {
+            return null;
+        }
+
+        string brokerPath = HardwareBrokerExecutableResolver.GetBrokerExecutablePath(processPath);
+        if (string.IsNullOrWhiteSpace(brokerPath))
+        {
+            AppLog.Write("Hardware monitor broker executable is unavailable.");
+            return null;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = brokerPath,
+            Arguments = BuildBrokerArguments(pipeName, parentProcessId),
+            WorkingDirectory = Path.GetDirectoryName(brokerPath) ?? AppContext.BaseDirectory,
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+        };
+        if (requestElevation && !CurrentProcessPrivilege.IsElevated())
+        {
+            startInfo.Verb = "runas";
+        }
+
+        return Process.Start(startInfo);
+    }
+
+    public void UseBrokerPipe(string brokerPipeName)
+    {
+        if (string.IsNullOrWhiteSpace(brokerPipeName))
+        {
+            return;
+        }
+
+        lock (_syncRoot)
+        {
+            DisposeBrokerProcess();
+            _pipeName = brokerPipeName;
+            _usesExternalBroker = true;
+            _lastSnapshotSensorIds = [];
+            _hasSnapshotSensorIds = false;
+        }
+    }
 
     public void SetStartElevated(bool startElevated)
     {
@@ -41,6 +102,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         {
             TrySendShutdown();
             DisposeBrokerProcess();
+            _usesExternalBroker = false;
             _lastSnapshotSensorIds = [];
             _hasSnapshotSensorIds = false;
         }
@@ -102,6 +164,11 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
 
     private bool EnsureBroker(bool forceRestart)
     {
+        if (_usesExternalBroker)
+        {
+            return true;
+        }
+
         if (forceRestart)
         {
             DisposeBrokerProcess();
@@ -112,33 +179,10 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
             return true;
         }
 
-        string? processPath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(processPath))
-        {
-            return false;
-        }
-
-        string brokerPath = HardwareBrokerExecutableResolver.GetBrokerExecutablePath(processPath);
-        if (string.IsNullOrWhiteSpace(brokerPath))
-        {
-            AppLog.Write("Hardware monitor broker executable is unavailable.");
-            return false;
-        }
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = brokerPath,
-            Arguments = BuildBrokerArguments(_pipeName),
-            WorkingDirectory = Path.GetDirectoryName(brokerPath) ?? AppContext.BaseDirectory,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Hidden,
-        };
-        if (_startElevated && !CurrentProcessPrivilege.IsElevated())
-        {
-            startInfo.Verb = "runas";
-        }
-
-        _brokerProcess = Process.Start(startInfo);
+        _brokerProcess = StartBrokerProcess(
+            _pipeName,
+            Environment.ProcessId,
+            _startElevated && !CurrentProcessPrivilege.IsElevated());
         if (_brokerProcess is null)
         {
             return false;
@@ -148,7 +192,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
         return true;
     }
 
-    private static string BuildBrokerArguments(string pipeName)
+    private static string BuildBrokerArguments(string pipeName, int parentProcessId)
     {
         return string.Join(
             " ",
@@ -157,7 +201,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
                 QuoteArgument(HardwareMonitorBrokerProtocol.PipeArgument),
                 QuoteArgument(pipeName),
                 QuoteArgument(HardwareMonitorBrokerProtocol.ParentArgument),
-                QuoteArgument(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                QuoteArgument(parentProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture)),
             ]);
     }
 
@@ -185,7 +229,7 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     {
         try
         {
-            if (_brokerProcess is { HasExited: false })
+            if (_usesExternalBroker || _brokerProcess is { HasExited: false })
             {
                 _ = SendRequest(HardwareMonitorBrokerProtocol.ShutdownCommand);
             }
@@ -239,7 +283,9 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
     private void RestartBrokerWhenSensorFilterChanged(IReadOnlyList<string> sensorIds)
     {
         string[] normalizedSensorIds = sensorIds.ToArray();
-        if (_hasSnapshotSensorIds && !normalizedSensorIds.SequenceEqual(_lastSnapshotSensorIds, StringComparer.OrdinalIgnoreCase))
+        if (!_usesExternalBroker
+            && _hasSnapshotSensorIds
+            && !normalizedSensorIds.SequenceEqual(_lastSnapshotSensorIds, StringComparer.OrdinalIgnoreCase))
         {
             TrySendShutdown();
             DisposeBrokerProcess();

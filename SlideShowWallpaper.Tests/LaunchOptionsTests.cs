@@ -63,6 +63,18 @@ public sealed class LaunchOptionsTests
     }
 
     [Fact]
+    public void FromArguments_WithHardwareBrokerPipe_AdoptsExistingBrokerPipe()
+    {
+        LaunchOptions options = LaunchOptions.FromArguments([
+            LaunchOptions.HardwareBrokerPipeArgument,
+            "pipe-name",
+        ]);
+
+        Assert.Equal("pipe-name", options.HardwareBrokerPipeName);
+        Assert.False(options.StartHardwareBrokerElevated);
+    }
+
+    [Fact]
     public void FromArguments_WithNoDemoteSwitch_SkipsDemotionWithoutDisablingCloseToTray()
     {
         LaunchOptions options = LaunchOptions.FromArguments([UnelevatedRestartService.NoDemoteArgument]);

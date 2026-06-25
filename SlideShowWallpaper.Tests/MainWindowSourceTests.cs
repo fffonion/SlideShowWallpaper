@@ -128,15 +128,17 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void ProgramMain_AllowsDemotedProcessToStartWinUiAndElevatedBroker()
+    public void ProgramMain_AllowsDemotedProcessToStartWinUiAndAdoptBrokerPipe()
     {
         Services.LaunchOptions options = Services.LaunchOptions.FromArguments([
-            Services.LaunchOptions.ElevatedBrokerArgument,
+            Services.LaunchOptions.HardwareBrokerPipeArgument,
+            "pipe-name",
             Services.UnelevatedRestartService.NoDemoteArgument,
         ]);
 
         Assert.True(options.SkipElevationDemotion);
-        Assert.True(options.StartHardwareBrokerElevated);
+        Assert.False(options.StartHardwareBrokerElevated);
+        Assert.Equal("pipe-name", options.HardwareBrokerPipeName);
         Assert.True(options.AllowMultipleInstances);
     }
 
@@ -181,11 +183,13 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void ShowExistingInstanceWindow", StringComparison.Ordinal)];
 
         int optionsIndex = method.IndexOf("LaunchOptions.FromArguments", StringComparison.Ordinal);
+        int pipeIndex = method.IndexOf("_hardwareMonitorService.UseBrokerPipe(launchOptions.HardwareBrokerPipeName);", StringComparison.Ordinal);
         int elevationIndex = method.IndexOf("_hardwareMonitorService.SetBrokerElevation(launchOptions.StartHardwareBrokerElevated);", StringComparison.Ordinal);
         int coordinatorIndex = method.IndexOf("new WallpaperPlaybackCoordinator", StringComparison.Ordinal);
 
         Assert.True(optionsIndex >= 0);
-        Assert.True(elevationIndex > optionsIndex);
+        Assert.True(pipeIndex > optionsIndex);
+        Assert.True(elevationIndex > pipeIndex);
         Assert.True(coordinatorIndex > elevationIndex);
     }
 
@@ -1178,6 +1182,8 @@ public sealed class MainWindowSourceTests
         Assert.Contains("_brokerClient.GetSnapshot(config)", source);
         Assert.Contains("public bool StartBroker()", clientSource);
         Assert.Contains("public void StopBroker()", clientSource);
+        Assert.Contains("public void UseBrokerPipe(string brokerPipeName)", source);
+        Assert.Contains("public void UseBrokerPipe(string brokerPipeName)", clientSource);
         Assert.Contains("public void SetBrokerElevation(bool startElevated)", source);
         Assert.Contains("public void SetStartElevated(bool startElevated)", clientSource);
         Assert.Contains("startInfo.Verb = \"runas\";", clientSource);

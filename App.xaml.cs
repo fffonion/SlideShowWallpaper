@@ -41,6 +41,7 @@ public partial class App : Application
         {
             string[] commandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
             LaunchOptions launchOptions = LaunchOptions.FromArguments(commandLineArguments);
+            _hardwareMonitorService.UseBrokerPipe(launchOptions.HardwareBrokerPipeName);
             _hardwareMonitorService.SetBrokerElevation(launchOptions.StartHardwareBrokerElevated);
             AppLog.Write("Launch start");
             AppTempPaths.Cleanup();
