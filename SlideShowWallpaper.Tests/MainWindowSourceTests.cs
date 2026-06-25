@@ -128,6 +128,19 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void ProgramMain_AllowsDemotedProcessToStartWinUiAndElevatedBroker()
+    {
+        Services.LaunchOptions options = Services.LaunchOptions.FromArguments([
+            Services.LaunchOptions.ElevatedBrokerArgument,
+            Services.UnelevatedRestartService.NoDemoteArgument,
+        ]);
+
+        Assert.True(options.SkipElevationDemotion);
+        Assert.True(options.StartHardwareBrokerElevated);
+        Assert.True(options.AllowMultipleInstances);
+    }
+
+    [Fact]
     public void RestartHardwareBrokerAsAdministrator_RestartsOnlyHardwareBroker()
     {
         string root = FindProjectRoot();

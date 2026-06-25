@@ -43,15 +43,13 @@ public sealed class UnelevatedRestartService
     public static string BuildDemotedArguments(IEnumerable<string> arguments)
     {
         string[] sourceArguments = arguments.ToArray();
-        bool requestElevatedBroker = sourceArguments.Any(argument => string.Equals(argument, AdministratorRestartService.RestartArgument, StringComparison.OrdinalIgnoreCase))
-            || sourceArguments.Any(argument => string.Equals(argument, LaunchOptions.ElevatedBrokerArgument, StringComparison.OrdinalIgnoreCase));
         return string.Join(
             " ",
             sourceArguments
                 .Where(argument => !string.Equals(argument, AdministratorRestartService.RestartArgument, StringComparison.OrdinalIgnoreCase))
                 .Where(argument => !string.Equals(argument, NoDemoteArgument, StringComparison.OrdinalIgnoreCase))
                 .Where(argument => !string.Equals(argument, LaunchOptions.ElevatedBrokerArgument, StringComparison.OrdinalIgnoreCase))
-                .Concat(requestElevatedBroker ? [LaunchOptions.ElevatedBrokerArgument] : [])
+                .Append(LaunchOptions.ElevatedBrokerArgument)
                 .Append(NoDemoteArgument)
                 .Select(QuoteArgument));
     }

@@ -48,13 +48,26 @@ public sealed class UnelevatedRestartServiceTests
     }
 
     [Fact]
-    public void BuildDemotedArguments_DoesNotDuplicateNoDemote()
+    public void BuildDemotedArguments_AlwaysRequestsElevatedBrokerAfterMainProcessDemotion()
+    {
+        string arguments = UnelevatedRestartService.BuildDemotedArguments([
+            "/q",
+        ]);
+
+        Assert.Contains($"\"{LaunchOptions.ElevatedBrokerArgument}\"", arguments);
+        Assert.Contains($"\"{UnelevatedRestartService.NoDemoteArgument}\"", arguments);
+    }
+
+    [Fact]
+    public void BuildDemotedArguments_DoesNotDuplicateNoDemoteAndStillRequestsElevatedBroker()
     {
         string arguments = UnelevatedRestartService.BuildDemotedArguments([
             UnelevatedRestartService.NoDemoteArgument,
         ]);
 
-        Assert.Equal($"\"{UnelevatedRestartService.NoDemoteArgument}\"", arguments);
+        Assert.Equal(
+            $"\"{LaunchOptions.ElevatedBrokerArgument}\" \"{UnelevatedRestartService.NoDemoteArgument}\"",
+            arguments);
     }
 
     [Fact]
