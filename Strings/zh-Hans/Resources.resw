@@ -38,6 +38,9 @@
   <data name="UpdateCheckFailedFormat" xml:space="preserve"><value>检查更新失败：{0}</value></data>
   <data name="OpenReleasePage" xml:space="preserve"><value>打开发布页面</value></data>
   <data name="DownloadUpdate" xml:space="preserve"><value>下载更新</value></data>
+  <data name="UpdateDownloadDownloading" xml:space="preserve"><value>正在下载更新...</value></data>
+  <data name="UpdateDownloadRestarting" xml:space="preserve"><value>更新已下载，正在重启...</value></data>
+  <data name="UpdateDownloadFailedFormat" xml:space="preserve"><value>下载更新失败：{0}</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>跟随系统</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>浅色</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>深色</value></data>

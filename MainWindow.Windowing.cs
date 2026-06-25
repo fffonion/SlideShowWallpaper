@@ -320,5 +320,6 @@ public sealed partial class MainWindow
         _updateCheckCancellation?.Cancel();
         _updateCheckCancellation?.Dispose();
         _updateCheckService.Dispose();
+        _updateInstallerService.Dispose();
     }
 }

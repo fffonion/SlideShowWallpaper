@@ -38,6 +38,9 @@
   <data name="UpdateCheckFailedFormat" xml:space="preserve"><value>Update check failed: {0}</value></data>
   <data name="OpenReleasePage" xml:space="preserve"><value>Open release page</value></data>
   <data name="DownloadUpdate" xml:space="preserve"><value>Download update</value></data>
+  <data name="UpdateDownloadDownloading" xml:space="preserve"><value>Downloading update...</value></data>
+  <data name="UpdateDownloadRestarting" xml:space="preserve"><value>Update downloaded. Restarting...</value></data>
+  <data name="UpdateDownloadFailedFormat" xml:space="preserve"><value>Update download failed: {0}</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>Follow system</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>Light</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>Dark</value></data>

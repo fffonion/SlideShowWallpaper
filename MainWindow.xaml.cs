@@ -117,6 +117,7 @@ public sealed partial class MainWindow : Window
     private readonly FolderPickerService _folderPickerService;
     private readonly ThumbnailCacheService _thumbnailCacheService = new();
     private readonly GitHubReleaseUpdateService _updateCheckService = new();
+    private readonly AppUpdateInstallerService _updateInstallerService = new();
     private readonly TrayIconService _trayIconService;
     private readonly ImageOrderService _imageOrderService;
     private readonly HardwareMonitorService _hardwareMonitorService;
@@ -137,7 +138,6 @@ public sealed partial class MainWindow : Window
     private TextBlock? _updateCheckStatusText;
     private ProgressRing? _updateCheckProgress;
     private Button? _updateCheckButton;
-    private Button? _updateReleaseButton;
     private Button? _updateDownloadButton;
     private CancellationTokenSource? _updateCheckCancellation;
     private ContentControl? _hardwareEditorPreviewHost;

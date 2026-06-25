@@ -286,11 +286,18 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("CreateUpdateCheckControls()", method);
         Assert.Contains("private readonly GitHubReleaseUpdateService _updateCheckService = new();", windowSource);
+        Assert.Contains("private readonly AppUpdateInstallerService _updateInstallerService = new();", windowSource);
         Assert.Contains("private async Task CheckForUpdatesAsync()", settingsSource);
         Assert.Contains("AppVersionService.GetCurrentVersion()", settingsSource);
         Assert.Contains("_updateCheckService.CheckForUpdateAsync", settingsSource);
-        Assert.Contains("OpenExternalUpdateUri", settingsSource);
+        Assert.Contains("DownloadAndInstallUpdateAsync", settingsSource);
+        Assert.Contains("_updateInstallerService.PrepareUpdateAsync", settingsSource);
+        Assert.Contains("_updateInstallerService.StartUpdater", settingsSource);
+        Assert.Contains("_updateCheckButton.Visibility = Visibility.Collapsed", settingsSource);
+        Assert.DoesNotContain("_updateReleaseButton", settingsSource);
+        Assert.DoesNotContain("OpenExternalUpdateUri", settingsSource);
         Assert.Contains("_updateCheckService.Dispose();", windowingSource);
+        Assert.Contains("_updateInstallerService.Dispose();", windowingSource);
     }
 
     [Fact]

@@ -38,6 +38,9 @@
   <data name="UpdateCheckFailedFormat" xml:space="preserve"><value>更新の確認に失敗しました: {0}</value></data>
   <data name="OpenReleasePage" xml:space="preserve"><value>リリースページを開く</value></data>
   <data name="DownloadUpdate" xml:space="preserve"><value>更新をダウンロード</value></data>
+  <data name="UpdateDownloadDownloading" xml:space="preserve"><value>更新をダウンロードしています...</value></data>
+  <data name="UpdateDownloadRestarting" xml:space="preserve"><value>更新をダウンロードしました。再起動しています...</value></data>
+  <data name="UpdateDownloadFailedFormat" xml:space="preserve"><value>更新のダウンロードに失敗しました: {0}</value></data>
   <data name="ThemeSystem" xml:space="preserve"><value>システムに合わせる</value></data>
   <data name="ThemeLight" xml:space="preserve"><value>ライト</value></data>
   <data name="ThemeDark" xml:space="preserve"><value>ダーク</value></data>

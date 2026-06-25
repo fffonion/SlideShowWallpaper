@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -177,22 +176,13 @@ public sealed partial class MainWindow
             Orientation = Orientation.Horizontal,
             Spacing = 8,
         };
-        _updateReleaseButton = new Button
-        {
-            Content = LocalizedStrings.Get("OpenReleasePage"),
-            Visibility = Visibility.Collapsed,
-        };
-        AutomationProperties.SetName(_updateReleaseButton, LocalizedStrings.Get("OpenReleasePage"));
-        _updateReleaseButton.Click += (_, _) => OpenExternalUpdateUri(_updateReleaseButton.Tag as string);
-        actionRow.Children.Add(_updateReleaseButton);
-
         _updateDownloadButton = new Button
         {
             Content = LocalizedStrings.Get("DownloadUpdate"),
             Visibility = Visibility.Collapsed,
         };
         AutomationProperties.SetName(_updateDownloadButton, LocalizedStrings.Get("DownloadUpdate"));
-        _updateDownloadButton.Click += (_, _) => OpenExternalUpdateUri(_updateDownloadButton.Tag as string);
+        _updateDownloadButton.Click += async (_, _) => await DownloadAndInstallUpdateAsync(_updateDownloadButton.Tag as string);
         actionRow.Children.Add(_updateDownloadButton);
         panel.Children.Add(actionRow);
 
@@ -206,7 +196,7 @@ public sealed partial class MainWindow
         _updateCheckCancellation = new CancellationTokenSource();
         CancellationToken cancellationToken = _updateCheckCancellation.Token;
         SetUpdateCheckBusy(true);
-        HideUpdateLinks();
+        ResetUpdateActions();
 
         Version currentVersion = AppVersionService.GetCurrentVersion();
         try
@@ -242,12 +232,14 @@ public sealed partial class MainWindow
         {
             case UpdateCheckStatus.UpdateAvailable:
                 _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateAvailableFormat", result.LatestTag, result.CurrentVersion);
-                ShowUpdateLinks(result);
+                ShowUpdateDownload(result);
                 break;
             case UpdateCheckStatus.UpToDate:
+                ResetUpdateActions();
                 _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateUpToDateFormat", result.CurrentVersion);
                 break;
             default:
+                ResetUpdateActions();
                 _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateCheckFailedFormat", result.ErrorMessage);
                 break;
         }
@@ -258,6 +250,11 @@ public sealed partial class MainWindow
         if (_updateCheckButton is not null)
         {
             _updateCheckButton.IsEnabled = !isBusy;
+        }
+
+        if (_updateDownloadButton is not null)
+        {
+            _updateDownloadButton.IsEnabled = !isBusy;
         }
 
         if (_updateCheckProgress is not null)
@@ -272,16 +269,22 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ShowUpdateLinks(UpdateCheckResult result)
+    private void ShowUpdateDownload(UpdateCheckResult result)
     {
-        SetUpdateLink(_updateReleaseButton, result.ReleaseUrl);
         SetUpdateLink(_updateDownloadButton, result.DownloadUrl);
+        if (_updateCheckButton is not null && !string.IsNullOrWhiteSpace(result.DownloadUrl))
+        {
+            _updateCheckButton.Visibility = Visibility.Collapsed;
+        }
     }
 
-    private void HideUpdateLinks()
+    private void ResetUpdateActions()
     {
-        SetUpdateLink(_updateReleaseButton, string.Empty);
         SetUpdateLink(_updateDownloadButton, string.Empty);
+        if (_updateCheckButton is not null)
+        {
+            _updateCheckButton.Visibility = Visibility.Visible;
+        }
     }
 
     private static void SetUpdateLink(Button? button, string url)
@@ -295,24 +298,56 @@ public sealed partial class MainWindow
         button.Visibility = string.IsNullOrWhiteSpace(url) ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private static void OpenExternalUpdateUri(string? url)
+    private async Task DownloadAndInstallUpdateAsync(string? url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
         {
             return;
         }
 
+        _updateCheckCancellation?.Cancel();
+        _updateCheckCancellation?.Dispose();
+        _updateCheckCancellation = new CancellationTokenSource();
+        CancellationToken cancellationToken = _updateCheckCancellation.Token;
+        SetUpdateCheckBusy(true);
+        if (_updateCheckStatusText is not null)
+        {
+            _updateCheckStatusText.Text = LocalizedStrings.Get("UpdateDownloadDownloading");
+        }
+
         try
         {
-            using Process? process = Process.Start(new ProcessStartInfo
+            AppUpdateInstallPlan plan = await _updateInstallerService.PrepareUpdateAsync(uri, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
             {
-                FileName = uri.AbsoluteUri,
-                UseShellExecute = true,
-            });
+                return;
+            }
+
+            if (_updateCheckStatusText is not null)
+            {
+                _updateCheckStatusText.Text = LocalizedStrings.Get("UpdateDownloadRestarting");
+            }
+
+            _updateInstallerService.StartUpdater(plan);
+            ExitApplication();
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception exception)
         {
             AppLog.Write(exception);
+            if (_updateCheckStatusText is not null)
+            {
+                _updateCheckStatusText.Text = LocalizedStrings.Format("UpdateDownloadFailedFormat", exception.Message);
+            }
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                SetUpdateCheckBusy(false);
+            }
         }
     }
 
