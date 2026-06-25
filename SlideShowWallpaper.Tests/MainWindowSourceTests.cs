@@ -571,6 +571,37 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HardwareEditorDrag_SelectsImmediatelyWithoutFullPageRender()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string windowSource = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string buildMethod = source[
+            source.IndexOf("private UIElement BuildHardwareEditorPage", StringComparison.Ordinal)..
+            source.IndexOf("private Border CreateHardwareMonitorSettingsSection", StringComparison.Ordinal)];
+        string dragMethod = source[
+            source.IndexOf("private void AttachHardwareEditorDrag", StringComparison.Ordinal)..
+            source.IndexOf("private List<HardwareOverlayElement> GetHardwareEditorDragElements", StringComparison.Ordinal)];
+        int selectMethodStart = source.IndexOf("private void SelectHardwareEditorElement", StringComparison.Ordinal);
+        int updateVisualStart = source.IndexOf("private static void UpdateHardwareEditorSelectionVisual", StringComparison.Ordinal);
+
+        Assert.Contains("private ContentControl? _hardwareElementSettingsHost;", windowSource);
+        Assert.Contains("_hardwareElementSettingsHost = new ContentControl", buildMethod);
+        Assert.Contains("_hardwareElementSettingsHost.Content = CreateHardwareElementSettingsSection(config);", buildMethod);
+        Assert.Contains("visual.PointerPressed += (_, args) =>", dragMethod);
+        Assert.Contains("SelectHardwareEditorElement(config, element.Id, visualsById);", dragMethod);
+        Assert.True(selectMethodStart >= 0);
+        Assert.True(updateVisualStart > selectMethodStart);
+        string selectMethod = source[selectMethodStart..updateVisualStart];
+        Assert.Contains("UpdateHardwareEditorSelectionVisual(entry.Value", selectMethod);
+        Assert.Contains("DispatcherQueue.TryEnqueue", selectMethod);
+        Assert.Contains("_hardwareElementSettingsHost.Content = CreateHardwareElementSettingsSection(config);", selectMethod);
+        Assert.DoesNotContain("visual.Tapped", dragMethod);
+        Assert.DoesNotContain("RenderTabs(_selectedMonitorId)", dragMethod);
+        Assert.Contains("visual.CapturePointer(args.Pointer);", dragMethod);
+    }
+
+    [Fact]
     public void HardwareEditorMarqueeSelection_SelectsIntersectingElements()
     {
         string root = FindProjectRoot();

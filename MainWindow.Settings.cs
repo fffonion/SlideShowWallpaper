@@ -396,7 +396,13 @@ public sealed partial class MainWindow
         Grid.SetRow(globalSection, 0);
         formatGrid.Children.Add(globalSection);
 
-        Border elementSection = CreateHardwareElementSettingsSection(config);
+        _hardwareElementSettingsHost = new ContentControl
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+        _hardwareElementSettingsHost.Content = CreateHardwareElementSettingsSection(config);
+        FrameworkElement elementSection = _hardwareElementSettingsHost;
         elementSection.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetRow(elementSection, 1);
         formatGrid.Children.Add(elementSection);
@@ -1799,6 +1805,51 @@ public sealed partial class MainWindow
             : string.Equals(config.SelectedElementId, elementId, StringComparison.OrdinalIgnoreCase);
     }
 
+    private void SelectHardwareEditorElement(
+        HardwareMonitorConfig config,
+        string elementId,
+        IReadOnlyDictionary<string, FrameworkElement> visualsById)
+    {
+        if (!_hardwareEditorSelectedElementIds.Contains(elementId))
+        {
+            _hardwareEditorSelectedElementIds.Clear();
+            _hardwareEditorSelectedElementIds.Add(elementId);
+        }
+
+        config.SelectedElementId = elementId;
+        foreach (KeyValuePair<string, FrameworkElement> entry in visualsById)
+        {
+            UpdateHardwareEditorSelectionVisual(entry.Value, _hardwareEditorSelectedElementIds.Contains(entry.Key));
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_hardwareElementSettingsHost is not null)
+            {
+                _hardwareElementSettingsHost.Content = CreateHardwareElementSettingsSection(config);
+            }
+        });
+        RequestHardwareEditorKeyboardFocus();
+    }
+
+    private static void UpdateHardwareEditorSelectionVisual(FrameworkElement visual, bool isSelected)
+    {
+        if (visual is not Grid host
+            || host.Children.Count == 0
+            || host.Children[host.Children.Count - 1] is not Border selectionBorder)
+        {
+            return;
+        }
+
+        selectionBorder.Background = isSelected
+            ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(36, 255, 255, 255))
+            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        selectionBorder.BorderBrush = isSelected
+            ? new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 96, 205, 255))
+            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        selectionBorder.BorderThickness = new Thickness(isSelected ? 2 : 0);
+    }
+
     private static (double Width, double Height) GetHardwareEditorVisualSize(FrameworkElement visual, double availableWidth, double availableHeight)
     {
         if (visual.ActualWidth > 0 && visual.ActualHeight > 0)
@@ -2016,25 +2067,11 @@ public sealed partial class MainWindow
         List<HardwareOverlayElement> dragElements = [];
         Dictionary<string, Point> startPositions = new(StringComparer.OrdinalIgnoreCase);
 
-        visual.Tapped += (_, _) =>
-        {
-            _hardwareEditorSelectedElementIds.Clear();
-            _hardwareEditorSelectedElementIds.Add(element.Id);
-            config.SelectedElementId = element.Id;
-            RenderTabs(_selectedMonitorId);
-            RequestHardwareEditorKeyboardFocus();
-        };
         visual.PointerPressed += (_, args) =>
         {
             canvas.Focus(FocusState.Programmatic);
             isDragging = true;
-            if (!_hardwareEditorSelectedElementIds.Contains(element.Id))
-            {
-                _hardwareEditorSelectedElementIds.Clear();
-                _hardwareEditorSelectedElementIds.Add(element.Id);
-            }
-
-            config.SelectedElementId = element.Id;
+            SelectHardwareEditorElement(config, element.Id, visualsById);
             dragStartX = args.GetCurrentPoint(canvas).Position.X;
             dragStartY = args.GetCurrentPoint(canvas).Position.Y;
             startLeft = Canvas.GetLeft(visual);

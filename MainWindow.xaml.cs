@@ -141,6 +141,7 @@ public sealed partial class MainWindow : Window
     private Button? _updateDownloadButton;
     private CancellationTokenSource? _updateCheckCancellation;
     private ContentControl? _hardwareEditorPreviewHost;
+    private ContentControl? _hardwareElementSettingsHost;
     private Canvas? _hardwareEditorKeyboardCanvas;
     private bool _hardwareEditorKeyboardFocusPending;
     private CancellationTokenSource? _thumbnailCacheSizeCancellation;
