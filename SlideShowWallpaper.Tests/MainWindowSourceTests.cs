@@ -302,6 +302,23 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void HandleWindowMinimizedChanged_DoesNotUnloadSettingsUiWhenWindowIsMinimized()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Windowing.cs"));
+        string method = source[
+            source.IndexOf("private void HandleWindowMinimizedChanged", StringComparison.Ordinal)..
+            source.IndexOf("private void ExitApplication", StringComparison.Ordinal)];
+        int minimizedIndex = method.IndexOf("if (isMinimized)", StringComparison.Ordinal);
+        int restoreIndex = method.IndexOf("if (_settingsUiUnloadedForBackground)", minimizedIndex, StringComparison.Ordinal);
+
+        Assert.True(minimizedIndex >= 0);
+        Assert.True(restoreIndex > minimizedIndex);
+        Assert.Contains("return;", method[minimizedIndex..restoreIndex]);
+        Assert.DoesNotContain("UnloadSettingsUiForBackground();", method[minimizedIndex..restoreIndex]);
+    }
+
+    [Fact]
     public void BuildAppSettingsPage_WrapsContentInScrollViewer()
     {
         string root = FindProjectRoot();

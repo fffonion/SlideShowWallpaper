@@ -287,18 +287,16 @@ public sealed partial class MainWindow
 
         if (isMinimized)
         {
-            UnloadSettingsUiForBackground();
+            return;
         }
-        else
-        {
-            if (_settingsUiUnloadedForBackground)
-            {
-                AppLog.Write("Background startup memory trim kept after hidden restore message.");
-                return;
-            }
 
-            EnsureSettingsUiLoaded();
+        if (_settingsUiUnloadedForBackground)
+        {
+            AppLog.Write("Background startup memory trim kept after hidden restore message.");
+            return;
         }
+
+        EnsureSettingsUiLoaded();
     }
 
     private void ExitApplication()
