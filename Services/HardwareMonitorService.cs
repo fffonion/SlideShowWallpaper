@@ -197,7 +197,8 @@ public static class HardwareOverlayTextRenderer
 
     private static bool IsVisibleReading(HardwareSensorReading reading)
     {
-        return !string.Equals(reading.SensorName, "Virtual Memory Available", StringComparison.OrdinalIgnoreCase);
+        return !reading.HardwareName.Contains("Virtual Memory", StringComparison.OrdinalIgnoreCase)
+            && !reading.SensorName.Contains("Virtual Memory", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int ResolveDecimalPlaces(HardwareOverlayElement element, HardwareSensorReading reading)

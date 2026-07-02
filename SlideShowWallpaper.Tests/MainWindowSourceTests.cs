@@ -1296,6 +1296,7 @@ public sealed class MainWindowSourceTests
         Assert.Contains("PublishSingleFile=true", project);
         Assert.Contains("<EmbeddedResource Include=\"$(HardwareBrokerEmbeddedExecutable)\"", project);
         Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", brokerProject);
+        Assert.Contains("<TargetFramework>net10.0</TargetFramework>", brokerProject);
         Assert.Contains("<AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>", brokerProject);
         Assert.Contains("<FileDescription>SlideShowWallpaper Broker</FileDescription>", brokerProject);
         Assert.Contains("<Product>SlideShowWallpaper Broker</Product>", brokerProject);

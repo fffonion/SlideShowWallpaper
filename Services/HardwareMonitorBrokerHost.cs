@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
@@ -7,6 +8,7 @@ using SlideShowWallpaper.Models;
 
 namespace SlideShowWallpaper.Services;
 
+[SupportedOSPlatform("windows")]
 public static class HardwareMonitorBrokerHost
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

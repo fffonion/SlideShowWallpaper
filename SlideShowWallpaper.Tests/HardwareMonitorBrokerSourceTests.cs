@@ -169,7 +169,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         string source = File.ReadAllText(projectPath);
 
         Assert.Contains("<OutputType>Exe</OutputType>", source);
-        Assert.Contains("<TargetFramework>net10.0-windows</TargetFramework>", source);
+        Assert.Contains("<TargetFramework>net10.0</TargetFramework>", source);
         Assert.Contains("<RootNamespace>SlideShowWallpaper.HardwareBroker</RootNamespace>", source);
         Assert.Contains("<AssemblyName>SlideShowWallpaper.HardwareBroker</AssemblyName>", source);
         Assert.Contains("<AssemblyTitle>SlideShowWallpaper Broker</AssemblyTitle>", source);
@@ -180,6 +180,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("LibreHardwareMonitorLib", source);
         Assert.DoesNotContain("WorkingSetTrimmer.cs", source);
         Assert.DoesNotContain("<OutputType>WinExe</OutputType>", source);
+        Assert.DoesNotContain("net10.0-windows", source);
         Assert.DoesNotContain("windows10.0", source);
         Assert.DoesNotContain("Microsoft.Windows.SDK.NET", source);
         Assert.DoesNotContain("UseWinUI>true", source);
@@ -187,14 +188,14 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
-    public void HardwareBrokerProject_UsesWinRingLibreHardwareMonitorPackage()
+    public void HardwareBrokerProject_UsesPawnIoLibreHardwareMonitorPackage()
     {
         string root = FindProjectRoot();
         string projectPath = Path.Combine(root, "HardwareBroker", "SlideShowWallpaper.HardwareBroker.csproj");
         string source = File.ReadAllText(projectPath);
 
-        Assert.Contains("<PackageReference Include=\"LibreHardwareMonitorLib\" Version=\"0.9.4\" />", source);
-        Assert.DoesNotContain("Version=\"0.9.6\"", source);
+        Assert.Contains("<PackageReference Include=\"LibreHardwareMonitorLib\" Version=\"0.9.6\" />", source);
+        Assert.DoesNotContain("Version=\"0.9.4\"", source);
     }
 
     [Fact]
@@ -205,6 +206,7 @@ public sealed class HardwareMonitorBrokerSourceTests
 
         Assert.Contains("HardwareBrokerProject", source);
         Assert.Contains("HardwareBrokerTargetFramework", source);
+        Assert.Contains("<HardwareBrokerTargetFramework>net10.0</HardwareBrokerTargetFramework>", source);
         Assert.Contains("TargetFramework=$(HardwareBrokerTargetFramework)", source);
         Assert.Contains("IncludeNativeLibrariesForSelfExtract=true", source);
         Assert.Contains("InvariantGlobalization=true", source);

@@ -266,6 +266,7 @@ public sealed class HardwareOverlayTextRendererTests
         var snapshot = new HardwareMonitorSnapshot(
             [
                 new HardwareSensorReading("virtual-memory", "Memory", "Virtual Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 128, "GB"),
+                new HardwareSensorReading("virtual-memory-pawnio", "Virtual Memory", "Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 256, "GB"),
                 new HardwareSensorReading("physical-memory", "Memory", "Memory Available", HardwareMetricKind.MemoryAvailable, HardwareMetricGroup.Memory, 32, "GB"),
             ],
             DateTimeOffset.Now);
