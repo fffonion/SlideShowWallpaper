@@ -187,6 +187,17 @@ public sealed class HardwareMonitorBrokerSourceTests
     }
 
     [Fact]
+    public void HardwareBrokerProject_UsesPawnIoLibreHardwareMonitorPackage()
+    {
+        string root = FindProjectRoot();
+        string projectPath = Path.Combine(root, "HardwareBroker", "SlideShowWallpaper.HardwareBroker.csproj");
+        string source = File.ReadAllText(projectPath);
+
+        Assert.Contains("<PackageReference Include=\"LibreHardwareMonitorLib\" Version=\"0.9.6\" />", source);
+        Assert.DoesNotContain("Version=\"0.9.4\"", source);
+    }
+
+    [Fact]
     public void MainProject_BuildsAndPublishesHardwareBroker()
     {
         string root = FindProjectRoot();
