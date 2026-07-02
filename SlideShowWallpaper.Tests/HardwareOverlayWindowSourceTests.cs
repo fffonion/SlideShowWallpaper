@@ -10,6 +10,7 @@ public sealed class HardwareOverlayWindowSourceTests
 
         Assert.Contains("Title = LocalizedStrings.Get(\"HardwareMonitorSettingsGroup\");", source);
         Assert.Contains("presenter.SetBorderAndTitleBar(false, false);", source);
+        Assert.Contains("NativeMethods.RemoveWindowFrame(_hwnd, showWindow: false);", source);
         Assert.Contains("Root.PointerPressed += Root_PointerPressed;", source);
         Assert.Contains("Root.PointerMoved += Root_PointerMoved;", source);
         Assert.Contains("Root.PointerReleased += Root_PointerReleased;", source);

@@ -18,4 +18,15 @@ public sealed class WindowStyleTests
 
         Assert.Equal(NativeMethods.WS_VISIBLE | NativeMethods.WS_POPUP, borderless);
     }
+
+    [Fact]
+    public void ToBorderlessWindowStyle_WhenShowWindowIsFalse_KeepsWindowHidden()
+    {
+        nint style = NativeMethods.WS_VISIBLE
+            | NativeMethods.WS_CAPTION;
+
+        nint borderless = NativeMethods.ToBorderlessWindowStyle(style, showWindow: false);
+
+        Assert.Equal(NativeMethods.WS_POPUP, borderless);
+    }
 }

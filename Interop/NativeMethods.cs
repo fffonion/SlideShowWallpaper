@@ -246,14 +246,25 @@ public static partial class NativeMethods
 
     public static nint ToBorderlessWindowStyle(nint style)
     {
+        return ToBorderlessWindowStyle(style, showWindow: true);
+    }
+
+    public static nint ToBorderlessWindowStyle(nint style, bool showWindow)
+    {
         nint frameStyles = WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-        return (style & ~frameStyles) | WS_POPUP | WS_VISIBLE;
+        nint borderless = (style & ~frameStyles) | WS_POPUP;
+        return showWindow ? borderless | WS_VISIBLE : borderless & ~WS_VISIBLE;
     }
 
     internal static void RemoveWindowFrame(IntPtr hWnd)
     {
+        RemoveWindowFrame(hWnd, showWindow: true);
+    }
+
+    internal static void RemoveWindowFrame(IntPtr hWnd, bool showWindow)
+    {
         nint style = GetWindowLongPtr(hWnd, GWL_STYLE);
-        SetWindowStyleLongPtr(hWnd, GWL_STYLE, ToBorderlessWindowStyle(style));
+        SetWindowStyleLongPtr(hWnd, GWL_STYLE, ToBorderlessWindowStyle(style, showWindow));
         SetWindowPos(
             hWnd,
             IntPtr.Zero,

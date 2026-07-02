@@ -97,7 +97,7 @@ public sealed partial class HardwareOverlayWindow : Window
             presenter.IsMinimizable = false;
         }
 
-        NativeMethods.RemoveWindowFrame(_hwnd);
+        NativeMethods.RemoveWindowFrame(_hwnd, showWindow: false);
         NativeMethods.SetToolWindow(_hwnd);
         NativeMethods.SetLayeredTransparentWindow(_hwnd, byte.MaxValue);
     }
