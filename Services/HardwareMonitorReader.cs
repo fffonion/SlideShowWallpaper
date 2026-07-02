@@ -217,6 +217,7 @@ public sealed class HardwareMonitorReader : IDisposable
                 {
                     case CollectorGroup.Cpu:
                         cpu = true;
+                        motherboard = true;
                         break;
                     case CollectorGroup.Gpu:
                         gpu = true;
@@ -225,6 +226,7 @@ public sealed class HardwareMonitorReader : IDisposable
                         memory = true;
                         break;
                     case CollectorGroup.Motherboard:
+                        cpu = true;
                         motherboard = true;
                         break;
                     case CollectorGroup.Storage:
@@ -243,7 +245,11 @@ public sealed class HardwareMonitorReader : IDisposable
             string id = sensorId.Trim();
             if (id.StartsWith("/intelcpu/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/amdcpu/", StringComparison.OrdinalIgnoreCase)
-                || id.StartsWith("/genericcpu/", StringComparison.OrdinalIgnoreCase))
+                || id.StartsWith("/genericcpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/cpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/cpu-intel/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/cpu-amd/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/generic-cpu/", StringComparison.OrdinalIgnoreCase))
             {
                 return CollectorGroup.Cpu;
             }
@@ -251,7 +257,11 @@ public sealed class HardwareMonitorReader : IDisposable
             if (id.StartsWith("/nvidiagpu/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/atigpu/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/adlgpu/", StringComparison.OrdinalIgnoreCase)
-                || id.StartsWith("/intelgpu/", StringComparison.OrdinalIgnoreCase))
+                || id.StartsWith("/intelgpu/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/gpu-nvidia/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/gpu-amd/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/gpu-ati/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/gpu-intel/", StringComparison.OrdinalIgnoreCase))
             {
                 return CollectorGroup.Gpu;
             }
@@ -273,7 +283,9 @@ public sealed class HardwareMonitorReader : IDisposable
             if (id.StartsWith("/lpc/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/mainboard/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/motherboard/", StringComparison.OrdinalIgnoreCase)
-                || id.StartsWith("/superio/", StringComparison.OrdinalIgnoreCase))
+                || id.StartsWith("/superio/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/ec/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/embeddedcontroller/", StringComparison.OrdinalIgnoreCase))
             {
                 return CollectorGroup.Motherboard;
             }

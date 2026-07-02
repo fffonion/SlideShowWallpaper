@@ -258,11 +258,28 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("CollectorProfile.FromSensorIds(requestedSensorIds)", readerSource);
         Assert.Contains("return Full;", readerSource);
         Assert.Contains("id.StartsWith(\"/intelcpu/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/cpu/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/cpu-amd/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/nvidiagpu/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/gpu-nvidia/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/ram/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/hdd/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/lpc/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/embeddedcontroller/\"", readerSource);
         Assert.Contains("requestedSensorIds is null || requestedSensorIds.Contains(reading.Id)", readerSource);
+    }
+
+    [Fact]
+    public void HardwareMonitorReader_KeepsCpuAndMotherboardCollectorsTogether()
+    {
+        string root = FindProjectRoot();
+        string readerSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
+        string fromSensorIds = readerSource[
+            readerSource.IndexOf("public static CollectorProfile FromSensorIds", StringComparison.Ordinal)..
+            readerSource.IndexOf("private static CollectorGroup InferGroup", StringComparison.Ordinal)];
+
+        Assert.Matches("case CollectorGroup\\.Cpu:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;", fromSensorIds);
+        Assert.Matches("case CollectorGroup\\.Motherboard:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;", fromSensorIds);
     }
 
     private static string FindProjectRoot()
