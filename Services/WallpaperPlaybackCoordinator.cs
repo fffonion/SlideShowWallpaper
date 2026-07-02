@@ -376,8 +376,6 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         if (ShouldPauseHardwareOverlayRefresh(targetMonitorId, monitorRect))
         {
-            ClearHardwareOverlay();
-            _ = Task.Run(_hardwareMonitorService.StopBroker);
             return;
         }
 

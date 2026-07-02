@@ -72,7 +72,7 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
-    public void RefreshHardwareOverlayAsync_StopsBrokerWhenTargetMonitorIsCovered()
+    public void RefreshHardwareOverlayAsync_SkipsSensorRefreshWhenTargetMonitorIsCovered()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
@@ -84,8 +84,6 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         Assert.True(targetIndex >= 0);
         Assert.True(pauseIndex > targetIndex);
         Assert.True(snapshotIndex > pauseIndex);
-        Assert.Contains("ClearHardwareOverlay();", refreshMethod[pauseIndex..snapshotIndex]);
-        Assert.Contains("_ = Task.Run(_hardwareMonitorService.StopBroker);", refreshMethod[pauseIndex..snapshotIndex]);
         Assert.Contains("return;", refreshMethod[pauseIndex..snapshotIndex]);
     }
 
