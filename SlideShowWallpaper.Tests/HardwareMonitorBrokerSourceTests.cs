@@ -265,6 +265,7 @@ public sealed class HardwareMonitorBrokerSourceTests
         Assert.Contains("id.StartsWith(\"/ram/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/hdd/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/lpc/\"", readerSource);
+        Assert.Contains("id.StartsWith(\"/controller/\"", readerSource);
         Assert.Contains("id.StartsWith(\"/embeddedcontroller/\"", readerSource);
         Assert.Contains("requestedSensorIds is null || requestedSensorIds.Contains(reading.Id)", readerSource);
     }
@@ -278,8 +279,25 @@ public sealed class HardwareMonitorBrokerSourceTests
             readerSource.IndexOf("public static CollectorProfile FromSensorIds", StringComparison.Ordinal)..
             readerSource.IndexOf("private static CollectorGroup InferGroup", StringComparison.Ordinal)];
 
-        Assert.Matches("case CollectorGroup\\.Cpu:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;", fromSensorIds);
-        Assert.Matches("case CollectorGroup\\.Motherboard:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;", fromSensorIds);
+        Assert.Matches("case CollectorGroup\\.Cpu:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;[\\s\\S]*controller = true;", fromSensorIds);
+        Assert.Matches("case CollectorGroup\\.Motherboard:[\\s\\S]*cpu = true;[\\s\\S]*motherboard = true;[\\s\\S]*controller = true;", fromSensorIds);
+        Assert.Contains("IsControllerEnabled = profile.Controller", readerSource);
+        Assert.Contains("HardwareType.EmbeddedController", readerSource);
+        Assert.Contains("HardwareType.Cooler", readerSource);
+    }
+
+    [Fact]
+    public void HardwareMonitorReader_RetriesWithFullCollectorsWhenRequestedSensorsAreMissing()
+    {
+        string root = FindProjectRoot();
+        string readerSource = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
+        string getSnapshot = readerSource[
+            readerSource.IndexOf("public HardwareMonitorSnapshot GetSnapshot", StringComparison.Ordinal)..
+            readerSource.IndexOf("public void Dispose", StringComparison.Ordinal)];
+
+        Assert.Contains("ShouldRetryWithFullCollectors(readings, requestedSensorIds, profile)", getSnapshot);
+        Assert.Contains("CollectReadings(EnsureComputer(CollectorProfile.Full), requestedSensorIds)", getSnapshot);
+        Assert.Contains("readings.Count < requestedSensorIds.Count", readerSource);
     }
 
     private static string FindProjectRoot()

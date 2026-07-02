@@ -1212,7 +1212,7 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
-    public void HardwareMonitorReader_AvoidsControllerAndPsuCollectors()
+    public void HardwareMonitorReader_EnablesControllerButAvoidsPsuCollector()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "HardwareMonitorReader.cs"));
@@ -1221,11 +1221,11 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private static void CollectHardware", StringComparison.Ordinal)];
 
         Assert.Contains("IsCpuEnabled = profile.Cpu", method);
+        Assert.Contains("IsControllerEnabled = profile.Controller", method);
         Assert.Contains("IsGpuEnabled = profile.Gpu", method);
         Assert.Contains("IsMemoryEnabled = profile.Memory", method);
         Assert.Contains("IsMotherboardEnabled = profile.Motherboard", method);
         Assert.Contains("IsStorageEnabled = profile.Storage", method);
-        Assert.DoesNotContain("IsControllerEnabled = true", method);
         Assert.DoesNotContain("IsPsuEnabled = true", method);
     }
 

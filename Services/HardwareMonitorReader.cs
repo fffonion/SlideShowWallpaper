@@ -22,11 +22,10 @@ public sealed class HardwareMonitorReader : IDisposable
             HashSet<string>? requestedSensorIds = CreateRequestedSensorSet(sensorIds);
             CollectorProfile profile = CollectorProfile.FromSensorIds(requestedSensorIds);
             Computer computer = EnsureComputer(profile);
-            var readings = new List<HardwareSensorReading>();
-            var updated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (IHardware hardware in computer.Hardware)
+            List<HardwareSensorReading> readings = CollectReadings(computer, requestedSensorIds);
+            if (ShouldRetryWithFullCollectors(readings, requestedSensorIds, profile))
             {
-                CollectHardware(readings, hardware, updated, requestedSensorIds);
+                readings = CollectReadings(EnsureComputer(CollectorProfile.Full), requestedSensorIds);
             }
 
             return new HardwareMonitorSnapshot(readings, DateTimeOffset.Now, CurrentProcessPrivilege.IsElevated());
@@ -59,6 +58,7 @@ public sealed class HardwareMonitorReader : IDisposable
         _collectorProfile = profile;
         _computer = new Computer
         {
+            IsControllerEnabled = profile.Controller,
             IsCpuEnabled = profile.Cpu,
             IsGpuEnabled = profile.Gpu,
             IsMemoryEnabled = profile.Memory,
@@ -116,6 +116,28 @@ public sealed class HardwareMonitorReader : IDisposable
         {
             CollectHardware(readings, subHardware, updated, requestedSensorIds);
         }
+    }
+
+    private static List<HardwareSensorReading> CollectReadings(Computer computer, IReadOnlySet<string>? requestedSensorIds)
+    {
+        var readings = new List<HardwareSensorReading>();
+        var updated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (IHardware hardware in computer.Hardware)
+        {
+            CollectHardware(readings, hardware, updated, requestedSensorIds);
+        }
+
+        return readings;
+    }
+
+    private static bool ShouldRetryWithFullCollectors(
+        IReadOnlyCollection<HardwareSensorReading> readings,
+        IReadOnlySet<string>? requestedSensorIds,
+        CollectorProfile profile)
+    {
+        return requestedSensorIds is not null
+            && readings.Count < requestedSensorIds.Count
+            && !profile.Equals(CollectorProfile.Full);
     }
 
     private static void UpdateHardwareOnce(IHardware hardware, HashSet<string> updated)
@@ -189,14 +211,14 @@ public sealed class HardwareMonitorReader : IDisposable
             HardwareType.GpuAmd or HardwareType.GpuIntel or HardwareType.GpuNvidia => HardwareMetricGroup.Gpu,
             HardwareType.Storage => HardwareMetricGroup.Storage,
             HardwareType.Memory => HardwareMetricGroup.Memory,
-            HardwareType.Motherboard or HardwareType.SuperIO => HardwareMetricGroup.Motherboard,
+            HardwareType.Motherboard or HardwareType.SuperIO or HardwareType.EmbeddedController or HardwareType.Cooler => HardwareMetricGroup.Motherboard,
             _ => HardwareMetricGroup.Other,
         };
     }
 
-    private sealed record CollectorProfile(bool Cpu, bool Gpu, bool Memory, bool Motherboard, bool Storage)
+    private sealed record CollectorProfile(bool Cpu, bool Gpu, bool Memory, bool Motherboard, bool Controller, bool Storage)
     {
-        public static CollectorProfile Full { get; } = new(Cpu: true, Gpu: true, Memory: true, Motherboard: true, Storage: true);
+        public static CollectorProfile Full { get; } = new(Cpu: true, Gpu: true, Memory: true, Motherboard: true, Controller: true, Storage: true);
 
         public static CollectorProfile FromSensorIds(IReadOnlySet<string>? sensorIds)
         {
@@ -209,6 +231,7 @@ public sealed class HardwareMonitorReader : IDisposable
             bool gpu = false;
             bool memory = false;
             bool motherboard = false;
+            bool controller = false;
             bool storage = false;
             foreach (string sensorId in sensorIds)
             {
@@ -218,6 +241,7 @@ public sealed class HardwareMonitorReader : IDisposable
                     case CollectorGroup.Cpu:
                         cpu = true;
                         motherboard = true;
+                        controller = true;
                         break;
                     case CollectorGroup.Gpu:
                         gpu = true;
@@ -228,6 +252,7 @@ public sealed class HardwareMonitorReader : IDisposable
                     case CollectorGroup.Motherboard:
                         cpu = true;
                         motherboard = true;
+                        controller = true;
                         break;
                     case CollectorGroup.Storage:
                         storage = true;
@@ -237,7 +262,7 @@ public sealed class HardwareMonitorReader : IDisposable
                 }
             }
 
-            return new CollectorProfile(cpu, gpu, memory, motherboard, storage);
+            return new CollectorProfile(cpu, gpu, memory, motherboard, controller, storage);
         }
 
         private static CollectorGroup InferGroup(string sensorId)
@@ -284,6 +309,7 @@ public sealed class HardwareMonitorReader : IDisposable
                 || id.StartsWith("/mainboard/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/motherboard/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/superio/", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("/controller/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/ec/", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("/embeddedcontroller/", StringComparison.OrdinalIgnoreCase))
             {
