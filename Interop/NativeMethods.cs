@@ -37,6 +37,11 @@ public static partial class NativeMethods
     internal const int MF_GRAYED = 0x0001;
     internal const int MF_SEPARATOR = 0x0800;
     internal const int MF_STRING = 0x0000;
+    internal const uint MIIM_BITMAP = 0x00000080;
+    internal const uint MIM_STYLE = 0x00000010;
+    internal const uint MNS_CHECKORBMP = 0x04000000;
+    internal const uint DIB_RGB_COLORS = 0;
+    internal const uint BI_RGB = 0;
     internal const int TPM_RIGHTBUTTON = 0x0002;
     internal const int TPM_RETURNCMD = 0x0100;
     internal const int SW_HIDE = 0;
@@ -219,6 +224,15 @@ public static partial class NativeMethods
     internal static extern bool AppendMenu(IntPtr hMenu, uint uFlags, nuint uIDNewItem, string lpNewItem);
 
     [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool SetMenuInfo(IntPtr hMenu, ref MENUINFO lpcmi);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern int GetMenuItemCount(IntPtr hMenu);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool SetMenuItemInfo(IntPtr hMenu, uint item, bool byPosition, ref MENUITEMINFO lpmii);
+
+    [DllImport("user32.dll", SetLastError = true)]
     internal static extern uint TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -306,6 +320,12 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool DestroyIcon(IntPtr hIcon);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateDIBSection(IntPtr hdc, ref BITMAPINFO pbmi, uint usage, out IntPtr ppvBits, IntPtr hSection, uint offset);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern bool DeleteObject(IntPtr hObject);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern int PrivateExtractIcons(string szFileName, int nIconIndex, int cxIcon, int cyIcon, IntPtr[] phicon, int[] piconid, int nIcons, int flags);
@@ -462,6 +482,58 @@ public static partial class NativeMethods
         public uint dwInfoFlags;
         public Guid guidItem;
         public IntPtr hBalloonIcon;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MENUINFO
+    {
+        public uint cbSize;
+        public uint fMask;
+        public uint dwStyle;
+        public uint cyMax;
+        public IntPtr hbrBack;
+        public uint dwContextHelpID;
+        public IntPtr dwMenuData;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct MENUITEMINFO
+    {
+        public uint cbSize;
+        public uint fMask;
+        public uint fType;
+        public uint fState;
+        public uint wID;
+        public IntPtr hSubMenu;
+        public IntPtr hbmpChecked;
+        public IntPtr hbmpUnchecked;
+        public IntPtr dwItemData;
+        public IntPtr dwTypeData;
+        public uint cch;
+        public IntPtr hbmpItem;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFO
+    {
+        public BITMAPINFOHEADER bmiHeader;
+        public uint bmiColors;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFOHEADER
+    {
+        public uint biSize;
+        public int biWidth;
+        public int biHeight;
+        public ushort biPlanes;
+        public ushort biBitCount;
+        public uint biCompression;
+        public uint biSizeImage;
+        public int biXPelsPerMeter;
+        public int biYPelsPerMeter;
+        public uint biClrUsed;
+        public uint biClrImportant;
     }
 
     [StructLayout(LayoutKind.Sequential)]

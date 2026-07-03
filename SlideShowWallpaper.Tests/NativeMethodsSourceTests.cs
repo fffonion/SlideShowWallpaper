@@ -49,6 +49,28 @@ public sealed class NativeMethodsSourceTests
         Assert.Contains("className is \"Progman\" or \"WorkerW\" or \"Shell_TrayWnd\" or \"Shell_SecondaryTrayWnd\"", foregroundSource);
     }
 
+    [Fact]
+    public void TrayMenuIcons_UseNativeMenuBitmaps()
+    {
+        string root = FindProjectRoot();
+        string nativeSource = File.ReadAllText(Path.Combine(root, "Interop", "NativeMethods.cs"));
+        string traySource = File.ReadAllText(Path.Combine(root, "Services", "TrayIconService.cs"));
+
+        Assert.Contains("SetMenuItemInfo", nativeSource);
+        Assert.Contains("MENUITEMINFO", nativeSource);
+        Assert.Contains("MIIM_BITMAP", nativeSource);
+        Assert.Contains("SetMenuInfo", nativeSource);
+        Assert.Contains("MNS_CHECKORBMP", nativeSource);
+        Assert.Contains("CreateDIBSection", nativeSource);
+        Assert.Contains("DeleteObject", nativeSource);
+        Assert.Contains("SetCompactMenuImageStyle(menu);", traySource);
+        Assert.Contains("NativeMethods.SetMenuItemInfo", traySource);
+        Assert.Contains("NativeMethods.CreateDIBSection", traySource);
+        Assert.Contains("NativeMethods.DeleteObject(bitmap)", traySource);
+        Assert.DoesNotContain("DisplayText", traySource);
+        Assert.DoesNotContain("GetIconGlyph", traySource);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

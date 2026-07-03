@@ -152,26 +152,40 @@ public sealed class TrayIconService : IDisposable
     private void ShowContextMenu()
     {
         IntPtr menu = NativeMethods.CreatePopupMenu();
+        SetCompactMenuImageStyle(menu);
+        var menuBitmaps = new List<IntPtr>();
 
         IReadOnlyList<MonitorProfile> profiles = _profiles();
         foreach (TrayMenuItem item in BuildMenuItems(profiles))
         {
-            AppendTrayMenuItem(menu, item);
+            AppendTrayMenuItem(menu, item, menuBitmaps);
         }
 
         foreach (TrayMenuItem item in BuildGlobalMenuItems(profiles))
         {
-            AppendTrayMenuItem(menu, item);
+            AppendTrayMenuItem(menu, item, menuBitmaps);
         }
 
         NativeMethods.GetCursorPos(out NativeMethods.POINT point);
         NativeMethods.SetForegroundWindow(_windowHandle);
         uint command = NativeMethods.TrackPopupMenu(menu, NativeMethods.TPM_RIGHTBUTTON | NativeMethods.TPM_RETURNCMD, point.X, point.Y, 0, _windowHandle, IntPtr.Zero);
         NativeMethods.DestroyMenu(menu);
+        DeleteMenuBitmaps(menuBitmaps);
         InvokeMenuCommand((int)command, profiles);
     }
 
-    private static void AppendTrayMenuItem(IntPtr menu, TrayMenuItem item)
+    private static void SetCompactMenuImageStyle(IntPtr menu)
+    {
+        var info = new NativeMethods.MENUINFO
+        {
+            cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MENUINFO>(),
+            fMask = NativeMethods.MIM_STYLE,
+            dwStyle = NativeMethods.MNS_CHECKORBMP,
+        };
+        NativeMethods.SetMenuInfo(menu, ref info);
+    }
+
+    private static void AppendTrayMenuItem(IntPtr menu, TrayMenuItem item, List<IntPtr> menuBitmaps)
     {
         uint flags = item.Kind switch
         {
@@ -179,7 +193,47 @@ public sealed class TrayIconService : IDisposable
             TrayMenuItemKind.Separator => NativeMethods.MF_SEPARATOR,
             _ => item.IsEnabled ? NativeMethods.MF_STRING : (uint)(NativeMethods.MF_STRING | NativeMethods.MF_GRAYED),
         };
-        NativeMethods.AppendMenu(menu, flags, (nuint)item.CommandId, item.DisplayText);
+        NativeMethods.AppendMenu(menu, flags, (nuint)item.CommandId, item.Text);
+        if (item.Kind == TrayMenuItemKind.Separator || item.Icon == TrayMenuIcon.None)
+        {
+            return;
+        }
+
+        IntPtr bitmap = TrayMenuBitmapFactory.Create(item.Icon, item.IsEnabled);
+        if (bitmap == IntPtr.Zero)
+        {
+            return;
+        }
+
+        int itemPosition = NativeMethods.GetMenuItemCount(menu) - 1;
+        if (itemPosition < 0)
+        {
+            NativeMethods.DeleteObject(bitmap);
+            return;
+        }
+
+        var info = new NativeMethods.MENUITEMINFO
+        {
+            cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MENUITEMINFO>(),
+            fMask = NativeMethods.MIIM_BITMAP,
+            hbmpItem = bitmap,
+        };
+        if (NativeMethods.SetMenuItemInfo(menu, (uint)itemPosition, byPosition: true, ref info))
+        {
+            menuBitmaps.Add(bitmap);
+        }
+        else
+        {
+            NativeMethods.DeleteObject(bitmap);
+        }
+    }
+
+    private static void DeleteMenuBitmaps(List<IntPtr> menuBitmaps)
+    {
+        foreach (IntPtr bitmap in menuBitmaps)
+        {
+            NativeMethods.DeleteObject(bitmap);
+        }
     }
 
     private void InvokeMenuCommand(int command, IReadOnlyList<MonitorProfile> profiles)
@@ -317,8 +371,6 @@ public enum TrayMenuIcon
 
 public sealed record TrayMenuItem(TrayMenuItemKind Kind, int CommandId, string Text, string MonitorId, bool IsEnabled, TrayMenuIcon Icon)
 {
-    public string DisplayText => Icon == TrayMenuIcon.None ? Text : $"{GetIconGlyph(Icon)}  {Text}";
-
     public static TrayMenuItem Header(string text, TrayMenuIcon icon = TrayMenuIcon.None)
     {
         return new TrayMenuItem(TrayMenuItemKind.Header, 0, text, string.Empty, false, icon);
@@ -338,21 +390,159 @@ public sealed record TrayMenuItem(TrayMenuItemKind Kind, int CommandId, string T
     {
         return new TrayMenuItem(TrayMenuItemKind.Separator, 0, string.Empty, string.Empty, false, TrayMenuIcon.None);
     }
+}
 
-    private static string GetIconGlyph(TrayMenuIcon icon)
+internal static class TrayMenuBitmapFactory
+{
+    private const int Size = 16;
+    private const int Foreground = unchecked((int)0xFF202020);
+    private const int DisabledForeground = unchecked((int)0xFF909090);
+    private const int Transparent = 0;
+
+    public static IntPtr Create(TrayMenuIcon icon, bool isEnabled)
     {
-        return icon switch
+        int[] pixels = Enumerable.Repeat(Transparent, Size * Size).ToArray();
+        int color = isEnabled ? Foreground : DisabledForeground;
+        DrawIcon(icon, pixels, color);
+
+        var bitmapInfo = new NativeMethods.BITMAPINFO
         {
-            TrayMenuIcon.Monitor => "\u25A3",
-            TrayMenuIcon.Status => "#",
-            TrayMenuIcon.NotLoaded => "!",
-            TrayMenuIcon.Start => "\u25B6",
-            TrayMenuIcon.Stop => "\u25A0",
-            TrayMenuIcon.Pause => "\u2161",
-            TrayMenuIcon.Next => "\u2192",
-            TrayMenuIcon.Open => "\u25A1",
-            TrayMenuIcon.Exit => "\u00D7",
-            _ => string.Empty,
+            bmiHeader = new NativeMethods.BITMAPINFOHEADER
+            {
+                biSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.BITMAPINFOHEADER>(),
+                biWidth = Size,
+                biHeight = -Size,
+                biPlanes = 1,
+                biBitCount = 32,
+                biCompression = NativeMethods.BI_RGB,
+                biSizeImage = Size * Size * 4u,
+            },
         };
+        IntPtr bitmap = NativeMethods.CreateDIBSection(IntPtr.Zero, ref bitmapInfo, NativeMethods.DIB_RGB_COLORS, out IntPtr bits, IntPtr.Zero, 0);
+        if (bitmap == IntPtr.Zero || bits == IntPtr.Zero)
+        {
+            return bitmap;
+        }
+
+        System.Runtime.InteropServices.Marshal.Copy(pixels, 0, bits, pixels.Length);
+        return bitmap;
+    }
+
+    private static void DrawIcon(TrayMenuIcon icon, int[] pixels, int color)
+    {
+        switch (icon)
+        {
+            case TrayMenuIcon.Monitor:
+                StrokeRect(pixels, 3, 3, 10, 7, color);
+                FillRect(pixels, 7, 10, 2, 2, color);
+                DrawLine(pixels, 5, 13, 10, 13, color);
+                break;
+            case TrayMenuIcon.Status:
+                DrawLine(pixels, 4, 5, 12, 5, color);
+                DrawLine(pixels, 4, 8, 10, 8, color);
+                DrawLine(pixels, 4, 11, 12, 11, color);
+                break;
+            case TrayMenuIcon.NotLoaded:
+                FillRect(pixels, 7, 3, 2, 7, color);
+                FillRect(pixels, 7, 12, 2, 2, color);
+                break;
+            case TrayMenuIcon.Start:
+                FillTriangleRight(pixels, 5, 3, 11, 8, 5, 13, color);
+                break;
+            case TrayMenuIcon.Stop:
+                FillRect(pixels, 4, 4, 8, 8, color);
+                break;
+            case TrayMenuIcon.Pause:
+                FillRect(pixels, 5, 4, 2, 8, color);
+                FillRect(pixels, 9, 4, 2, 8, color);
+                break;
+            case TrayMenuIcon.Next:
+                DrawLine(pixels, 3, 8, 11, 8, color);
+                DrawLine(pixels, 8, 5, 11, 8, color);
+                DrawLine(pixels, 8, 11, 11, 8, color);
+                break;
+            case TrayMenuIcon.Open:
+                StrokeRect(pixels, 3, 4, 10, 8, color);
+                DrawLine(pixels, 6, 3, 12, 3, color);
+                break;
+            case TrayMenuIcon.Exit:
+                DrawLine(pixels, 4, 4, 12, 12, color);
+                DrawLine(pixels, 12, 4, 4, 12, color);
+                break;
+        }
+    }
+
+    private static void FillRect(int[] pixels, int x, int y, int width, int height, int color)
+    {
+        for (int row = y; row < y + height; row++)
+        {
+            for (int column = x; column < x + width; column++)
+            {
+                SetPixel(pixels, column, row, color);
+            }
+        }
+    }
+
+    private static void StrokeRect(int[] pixels, int x, int y, int width, int height, int color)
+    {
+        DrawLine(pixels, x, y, x + width, y, color);
+        DrawLine(pixels, x, y + height, x + width, y + height, color);
+        DrawLine(pixels, x, y, x, y + height, color);
+        DrawLine(pixels, x + width, y, x + width, y + height, color);
+    }
+
+    private static void FillTriangleRight(int[] pixels, int leftX, int topY, int rightX, int middleY, int bottomX, int bottomY, int color)
+    {
+        for (int y = topY; y <= bottomY; y++)
+        {
+            double t = y <= middleY
+                ? (double)(y - topY) / Math.Max(1, middleY - topY)
+                : (double)(bottomY - y) / Math.Max(1, bottomY - middleY);
+            int rowRight = leftX + (int)Math.Round((rightX - leftX) * t);
+            for (int x = leftX; x <= rowRight; x++)
+            {
+                SetPixel(pixels, x, y, color);
+            }
+        }
+    }
+
+    private static void DrawLine(int[] pixels, int x0, int y0, int x1, int y1, int color)
+    {
+        int dx = Math.Abs(x1 - x0);
+        int sx = x0 < x1 ? 1 : -1;
+        int dy = -Math.Abs(y1 - y0);
+        int sy = y0 < y1 ? 1 : -1;
+        int error = dx + dy;
+        while (true)
+        {
+            SetPixel(pixels, x0, y0, color);
+            if (x0 == x1 && y0 == y1)
+            {
+                break;
+            }
+
+            int e2 = 2 * error;
+            if (e2 >= dy)
+            {
+                error += dy;
+                x0 += sx;
+            }
+
+            if (e2 <= dx)
+            {
+                error += dx;
+                y0 += sy;
+            }
+        }
+    }
+
+    private static void SetPixel(int[] pixels, int x, int y, int color)
+    {
+        if (x < 0 || x >= Size || y < 0 || y >= Size)
+        {
+            return;
+        }
+
+        pixels[(y * Size) + x] = color;
     }
 }

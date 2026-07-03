@@ -22,9 +22,9 @@ public sealed class TrayMenuTests
         Assert.Contains(items, item => item.Text == "Stop" && item.MonitorId == "display1");
         Assert.Contains(items, item => item.Text == "Pause" && item.MonitorId == "display1");
         Assert.Contains(items, item => item.Text == "Next" && item.MonitorId == "display1");
-        Assert.Contains(items, item => item.Text == "Stop" && item.Icon == TrayMenuIcon.Stop && item.DisplayText.Length > item.Text.Length);
-        Assert.Contains(items, item => item.Text == "Pause" && item.Icon == TrayMenuIcon.Pause && item.DisplayText.Length > item.Text.Length);
-        Assert.Contains(items, item => item.Text == "Next" && item.Icon == TrayMenuIcon.Next && item.DisplayText.Length > item.Text.Length);
+        Assert.Contains(items, item => item.Text == "Stop" && item.Icon == TrayMenuIcon.Stop);
+        Assert.Contains(items, item => item.Text == "Pause" && item.Icon == TrayMenuIcon.Pause);
+        Assert.Contains(items, item => item.Text == "Next" && item.Icon == TrayMenuIcon.Next);
         Assert.DoesNotContain(items, item => item.Kind == TrayMenuItemKind.Command && item.Text.Contains("Dell", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(TrayMenuItemKind.Separator, items[^1].Kind);
     }
