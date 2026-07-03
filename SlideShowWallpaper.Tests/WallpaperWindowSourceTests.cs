@@ -117,7 +117,7 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
-    public void StopVideo_CancelsPendingRequestsAndClearsPlayerSource()
+    public void StopVideo_CancelsPendingRequestsAndReplacesPlayer()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
@@ -126,8 +126,44 @@ public sealed class WallpaperWindowSourceTests
             source.IndexOf("private void MediaPlayer_MediaEnded", StringComparison.Ordinal)];
 
         Assert.Contains("CancelMediaRequest();", stopVideo);
-        Assert.Contains("ResetMediaPlayerSource(_mediaPlayer);", stopVideo);
+        Assert.Contains("ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));", stopVideo);
         Assert.Contains("VideoPlayer.Visibility = Visibility.Collapsed;", stopVideo);
+    }
+
+    [Fact]
+    public void ReplaceMediaPlayer_RehostsNewPlayerBeforeReleasingOldPlayer()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string replaceMediaPlayer = source[
+            source.IndexOf("private MediaPlayer ReplaceMediaPlayer", StringComparison.Ordinal)..
+            source.IndexOf("private MediaPlayer CreateMediaPlayer", StringComparison.Ordinal)];
+
+        int previousIndex = replaceMediaPlayer.IndexOf("MediaPlayer previousPlayer = _mediaPlayer;", StringComparison.Ordinal);
+        int createIndex = replaceMediaPlayer.IndexOf("var nextPlayer = CreateMediaPlayer(loop);", StringComparison.Ordinal);
+        int assignIndex = replaceMediaPlayer.IndexOf("_mediaPlayer = nextPlayer;", StringComparison.Ordinal);
+        int rehostIndex = replaceMediaPlayer.IndexOf("VideoPlayer.SetMediaPlayer(nextPlayer);", StringComparison.Ordinal);
+        int releaseIndex = replaceMediaPlayer.IndexOf("ReleaseMediaPlayer(previousPlayer, releaseCurrent: false);", StringComparison.Ordinal);
+
+        Assert.True(previousIndex >= 0);
+        Assert.True(createIndex > previousIndex);
+        Assert.True(assignIndex > createIndex);
+        Assert.True(rehostIndex > assignIndex);
+        Assert.True(releaseIndex > rehostIndex);
+        Assert.DoesNotContain("ResetMediaPlayerSource", replaceMediaPlayer);
+    }
+
+    [Fact]
+    public void ShowVideoAsync_ReleasesStalePlayerWithoutResettingSource()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string showVideoAsync = source[
+            source.IndexOf("public async Task ShowVideoAsync", StringComparison.Ordinal)..
+            source.IndexOf("public void SetVideoPausedByCoverage", StringComparison.Ordinal)];
+
+        Assert.Contains("ReleaseMediaPlayer(player, releaseCurrent: false);", showVideoAsync);
+        Assert.DoesNotContain("ResetMediaPlayerSource(player);", showVideoAsync);
     }
 
     [Fact]
@@ -145,7 +181,7 @@ public sealed class WallpaperWindowSourceTests
         Assert.Contains("PauseVideoForCoverage();", setPaused);
         Assert.Contains("_mediaPlayer.Play();", setPaused);
         Assert.Contains("_mediaPlayer.Pause();", pauseVideo);
-        Assert.DoesNotContain("ResetMediaPlayerSource(_mediaPlayer);", pauseVideo);
+        Assert.DoesNotContain("ReplaceMediaPlayer(", pauseVideo);
         Assert.DoesNotContain("VideoPlayer.Visibility = Visibility.Collapsed;", pauseVideo);
         Assert.DoesNotContain("ResumeVideoAfterCoverageAsync", source);
     }
