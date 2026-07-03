@@ -108,6 +108,10 @@
   <data name="Stop" xml:space="preserve"><value>停止</value></data>
   <data name="Pause" xml:space="preserve"><value>暫停</value></data>
   <data name="Resume" xml:space="preserve"><value>繼續</value></data>
+  <data name="StartAll" xml:space="preserve"><value>全部開始</value></data>
+  <data name="StopAll" xml:space="preserve"><value>全部停止</value></data>
+  <data name="PauseAll" xml:space="preserve"><value>全部暫停</value></data>
+  <data name="ResumeAll" xml:space="preserve"><value>全部繼續</value></data>
   <data name="Next" xml:space="preserve"><value>下一張</value></data>
   <data name="Shuffle" xml:space="preserve"><value>重新打亂</value></data>
   <data name="Open" xml:space="preserve"><value>開啟</value></data>
