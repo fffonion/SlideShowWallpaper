@@ -1,5 +1,6 @@
 using SlideShowWallpaper.Interop;
 using SlideShowWallpaper.Models;
+using System.Globalization;
 
 namespace SlideShowWallpaper.Services;
 
@@ -33,7 +34,7 @@ public sealed class MonitorService
             return true;
         }, IntPtr.Zero);
 
-        return monitors;
+        return SortBySystemDisplayNumber(monitors);
     }
 
     public IReadOnlyDictionary<string, NativeMethods.RECT> GetMonitorRects()
@@ -62,6 +63,14 @@ public sealed class MonitorService
 
     public static NativeMethods.RECT ToDesktopRect(NativeMethods.RECT monitorRect) => monitorRect;
 
+    public static IReadOnlyList<MonitorProfile> SortBySystemDisplayNumber(IEnumerable<MonitorProfile> monitors)
+    {
+        return monitors
+            .OrderBy(monitor => GetSystemDisplayNumber(monitor.Id) ?? int.MaxValue)
+            .ThenBy(monitor => monitor.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static string BuildDisplayName(string deviceName, string friendlyName)
     {
         string cleanDeviceName = string.IsNullOrWhiteSpace(deviceName) ? "Display" : deviceName.Trim();
@@ -82,6 +91,21 @@ public sealed class MonitorService
         string cleanValue = value.Trim();
         int descriptionStart = cleanValue.IndexOf('(');
         return descriptionStart > 0 ? cleanValue[..descriptionStart].Trim() : cleanValue;
+    }
+
+    private static int? GetSystemDisplayNumber(string deviceName)
+    {
+        const string displayPrefix = @"\\.\DISPLAY";
+        string cleanDeviceName = deviceName.Trim();
+        if (!cleanDeviceName.StartsWith(displayPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string suffix = cleanDeviceName[displayPrefix.Length..];
+        return int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out int displayNumber)
+            ? displayNumber
+            : null;
     }
 
     private static string GetFriendlyName(string deviceName)
