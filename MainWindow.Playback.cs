@@ -10,6 +10,12 @@ public sealed partial class MainWindow
 {
     private void Coordinator_OrderedImagesChanged(object? sender, OrderedImagesChangedEventArgs args)
     {
+        MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
+        if (profile is not null)
+        {
+            ApplyMediaListCount(profile, args.Images);
+        }
+
         if (_settingsUiUnloadedForBackground)
         {
             return;
@@ -21,12 +27,9 @@ public sealed partial class MainWindow
         }
 
         ImagePreviewItem[] reusableItems = [.. items];
-        MonitorProfile? profile = _viewModel.Profiles.FirstOrDefault(item => string.Equals(item.Id, args.MonitorId, StringComparison.OrdinalIgnoreCase));
         if (profile is not null)
         {
             ApplyPreviewItems(profile, items, args.Images, reusableItems);
-            profile.TotalMediaCount = items.Count;
-            UpdatePlaybackStatusText(profile);
         }
         else
         {
@@ -179,6 +182,71 @@ public sealed partial class MainWindow
     private void RefreshProfileMedia(MonitorProfile profile)
     {
         _coordinator.RefreshFolder(profile.Id);
+    }
+
+    private void StartBackgroundMediaListLoad()
+    {
+        foreach (MonitorProfile profile in _viewModel.Profiles)
+        {
+            _ = LoadBackgroundMediaListAsync(profile);
+        }
+    }
+
+    private async Task LoadBackgroundMediaListAsync(MonitorProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.FolderPath))
+        {
+            ApplyMediaListCount(profile, []);
+            return;
+        }
+
+        try
+        {
+            ImageOrderLoadResult result = await _imageOrderService.GetOrLoadOrderedImagesWithStatusAsync(
+                profile.FolderPath,
+                profile.PlaybackOrder,
+                profile.MediaFilter,
+                profile.IncludeSubdirectories,
+                CancellationToken.None);
+            ApplyMediaListCount(profile, result.Images);
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private void ApplyMediaListCount(MonitorProfile profile, IReadOnlyList<ImageMetadata> images)
+    {
+        profile.TotalMediaCount = images.Count;
+        profile.CurrentMediaIndex = ResolveCurrentMediaIndex(profile, images);
+        UpdatePlaybackStatusText(profile);
+    }
+
+    private static int ResolveCurrentMediaIndex(MonitorProfile profile, IReadOnlyList<ImageMetadata> images)
+    {
+        if (images.Count == 0)
+        {
+            return 0;
+        }
+
+        if (profile.CurrentMediaIndex >= 1 && profile.CurrentMediaIndex <= images.Count)
+        {
+            return profile.CurrentMediaIndex;
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.SelectedImagePath))
+        {
+            for (int index = 0; index < images.Count; index++)
+            {
+                if (string.Equals(images[index].Path, profile.SelectedImagePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return index + 1;
+                }
+            }
+        }
+
+        return 0;
     }
 
     private void SaveCurrentImageCheckpoint()

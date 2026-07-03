@@ -246,6 +246,11 @@ public sealed partial class MainWindow : Window
 
         ConfigureSettingsWindow();
         ApplySettings();
+        if (startInTray)
+        {
+            StartBackgroundMediaListLoad();
+        }
+
         _currentImageCheckpointTimer.Start();
         _playbackStatusTimer.Start();
         if (startInTray)

@@ -474,9 +474,32 @@ public sealed class MainWindowSourceTests
             source.IndexOf("private void Coordinator_CurrentWallpaperChanged", StringComparison.Ordinal)];
 
         int unloadedIndex = method.IndexOf("if (_settingsUiUnloadedForBackground)", StringComparison.Ordinal);
+        int countIndex = method.IndexOf("ApplyMediaListCount(profile, args.Images);", StringComparison.Ordinal);
         int applyIndex = method.IndexOf("ApplyPreviewItems(profile, items, args.Images, reusableItems);", StringComparison.Ordinal);
         Assert.True(unloadedIndex >= 0);
+        Assert.True(countIndex >= 0);
+        Assert.True(countIndex < unloadedIndex);
         Assert.True(applyIndex > unloadedIndex);
+    }
+
+    [Fact]
+    public void BackgroundMediaListLoad_UpdatesCountsWithoutCreatingPreviewItems()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Playback.cs"));
+        string startMethod = source[
+            source.IndexOf("private void StartBackgroundMediaListLoad", StringComparison.Ordinal)..
+            source.IndexOf("private async Task LoadBackgroundMediaListAsync", StringComparison.Ordinal)];
+        string loadMethod = source[
+            source.IndexOf("private async Task LoadBackgroundMediaListAsync", StringComparison.Ordinal)..
+            source.IndexOf("private void ApplyMediaListCount", StringComparison.Ordinal)];
+
+        Assert.Contains("LoadBackgroundMediaListAsync(profile)", startMethod);
+        Assert.Contains("GetOrLoadOrderedImagesWithStatusAsync", loadMethod);
+        Assert.Contains("ApplyMediaListCount(profile, result.Images);", loadMethod);
+        Assert.DoesNotContain("ImagePreviewItem", loadMethod);
+        Assert.DoesNotContain("CreateThumbnailLoader", loadMethod);
+        Assert.DoesNotContain("RenderTabs", loadMethod);
     }
 
     [Fact]
@@ -1283,6 +1306,9 @@ public sealed class MainWindowSourceTests
         Assert.Contains("public void ActivateHiddenTrayStartupWindow()", windowingSource);
         Assert.Contains("Activate();", windowingSource);
         Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_HIDE);", windowingSource);
+
+        string mainWindowSource = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        Assert.Contains("StartBackgroundMediaListLoad();", mainWindowSource);
     }
 
     [Fact]
