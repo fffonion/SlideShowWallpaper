@@ -233,6 +233,7 @@ public sealed partial class MainWindow
             IsLoopingEnabled = true,
             IsMuted = true,
         };
+        DisablePreviewPopupSystemMediaControls(_previewPopupPlayer);
         _previewPopupPlayer.MediaOpened += PreviewPopupPlayer_MediaOpened;
         _previewPopupPlayer.MediaFailed += PreviewPopupPlayer_MediaFailed;
         _previewPopupImage = new Microsoft.UI.Xaml.Controls.Image
@@ -281,6 +282,12 @@ public sealed partial class MainWindow
             Child = _previewPopupSurface,
             IsLightDismissEnabled = false,
         };
+    }
+
+    private static void DisablePreviewPopupSystemMediaControls(MediaPlayer player)
+    {
+        player.CommandManager.IsEnabled = false;
+        player.SystemMediaTransportControls.IsEnabled = false;
     }
 
     private async Task ShowPreviewPopupVideoAsync(string playbackPath, MonitorProfile profile, PreviewPopupMediaLayout mediaSize, CancellationToken cancellationToken)

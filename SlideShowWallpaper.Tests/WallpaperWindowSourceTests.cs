@@ -154,6 +154,20 @@ public sealed class WallpaperWindowSourceTests
     }
 
     [Fact]
+    public void CreateMediaPlayer_DisablesSystemMediaControls()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string createMediaPlayer = source[
+            source.IndexOf("private MediaPlayer CreateMediaPlayer", StringComparison.Ordinal)..
+            source.IndexOf("private void DetachMediaPlayerEvents", StringComparison.Ordinal)];
+
+        Assert.Contains("DisableSystemMediaControls(player);", createMediaPlayer);
+        Assert.Contains("player.CommandManager.IsEnabled = false;", createMediaPlayer);
+        Assert.Contains("player.SystemMediaTransportControls.IsEnabled = false;", createMediaPlayer);
+    }
+
+    [Fact]
     public void ShowVideoAsync_ReleasesStalePlayerWithoutResettingSource()
     {
         string root = FindProjectRoot();

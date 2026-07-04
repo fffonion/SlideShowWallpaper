@@ -950,10 +950,17 @@ public sealed partial class WallpaperWindow : Window
             IsLoopingEnabled = loop,
             IsMuted = _forceMuted || !_profile.VideoSoundEnabled,
         };
+        DisableSystemMediaControls(player);
         player.MediaEnded += MediaPlayer_MediaEnded;
         player.MediaFailed += MediaPlayer_MediaFailed;
         player.MediaOpened += MediaPlayer_MediaOpened;
         return player;
+    }
+
+    private static void DisableSystemMediaControls(MediaPlayer player)
+    {
+        player.CommandManager.IsEnabled = false;
+        player.SystemMediaTransportControls.IsEnabled = false;
     }
 
     private void DetachMediaPlayerEvents(MediaPlayer player)

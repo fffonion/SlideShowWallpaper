@@ -516,6 +516,20 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void PreviewPopupPlayer_DisablesSystemMediaControls()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Preview.cs"));
+        string method = source[
+            source.IndexOf("private void EnsurePreviewPopup", StringComparison.Ordinal)..
+            source.IndexOf("private async Task ShowPreviewPopupVideoAsync", StringComparison.Ordinal)];
+
+        Assert.Contains("DisablePreviewPopupSystemMediaControls(_previewPopupPlayer);", method);
+        Assert.Contains("player.CommandManager.IsEnabled = false;", method);
+        Assert.Contains("player.SystemMediaTransportControls.IsEnabled = false;", method);
+    }
+
+    [Fact]
     public void BuildHardwareEditorPage_ContainsPreviewAndFormatSections()
     {
         string root = FindProjectRoot();
