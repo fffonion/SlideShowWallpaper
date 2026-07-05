@@ -1,3 +1,4 @@
+using Microsoft.UI.Dispatching;
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Windows;
 
@@ -5,6 +6,9 @@ namespace SlideShowWallpaper.Services;
 
 public sealed partial class WallpaperPlaybackCoordinator
 {
+    private static readonly TimeSpan FolderAvailabilityRetryDelay = TimeSpan.FromSeconds(15);
+    private readonly Dictionary<string, DispatcherQueueTimer> _folderAvailabilityRetryTimers = new(StringComparer.OrdinalIgnoreCase);
+
     private void ConfigureFolderWatcher(MonitorProfile profile)
     {
         if (string.IsNullOrWhiteSpace(profile.FolderPath))
@@ -31,6 +35,19 @@ public sealed partial class WallpaperPlaybackCoordinator
                 profile.IncludeSubdirectories,
                 CancellationToken.None);
             IReadOnlyList<ImageMetadata> images = result.Images;
+            if (images.Count == 0 && IsFolderTemporarilyUnavailable(profile))
+            {
+                ScheduleFolderAvailabilityRetry(profile.Id);
+                if (_queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue) && existingQueue.Count > 0)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                StopFolderAvailabilityRetry(profile.Id);
+            }
+
             if (!_playbackEnabled
                 || profile.IsStopped
                 || !_queueVersions.TryGetValue(profile.Id, out int latestVersion)
@@ -89,14 +106,26 @@ public sealed partial class WallpaperPlaybackCoordinator
             return;
         }
 
+        if (IsFolderTemporarilyUnavailable(profile))
+        {
+            ScheduleFolderAvailabilityRetry(profile.Id);
+            return;
+        }
+
         try
         {
+            StopFolderAvailabilityRetry(profile.Id);
             IReadOnlyList<ImageMetadata> images = await _imageOrderService.ReloadOrderedImagesAsync(
                 profile.FolderPath,
                 profile.PlaybackOrder,
                 profile.MediaFilter,
                 profile.IncludeSubdirectories,
                 CancellationToken.None);
+            if (_autoTrackNewFiles)
+            {
+                ConfigureFolderWatcher(profile);
+            }
+
             OrderedImagesChanged?.Invoke(this, new OrderedImagesChangedEventArgs(profile.Id, images));
             if (!_playbackEnabled || profile.IsStopped)
             {
@@ -129,6 +158,71 @@ public sealed partial class WallpaperPlaybackCoordinator
         {
             AppLog.Write(exception);
         }
+    }
+
+    private void RefreshFoldersAfterDisplayResume()
+    {
+        foreach (MonitorProfile profile in _profiles.Values)
+        {
+            if (!profile.IsStopped && !string.IsNullOrWhiteSpace(profile.FolderPath))
+            {
+                DispatchFolderChange(profile.Id);
+            }
+        }
+    }
+
+    private void ScheduleFolderAvailabilityRetry(string monitorId)
+    {
+        if (!_folderAvailabilityRetryTimers.TryGetValue(monitorId, out DispatcherQueueTimer? timer))
+        {
+            timer = _dispatcherQueue.CreateTimer();
+            timer.Interval = FolderAvailabilityRetryDelay;
+            timer.IsRepeating = true;
+            timer.Tick += (_, _) => RetryUnavailableFolder(monitorId);
+            _folderAvailabilityRetryTimers[monitorId] = timer;
+        }
+
+        timer.Start();
+    }
+
+    private void RetryUnavailableFolder(string monitorId)
+    {
+        if (!_profiles.TryGetValue(monitorId, out MonitorProfile? profile) || string.IsNullOrWhiteSpace(profile.FolderPath) || profile.IsStopped)
+        {
+            StopFolderAvailabilityRetry(monitorId);
+            return;
+        }
+
+        if (IsFolderTemporarilyUnavailable(profile))
+        {
+            return;
+        }
+
+        StopFolderAvailabilityRetry(monitorId);
+        DispatchFolderChange(monitorId);
+    }
+
+    private void StopFolderAvailabilityRetry(string monitorId)
+    {
+        if (_folderAvailabilityRetryTimers.Remove(monitorId, out DispatcherQueueTimer? timer))
+        {
+            timer.Stop();
+        }
+    }
+
+    private void StopAllFolderAvailabilityRetries()
+    {
+        foreach (DispatcherQueueTimer timer in _folderAvailabilityRetryTimers.Values)
+        {
+            timer.Stop();
+        }
+
+        _folderAvailabilityRetryTimers.Clear();
+    }
+
+    private static bool IsFolderTemporarilyUnavailable(MonitorProfile profile)
+    {
+        return !string.IsNullOrWhiteSpace(profile.FolderPath) && !Directory.Exists(profile.FolderPath);
     }
 
     private void ReplaceQueue(MonitorProfile profile, IEnumerable<string> paths, bool preserveInitialOrder = false)

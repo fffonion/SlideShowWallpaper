@@ -134,6 +134,31 @@ public sealed class ImageOrderServiceTests
         Assert.Equal(["nested.png", "root.png"], media.Select(item => item.FileName).OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task ReloadOrderedImagesAsync_WithUnavailableFolder_UsesMediaCache()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string folder = Path.Combine(root, "network-share");
+        string cachePath = Path.Combine(root, "cache.json");
+        var cache = new MediaLibraryCacheService(cachePath);
+        cache.Save(
+            folder,
+            includeSubdirectories: false,
+            [new ImageMetadata(Path.Combine(folder, "cached.png"), "cached.png", DateTime.UtcNow, 1, MediaKind.Image)]);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        IReadOnlyList<ImageMetadata> media = await service.ReloadOrderedImagesAsync(
+            folder,
+            PlaybackOrder.NameAsc,
+            PlaybackMediaFilter.ImagesOnly,
+            includeSubdirectories: false,
+            CancellationToken.None);
+
+        ImageMetadata item = Assert.Single(media);
+        Assert.Equal("cached.png", item.FileName);
+    }
+
     private sealed class ZeroRandom : Random
     {
         public override int Next(int maxValue)

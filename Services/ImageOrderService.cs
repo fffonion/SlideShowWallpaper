@@ -142,9 +142,16 @@ public sealed class ImageOrderService
 
     private IReadOnlyList<ImageMetadata> Scan(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, bool includeSubdirectories)
     {
-        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        if (string.IsNullOrWhiteSpace(folderPath))
         {
             return [];
+        }
+
+        if (!Directory.Exists(folderPath))
+        {
+            return _mediaCache.TryLoad(folderPath, includeSubdirectories, out IReadOnlyList<ImageMetadata> cachedMedia)
+                ? ApplyOrderAndFilter(cachedMedia, order, mediaFilter)
+                : [];
         }
 
         IReadOnlyList<ImageMetadata> scanned = ImageLibrary.ScanFolderMetadata(folderPath, PlaybackOrder.NameAsc, includeSubdirectories);

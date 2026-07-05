@@ -186,6 +186,7 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string method = ExtractMethod(source, "public void SetDisplayPowerVideoPause", "public void PauseOrResume");
 
         Assert.Contains("RehostActiveWindows();", method);
+        Assert.Contains("RefreshFoldersAfterDisplayResume();", method);
         Assert.Contains("_desktopHostService.HostOnDesktop(window, monitorId, _monitorRects);", method);
     }
 
@@ -210,6 +211,38 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         Assert.Contains("_folderChangeWatcherService.Watch(profile.Id, profile.FolderPath, profile.IncludeSubdirectories", source);
         Assert.Contains("GetOrLoadOrderedImagesWithStatusAsync", source);
         Assert.Contains("ReloadOrderedImagesAsync", source);
+    }
+
+    [Fact]
+    public void QueueReloads_PreserveCurrentQueueWhenFolderIsTemporarilyUnavailable()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+        string method = ExtractMethod(source, "private async void ReloadChangedFolderAsync", "private void RefreshFoldersAfterDisplayResume");
+
+        int unavailableIndex = method.IndexOf("if (IsFolderTemporarilyUnavailable(profile))", StringComparison.Ordinal);
+        int retryIndex = method.IndexOf("ScheduleFolderAvailabilityRetry(profile.Id);", StringComparison.Ordinal);
+        int scanIndex = method.IndexOf("_imageOrderService.ReloadOrderedImagesAsync", StringComparison.Ordinal);
+        Assert.True(unavailableIndex >= 0);
+        Assert.True(retryIndex > unavailableIndex);
+        Assert.True(scanIndex > retryIndex);
+        Assert.Contains("return;", method[retryIndex..scanIndex]);
+        Assert.DoesNotContain("ReplaceQueueAfterCurrent(profile, []", method);
+    }
+
+    [Fact]
+    public void FolderAvailabilityRetry_RunsAfterDisplayResumeAndStopsOnShutdown()
+    {
+        string root = FindProjectRoot();
+        string queueSource = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+        string coordinatorSource = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string retryMethod = ExtractMethod(queueSource, "private void RetryUnavailableFolder", "private void StopFolderAvailabilityRetry");
+        string stopMethod = ExtractMethod(coordinatorSource, "public void StopPlayback", "private void ConfigureHardwareOverlayTimer");
+
+        Assert.Contains("RefreshFoldersAfterDisplayResume", queueSource);
+        Assert.Contains("ScheduleFolderAvailabilityRetry", queueSource);
+        Assert.Contains("DispatchFolderChange(monitorId);", retryMethod);
+        Assert.Contains("StopAllFolderAvailabilityRetries();", stopMethod);
     }
 
     [Fact]

@@ -98,6 +98,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         {
             _profiles.Remove(monitorId);
             _folderChangeWatcherService.Unwatch(monitorId);
+            StopFolderAvailabilityRetry(monitorId);
         }
 
         foreach (MonitorProfile profile in profiles)
@@ -111,6 +112,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             if (profile.IsStopped)
             {
                 HideWindow(profile.Id);
+                StopFolderAvailabilityRetry(profile.Id);
                 _profileChanges.Forget(profile.Id);
                 continue;
             }
@@ -181,6 +183,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         if (!isPaused)
         {
             RehostActiveWindows();
+            RefreshFoldersAfterDisplayResume();
         }
 
         if (!stateChanged && isPaused)
@@ -319,6 +322,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _profiles.Clear();
         _profileChanges.Clear();
         _folderChangeWatcherService.Clear();
+        StopAllFolderAvailabilityRetries();
         _videoCoverageTimer.Stop();
         _hardwareOverlayTimer.Stop();
         _ = Task.Run(_hardwareMonitorService.StopBroker);
