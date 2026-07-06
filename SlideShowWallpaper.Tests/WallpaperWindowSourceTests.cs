@@ -127,7 +127,26 @@ public sealed class WallpaperWindowSourceTests
 
         Assert.Contains("CancelMediaRequest();", stopVideo);
         Assert.Contains("ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));", stopVideo);
+        Assert.Contains("catch (Exception exception)", stopVideo);
         Assert.Contains("VideoPlayer.Visibility = Visibility.Collapsed;", stopVideo);
+    }
+
+    [Fact]
+    public void ClosedHandler_UsesCloseCleanupWithoutReplacingMediaPlayer()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Windows", "WallpaperWindow.xaml.cs"));
+        string constructor = source[
+            source.IndexOf("public WallpaperWindow(MonitorProfile profile)", StringComparison.Ordinal)..
+            source.IndexOf("public event EventHandler? VideoEnded;", StringComparison.Ordinal)];
+        string cleanupAfterClose = source[
+            source.IndexOf("private void CleanupAfterClose", StringComparison.Ordinal)..
+            source.IndexOf("private DoubleAnimation CreateOpacityAnimation", StringComparison.Ordinal)];
+
+        Assert.Contains("Closed += (_, _) => CleanupAfterClose();", constructor);
+        Assert.Contains("ReleaseMediaPlayer(_mediaPlayer, releaseCurrent: true);", cleanupAfterClose);
+        Assert.DoesNotContain("StopVideo();", cleanupAfterClose);
+        Assert.DoesNotContain("ReplaceMediaPlayer(", cleanupAfterClose);
     }
 
     [Fact]
@@ -163,8 +182,10 @@ public sealed class WallpaperWindowSourceTests
             source.IndexOf("private void DetachMediaPlayerEvents", StringComparison.Ordinal)];
 
         Assert.Contains("DisableSystemMediaControls(player);", createMediaPlayer);
-        Assert.Contains("player.CommandManager.IsEnabled = false;", createMediaPlayer);
-        Assert.Contains("player.SystemMediaTransportControls.IsEnabled = false;", createMediaPlayer);
+        Assert.Contains("player.CommandManager.IsEnabled = false", createMediaPlayer);
+        Assert.Contains("player.SystemMediaTransportControls.IsEnabled = false", createMediaPlayer);
+        Assert.Contains("TryDisableSystemMediaControl", createMediaPlayer);
+        Assert.Contains("catch (Exception exception)", createMediaPlayer);
     }
 
     [Fact]

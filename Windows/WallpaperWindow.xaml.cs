@@ -54,13 +54,7 @@ public sealed partial class WallpaperWindow : Window
         ConfigureHardwareOverlayDrag();
         ApplyProfile(profile);
         Root.SizeChanged += (_, _) => ApplyProfile(_profile);
-        Closed += (_, _) =>
-        {
-            _isClosed = true;
-            StopVideo();
-            ClearImageSources();
-            ReleaseMediaPlayer(_mediaPlayer, releaseCurrent: true);
-        };
+        Closed += (_, _) => CleanupAfterClose();
     }
 
     public event EventHandler? VideoEnded;
@@ -763,7 +757,15 @@ public sealed partial class WallpaperWindow : Window
     {
         CancelMediaRequest();
         _currentPlaybackPath = string.Empty;
-        ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));
+        try
+        {
+            ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
         VideoPlayer.Visibility = Visibility.Collapsed;
         _currentKind = MediaKind.Image;
     }
@@ -835,7 +837,15 @@ public sealed partial class WallpaperWindow : Window
     private void ShowVideoError(string path, string message)
     {
         CancelMediaRequest();
-        ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));
+        try
+        {
+            ReplaceMediaPlayer(VideoPlaybackPolicy.ShouldLoopVideo(_profile));
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+
         VideoPlayer.Visibility = Visibility.Collapsed;
         ErrorTitleText.Text = LocalizedStrings.Get("VideoPlaybackErrorTitle");
         ErrorDetailText.Text = LocalizedStrings.Format("VideoPlaybackErrorFormat", System.IO.Path.GetFileName(path), message);
@@ -959,8 +969,20 @@ public sealed partial class WallpaperWindow : Window
 
     private static void DisableSystemMediaControls(MediaPlayer player)
     {
-        player.CommandManager.IsEnabled = false;
-        player.SystemMediaTransportControls.IsEnabled = false;
+        TryDisableSystemMediaControl(() => player.CommandManager.IsEnabled = false);
+        TryDisableSystemMediaControl(() => player.SystemMediaTransportControls.IsEnabled = false);
+    }
+
+    private static void TryDisableSystemMediaControl(Action disable)
+    {
+        try
+        {
+            disable();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
     }
 
     private void DetachMediaPlayerEvents(MediaPlayer player)
@@ -977,10 +999,33 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
-        DetachMediaPlayerEvents(player);
         try
         {
+            DetachMediaPlayerEvents(player);
             player.Dispose();
+        }
+        catch (Exception exception)
+        {
+            AppLog.Write(exception);
+        }
+    }
+
+    private void CleanupAfterClose()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        _isClosed = true;
+        try
+        {
+            CancelMediaRequest();
+            _currentPlaybackPath = string.Empty;
+            VideoPlayer.Visibility = Visibility.Collapsed;
+            ClearImageSources();
+            HideError();
+            ReleaseMediaPlayer(_mediaPlayer, releaseCurrent: true);
         }
         catch (Exception exception)
         {
