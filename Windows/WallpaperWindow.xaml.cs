@@ -95,7 +95,7 @@ public sealed partial class WallpaperWindow : Window
             return;
         }
 
-        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);
+        NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOWNA);
     }
 
     public void HideWallpaperWindow()

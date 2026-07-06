@@ -9,6 +9,11 @@ public static partial class NativeMethods
     public static readonly nint WS_MAXIMIZEBOX = 0x00010000;
     public static readonly nint WS_MINIMIZEBOX = 0x00020000;
     public static readonly nint WS_POPUP = unchecked((nint)0x80000000);
+    public static readonly nint WS_CHILD = 0x40000000;
+    public static readonly nint WS_CLIPCHILDREN = 0x02000000;
+    public static readonly nint WS_CLIPSIBLINGS = 0x04000000;
+    public static readonly nint WS_MINIMIZE = 0x20000000;
+    public static readonly nint WS_MAXIMIZE = 0x01000000;
     public static readonly nint WS_SYSMENU = 0x00080000;
     public static readonly nint WS_THICKFRAME = 0x00040000;
     public static readonly nint WS_VISIBLE = 0x10000000;
@@ -270,6 +275,20 @@ public static partial class NativeMethods
         return showWindow ? borderless | WS_VISIBLE : borderless & ~WS_VISIBLE;
     }
 
+    public static nint ToDesktopChildWindowStyle(nint style, bool showWindow)
+    {
+        nint removedStyles = WS_CAPTION
+            | WS_THICKFRAME
+            | WS_SYSMENU
+            | WS_MINIMIZEBOX
+            | WS_MAXIMIZEBOX
+            | WS_POPUP
+            | WS_MINIMIZE
+            | WS_MAXIMIZE;
+        nint childStyle = (style & ~removedStyles) | WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+        return showWindow ? childStyle | WS_VISIBLE : childStyle & ~WS_VISIBLE;
+    }
+
     internal static void RemoveWindowFrame(IntPtr hWnd)
     {
         RemoveWindowFrame(hWnd, showWindow: true);
@@ -279,6 +298,20 @@ public static partial class NativeMethods
     {
         nint style = GetWindowLongPtr(hWnd, GWL_STYLE);
         SetWindowStyleLongPtr(hWnd, GWL_STYLE, ToBorderlessWindowStyle(style, showWindow));
+        SetWindowPos(
+            hWnd,
+            IntPtr.Zero,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
+    internal static void SetDesktopChildWindow(IntPtr hWnd)
+    {
+        nint style = GetWindowLongPtr(hWnd, GWL_STYLE);
+        SetWindowStyleLongPtr(hWnd, GWL_STYLE, ToDesktopChildWindowStyle(style, showWindow: true));
         SetWindowPos(
             hWnd,
             IntPtr.Zero,

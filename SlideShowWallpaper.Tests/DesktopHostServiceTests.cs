@@ -48,6 +48,25 @@ public sealed class DesktopHostServiceTests
         Assert.DoesNotContain("DesktopHostOffset", source);
     }
 
+    [Fact]
+    public void HostOnDesktop_ConvertsWallpaperWindowToChildBeforeSetParent()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "DesktopHostService.cs"));
+        string method = source[
+            source.IndexOf("public void HostOnDesktop", StringComparison.Ordinal)..
+            source.IndexOf("public static uint CreatePositionFlags", StringComparison.Ordinal)];
+
+        int childStyleIndex = method.IndexOf("NativeMethods.SetDesktopChildWindow(hwnd);", StringComparison.Ordinal);
+        int setParentIndex = method.IndexOf("NativeMethods.SetParent(hwnd, target.HostWindow);", StringComparison.Ordinal);
+        int showIndex = method.IndexOf("NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOWNA);", StringComparison.Ordinal);
+
+        Assert.True(childStyleIndex >= 0);
+        Assert.True(setParentIndex > childStyleIndex);
+        Assert.True(showIndex > setParentIndex);
+        Assert.DoesNotContain("SW_SHOW);", method);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

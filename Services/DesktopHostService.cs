@@ -14,6 +14,7 @@ public sealed class DesktopHostService
         NativeMethods.RECT hostRect = default;
         if (target.HostWindow != IntPtr.Zero)
         {
+            NativeMethods.SetDesktopChildWindow(hwnd);
             NativeMethods.SetParent(hwnd, target.HostWindow);
             NativeMethods.GetWindowRect(target.HostWindow, out hostRect);
             if (target.IconListWindow != IntPtr.Zero)
@@ -27,6 +28,7 @@ public sealed class DesktopHostService
             int x = target.HostWindow == IntPtr.Zero ? rect.Left : rect.Left - hostRect.Left;
             int y = target.HostWindow == IntPtr.Zero ? rect.Top : rect.Top - hostRect.Top;
             NativeMethods.SetWindowPos(hwnd, target.InsertAfterWindow, x, y, rect.Width, rect.Height, CreatePositionFlags(target.InsertAfterWindow));
+            NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOWNA);
         }
     }
 

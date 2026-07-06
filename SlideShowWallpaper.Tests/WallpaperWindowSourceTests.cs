@@ -212,7 +212,7 @@ public sealed class WallpaperWindowSourceTests
             source.IndexOf("public void HideWallpaperWindow", StringComparison.Ordinal)..
             source.IndexOf("public async Task ShowImageAsync", StringComparison.Ordinal)];
 
-        Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOW);", showWallpaperWindow);
+        Assert.Contains("NativeMethods.ShowWindow(_hwnd, NativeMethods.SW_SHOWNA);", showWallpaperWindow);
         Assert.DoesNotContain("AppWindow.Show();", showWallpaperWindow);
         Assert.Contains("StopVideo();", hideWallpaperWindow);
         Assert.Contains("ClearImageSources();", hideWallpaperWindow);
