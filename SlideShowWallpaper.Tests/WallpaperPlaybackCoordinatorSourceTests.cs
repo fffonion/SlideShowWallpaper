@@ -179,15 +179,42 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
-    public void DisplayPowerResume_RehostsActiveWindows()
+    public void DisplayPowerResume_RestoresCurrentMediaAndSchedulesRecovery()
     {
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
         string method = ExtractMethod(source, "public void SetDisplayPowerVideoPause", "public void PauseOrResume");
 
-        Assert.Contains("RehostActiveWindows();", method);
+        Assert.Contains("RecoverWallpapersAfterDisplayResume(refreshMedia: true);", method);
+        Assert.Contains("ScheduleDisplayResumeRecovery();", method);
         Assert.Contains("RefreshFoldersAfterDisplayResume();", method);
-        Assert.Contains("_desktopHostService.HostOnDesktop(window, monitorId, _monitorRects);", method);
+    }
+
+    [Fact]
+    public void DisplayResumeRecovery_RehostsWindowsWithoutAdvancingQueue()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private void RecoverWallpapersAfterDisplayResume", "private async Task ShowCurrentOrNextAsync");
+        string showCurrentMethod = ExtractMethod(source, "private async Task ShowCurrentOrNextAsync", "private void ScheduleDisplayResumeRecovery");
+
+        Assert.Contains("window.ShowWallpaperWindow();", method);
+        Assert.Contains("_desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);", method);
+        Assert.Contains("ShowCurrentOrNextAsync(profile, window, playbackQueue)", method);
+        Assert.Contains("ImagePlaybackItem? currentItem = queue.CurrentItem;", showCurrentMethod);
+        Assert.Contains("ShowWindowMediaSafeAsync(profile.Id, window, currentItem)", showCurrentMethod);
+        Assert.Contains("await ShowNextAsync(profile.Id);", showCurrentMethod);
+    }
+
+    [Fact]
+    public void FolderAvailabilityRetry_RestoresCurrentMediaAfterFolderReturns()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+        string method = ExtractMethod(source, "private void RetryUnavailableFolder", "private void StopFolderAvailabilityRetry");
+
+        Assert.Contains("DispatchFolderChange(monitorId);", method);
+        Assert.Contains("RecoverWallpapersAfterDisplayResume(refreshMedia: true);", method);
     }
 
     [Fact]

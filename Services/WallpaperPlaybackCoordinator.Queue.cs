@@ -200,6 +200,7 @@ public sealed partial class WallpaperPlaybackCoordinator
 
         StopFolderAvailabilityRetry(monitorId);
         DispatchFolderChange(monitorId);
+        RecoverWallpapersAfterDisplayResume(refreshMedia: true);
     }
 
     private void StopFolderAvailabilityRetry(string monitorId)

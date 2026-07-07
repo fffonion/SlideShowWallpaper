@@ -6,6 +6,8 @@ namespace SlideShowWallpaper.Services;
 
 public sealed partial class WallpaperPlaybackCoordinator
 {
+    private const int DisplayResumeRecoveryAttempts = 5;
+    private static readonly TimeSpan DisplayResumeRecoveryInterval = TimeSpan.FromSeconds(2);
     private readonly MonitorService _monitorService;
     private readonly DesktopHostService _desktopHostService;
     private readonly ImageOrderService _imageOrderService;
@@ -15,6 +17,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly DispatcherQueueTimer _videoCoverageTimer;
     private readonly DispatcherQueueTimer _hardwareOverlayTimer;
+    private readonly DispatcherQueueTimer _displayResumeRecoveryTimer;
     private readonly Dictionary<string, WallpaperWindow> _windows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DispatcherQueueTimer> _timers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PlaybackQueue> _queues = new(StringComparer.OrdinalIgnoreCase);
@@ -30,6 +33,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private bool _pauseVideoWhenDisplayOffOrSleeping = true;
     private bool _isDisplayOffOrSleeping;
     private bool _hardwareOverlayRefreshInProgress;
+    private int _displayResumeRecoveryAttemptsRemaining;
     private HardwareMonitorConfig _hardwareMonitorConfig = new();
 
     public WallpaperPlaybackCoordinator(
@@ -55,6 +59,10 @@ public sealed partial class WallpaperPlaybackCoordinator
         _hardwareOverlayTimer.Interval = TimeSpan.FromSeconds(HardwareMonitorConfig.DefaultRefreshIntervalSeconds);
         _hardwareOverlayTimer.IsRepeating = true;
         _hardwareOverlayTimer.Tick += async (_, _) => await RefreshHardwareOverlayAsync();
+        _displayResumeRecoveryTimer = _dispatcherQueue.CreateTimer();
+        _displayResumeRecoveryTimer.Interval = DisplayResumeRecoveryInterval;
+        _displayResumeRecoveryTimer.IsRepeating = true;
+        _displayResumeRecoveryTimer.Tick += (_, _) => RunDisplayResumeRecoveryTick();
     }
 
     public IReadOnlyList<MonitorProfile> CurrentMonitors => _monitorService.GetCurrentMonitors();
@@ -182,8 +190,13 @@ public sealed partial class WallpaperPlaybackCoordinator
         _isDisplayOffOrSleeping = isPaused;
         if (!isPaused)
         {
-            RehostActiveWindows();
+            RecoverWallpapersAfterDisplayResume(refreshMedia: true);
+            ScheduleDisplayResumeRecovery();
             RefreshFoldersAfterDisplayResume();
+        }
+        else
+        {
+            StopDisplayResumeRecovery();
         }
 
         if (!stateChanged && isPaused)
@@ -194,16 +207,87 @@ public sealed partial class WallpaperPlaybackCoordinator
         ApplyVideoCoverageState();
     }
 
-    private void RehostActiveWindows()
+    private void RecoverWallpapersAfterDisplayResume(bool refreshMedia)
     {
         _monitorRects = _monitorService.GetMonitorRects();
-        foreach ((string monitorId, WallpaperWindow window) in _windows)
+        foreach (MonitorProfile profile in _profiles.Values)
         {
-            if (window.IsShowingWallpaper)
+            if (profile.IsStopped)
             {
-                _desktopHostService.HostOnDesktop(window, monitorId, _monitorRects);
+                continue;
+            }
+
+            if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            {
+                if (_queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue) && existingQueue.Count > 0)
+                {
+                    EnsureWindow(profile);
+                    ConfigureTimer(profile);
+                    if (refreshMedia)
+                    {
+                        _ = ShowCurrentOrNextAsync(profile, _windows[profile.Id], existingQueue);
+                    }
+                }
+
+                continue;
+            }
+
+            if (!window.IsShowingWallpaper && (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0))
+            {
+                continue;
+            }
+
+            window.ShowWallpaperWindow();
+            window.ApplyProfile(profile);
+            window.SetForceMuted(_globalMute);
+            _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
+            ConfigureTimer(profile);
+            if (refreshMedia && _queues.TryGetValue(profile.Id, out PlaybackQueue? playbackQueue))
+            {
+                _ = ShowCurrentOrNextAsync(profile, window, playbackQueue);
             }
         }
+
+        ConfigureVideoCoverageTimer();
+        ApplyVideoCoverageState();
+        ConfigureHardwareOverlayTimer();
+    }
+
+    private async Task ShowCurrentOrNextAsync(MonitorProfile profile, WallpaperWindow window, PlaybackQueue queue)
+    {
+        ImagePlaybackItem? currentItem = queue.CurrentItem;
+        if (currentItem is not null)
+        {
+            await ShowWindowMediaSafeAsync(profile.Id, window, currentItem);
+            return;
+        }
+
+        await ShowNextAsync(profile.Id);
+    }
+
+    private void ScheduleDisplayResumeRecovery()
+    {
+        _displayResumeRecoveryAttemptsRemaining = DisplayResumeRecoveryAttempts;
+        _displayResumeRecoveryTimer.Stop();
+        _displayResumeRecoveryTimer.Start();
+    }
+
+    private void RunDisplayResumeRecoveryTick()
+    {
+        if (_displayResumeRecoveryAttemptsRemaining <= 0)
+        {
+            StopDisplayResumeRecovery();
+            return;
+        }
+
+        _displayResumeRecoveryAttemptsRemaining--;
+        RecoverWallpapersAfterDisplayResume(refreshMedia: false);
+    }
+
+    private void StopDisplayResumeRecovery()
+    {
+        _displayResumeRecoveryAttemptsRemaining = 0;
+        _displayResumeRecoveryTimer.Stop();
     }
 
     public void PauseOrResume(string monitorId, bool isPaused)
@@ -325,6 +409,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         StopAllFolderAvailabilityRetries();
         _videoCoverageTimer.Stop();
         _hardwareOverlayTimer.Stop();
+        StopDisplayResumeRecovery();
         _ = Task.Run(_hardwareMonitorService.StopBroker);
     }
 

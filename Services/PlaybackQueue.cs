@@ -36,6 +36,20 @@ public sealed class PlaybackQueue
 
     public int CurrentIndex => _currentIndex;
 
+    public ImagePlaybackItem? CurrentItem
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_currentPath))
+            {
+                return null;
+            }
+
+            int index = _items.FindIndex(item => string.Equals(item.Path, _currentPath, StringComparison.OrdinalIgnoreCase));
+            return index >= 0 ? _items[index] : null;
+        }
+    }
+
     public static PlaybackQueue FromOrderedItems(IEnumerable<ImagePlaybackItem> items, PlaybackOrder order, Random? random = null)
     {
         return new PlaybackQueue(items, order, random ?? Random.Shared, shuffleInitial: false);
