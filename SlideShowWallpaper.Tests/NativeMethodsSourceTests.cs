@@ -71,6 +71,31 @@ public sealed class NativeMethodsSourceTests
         Assert.DoesNotContain("GetIconGlyph", traySource);
     }
 
+    [Fact]
+    public void PowerNotifications_RegisterSuspendResumeSeparately()
+    {
+        string root = FindProjectRoot();
+        string nativeSource = File.ReadAllText(Path.Combine(root, "Interop", "NativeMethods.cs"));
+        string serviceSource = File.ReadAllText(Path.Combine(root, "Services", "DisplayPowerPauseService.cs"));
+
+        Assert.Contains("RegisterSuspendResumeNotification", nativeSource);
+        Assert.Contains("UnregisterSuspendResumeNotification", nativeSource);
+        Assert.Contains("RegisterSuspendResume(windowHandle);", serviceSource);
+        Assert.Contains("PowerNotificationRegistration.SuspendResume(registration)", serviceSource);
+        Assert.Contains("NativeMethods.UnregisterSuspendResumeNotification(Handle);", serviceSource);
+    }
+
+    [Fact]
+    public void DisplayPowerService_IgnoresInitialDisplayOnUntilPaused()
+    {
+        string root = FindProjectRoot();
+        string serviceSource = File.ReadAllText(Path.Combine(root, "Services", "DisplayPowerPauseService.cs"));
+
+        Assert.Contains("_hasPausedSinceStartup", serviceSource);
+        Assert.Contains("DisplayPowerPausePolicy.IsResumeEvent(powerEvent) || _hasPausedSinceStartup", serviceSource);
+        Assert.Contains("_pauseStateChanged(false);", serviceSource);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

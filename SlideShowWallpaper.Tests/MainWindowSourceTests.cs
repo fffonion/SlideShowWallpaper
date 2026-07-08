@@ -61,6 +61,26 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void Constructor_WiresDisplayConfigurationRecoveryThroughTrayWindowProc()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        string constructor = source[
+            source.IndexOf("public MainWindow(", StringComparison.Ordinal)..
+            source.IndexOf("private void HardwareMonitorService_BrokerProcessStarted", StringComparison.Ordinal)];
+        int handlerStart = source.IndexOf("private void HandleDisplayConfigurationChanged", StringComparison.Ordinal);
+        string handler = source[
+            handlerStart..
+            source.IndexOf("private MonitorProfile? SelectedProfile", handlerStart, StringComparison.Ordinal)];
+        string traySource = File.ReadAllText(Path.Combine(root, "Services", "TrayIconService.cs"));
+
+        Assert.Contains("HandleDisplayConfigurationChanged", constructor);
+        Assert.Contains("_coordinator.RecoverWallpapersAfterDisplayConfigurationChange();", handler);
+        Assert.Contains("msg == NativeMethods.WM_DISPLAYCHANGE", traySource);
+        Assert.Contains("_displayConfigurationChanged();", traySource);
+    }
+
+    [Fact]
     public void ProgramMain_StartsWinUiWithoutBrokerMode()
     {
         string root = FindProjectRoot();

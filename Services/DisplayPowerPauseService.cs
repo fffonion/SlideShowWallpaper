@@ -6,12 +6,14 @@ namespace SlideShowWallpaper.Services;
 internal sealed class DisplayPowerPauseService : IDisposable
 {
     private readonly Action<bool> _pauseStateChanged;
-    private readonly List<IntPtr> _registrations = [];
+    private readonly List<PowerNotificationRegistration> _registrations = [];
+    private bool _hasPausedSinceStartup;
     private bool _disposed;
 
     public DisplayPowerPauseService(IntPtr windowHandle, Action<bool> pauseStateChanged)
     {
         _pauseStateChanged = pauseStateChanged;
+        RegisterSuspendResume(windowHandle);
         Register(windowHandle, DisplayPowerPausePolicy.ConsoleDisplayStateGuid);
         Register(windowHandle, DisplayPowerPausePolicy.MonitorPowerOnGuid);
     }
@@ -28,9 +30,22 @@ internal sealed class DisplayPowerPauseService : IDisposable
         }
 
         bool? pauseState = DisplayPowerPausePolicy.GetPauseState(powerEvent, powerSetting, data);
-        if (pauseState.HasValue)
+        if (!pauseState.HasValue)
         {
-            _pauseStateChanged(pauseState.Value);
+            return;
+        }
+
+        if (pauseState.Value)
+        {
+            _hasPausedSinceStartup = true;
+            _pauseStateChanged(true);
+            return;
+        }
+
+        if (DisplayPowerPausePolicy.IsResumeEvent(powerEvent) || _hasPausedSinceStartup)
+        {
+            _hasPausedSinceStartup = false;
+            _pauseStateChanged(false);
         }
     }
 
@@ -41,9 +56,9 @@ internal sealed class DisplayPowerPauseService : IDisposable
             return;
         }
 
-        foreach (IntPtr registration in _registrations)
+        foreach (PowerNotificationRegistration registration in _registrations)
         {
-            NativeMethods.UnregisterPowerSettingNotification(registration);
+            registration.Unregister();
         }
 
         _registrations.Clear();
@@ -63,7 +78,21 @@ internal sealed class DisplayPowerPauseService : IDisposable
             return;
         }
 
-        _registrations.Add(registration);
+        _registrations.Add(PowerNotificationRegistration.PowerSetting(registration));
+    }
+
+    private void RegisterSuspendResume(IntPtr windowHandle)
+    {
+        IntPtr registration = NativeMethods.RegisterSuspendResumeNotification(
+            windowHandle,
+            NativeMethods.DEVICE_NOTIFY_WINDOW_HANDLE);
+        if (registration == IntPtr.Zero)
+        {
+            AppLog.Write($"RegisterSuspendResumeNotification failed: {Marshal.GetLastWin32Error()}");
+            return;
+        }
+
+        _registrations.Add(PowerNotificationRegistration.SuspendResume(registration));
     }
 
     private static void ReadPowerBroadcastSetting(IntPtr lParam, out Guid? powerSetting, out int? data)
@@ -81,6 +110,30 @@ internal sealed class DisplayPowerPauseService : IDisposable
             AppLog.Write(exception);
             powerSetting = null;
             data = null;
+        }
+    }
+
+    private readonly record struct PowerNotificationRegistration(IntPtr Handle, bool IsSuspendResume)
+    {
+        public static PowerNotificationRegistration PowerSetting(IntPtr handle)
+        {
+            return new PowerNotificationRegistration(handle, false);
+        }
+
+        public static PowerNotificationRegistration SuspendResume(IntPtr handle)
+        {
+            return new PowerNotificationRegistration(handle, true);
+        }
+
+        public void Unregister()
+        {
+            if (IsSuspendResume)
+            {
+                NativeMethods.UnregisterSuspendResumeNotification(Handle);
+                return;
+            }
+
+            NativeMethods.UnregisterPowerSettingNotification(Handle);
         }
     }
 }

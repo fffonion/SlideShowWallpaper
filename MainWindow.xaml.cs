@@ -229,7 +229,8 @@ public sealed partial class MainWindow : Window
             TogglePauseFromTray,
             ToggleStopFromTray,
             HandleWindowMinimizedChanged,
-            HandleDisplayPowerPauseChanged);
+            HandleDisplayPowerPauseChanged,
+            HandleDisplayConfigurationChanged);
         _coordinator.OrderedImagesChanged += Coordinator_OrderedImagesChanged;
         _coordinator.CurrentWallpaperChanged += Coordinator_CurrentWallpaperChanged;
         _coordinator.HardwareOverlayMoved += Coordinator_HardwareOverlayMoved;
@@ -272,6 +273,11 @@ public sealed partial class MainWindow : Window
     private void HandleDisplayPowerPauseChanged(bool isPaused)
     {
         _coordinator.SetDisplayPowerVideoPause(isPaused);
+    }
+
+    private void HandleDisplayConfigurationChanged()
+    {
+        _coordinator.RecoverWallpapersAfterDisplayConfigurationChange();
     }
 
     private MonitorProfile? SelectedProfile => _viewModel.Profiles.FirstOrDefault(profile => string.Equals(profile.Id, _selectedMonitorId, StringComparison.OrdinalIgnoreCase))

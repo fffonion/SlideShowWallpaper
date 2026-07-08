@@ -10,10 +10,15 @@ public static class DisplayPowerPausePolicy
         return powerEvent switch
         {
             Interop.NativeMethods.PBT_APMSUSPEND => true,
-            Interop.NativeMethods.PBT_APMRESUMEAUTOMATIC or Interop.NativeMethods.PBT_APMRESUMESUSPEND => false,
+            _ when IsResumeEvent(powerEvent) => false,
             Interop.NativeMethods.PBT_POWERSETTINGCHANGE => GetPauseStateFromPowerSetting(powerSetting, data),
             _ => null,
         };
+    }
+
+    public static bool IsResumeEvent(uint powerEvent)
+    {
+        return powerEvent is Interop.NativeMethods.PBT_APMRESUMEAUTOMATIC or Interop.NativeMethods.PBT_APMRESUMESUSPEND;
     }
 
     private static bool? GetPauseStateFromPowerSetting(Guid? powerSetting, int? data)

@@ -185,9 +185,24 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
         string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
         string method = ExtractMethod(source, "public void SetDisplayPowerVideoPause", "public void PauseOrResume");
 
-        Assert.Contains("RecoverWallpapersAfterDisplayResume(refreshMedia: true);", method);
+        Assert.Contains("RecoverWallpapersAfterDisplayResume(ShouldRefreshMediaForDisplayResume());", method);
         Assert.Contains("ScheduleDisplayResumeRecovery();", method);
         Assert.Contains("RefreshFoldersAfterDisplayResume();", method);
+    }
+
+    [Fact]
+    public void DisplayConfigurationChange_UsesSameRecoveryPathWithMediaRefreshCooldown()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "public void RecoverWallpapersAfterDisplayConfigurationChange", "private void RecoverWallpapersAfterDisplayResume");
+        string cooldownMethod = ExtractMethod(source, "private bool ShouldRefreshMediaForDisplayResume", "private void ConfigureHardwareOverlayTimer");
+
+        Assert.Contains("RecoverWallpapersAfterDisplayResume(ShouldRefreshMediaForDisplayResume());", method);
+        Assert.Contains("ScheduleDisplayResumeRecovery();", method);
+        Assert.Contains("RefreshFoldersAfterDisplayResume();", method);
+        Assert.Contains("DisplayResumeMediaRefreshCooldown", cooldownMethod);
+        Assert.Contains("_lastDisplayResumeMediaRefreshUtc", cooldownMethod);
     }
 
     [Fact]

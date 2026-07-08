@@ -67,6 +67,7 @@ public static partial class NativeMethods
     internal const uint PBT_APMRESUMESUSPEND = 0x0007;
     internal const uint PBT_APMSUSPEND = 0x0004;
     internal const uint PBT_POWERSETTINGCHANGE = 0x8013;
+    internal const int ERROR_SUCCESS = 0;
     internal const int DEVICE_NOTIFY_WINDOW_HANDLE = 0;
     internal const int SIZE_RESTORED = 0;
     internal const int SIZE_MINIMIZED = 1;
@@ -221,6 +222,12 @@ public static partial class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool UnregisterPowerSettingNotification(IntPtr handle);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr RegisterSuspendResumeNotification(IntPtr hRecipient, int flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool UnregisterSuspendResumeNotification(IntPtr handle);
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr CreatePopupMenu();

@@ -8,6 +8,7 @@ public sealed partial class WallpaperPlaybackCoordinator
 {
     private const int DisplayResumeRecoveryAttempts = 5;
     private static readonly TimeSpan DisplayResumeRecoveryInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DisplayResumeMediaRefreshCooldown = TimeSpan.FromSeconds(5);
     private readonly MonitorService _monitorService;
     private readonly DesktopHostService _desktopHostService;
     private readonly ImageOrderService _imageOrderService;
@@ -34,6 +35,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private bool _isDisplayOffOrSleeping;
     private bool _hardwareOverlayRefreshInProgress;
     private int _displayResumeRecoveryAttemptsRemaining;
+    private DateTimeOffset _lastDisplayResumeMediaRefreshUtc = DateTimeOffset.MinValue;
     private HardwareMonitorConfig _hardwareMonitorConfig = new();
 
     public WallpaperPlaybackCoordinator(
@@ -190,7 +192,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _isDisplayOffOrSleeping = isPaused;
         if (!isPaused)
         {
-            RecoverWallpapersAfterDisplayResume(refreshMedia: true);
+            RecoverWallpapersAfterDisplayResume(ShouldRefreshMediaForDisplayResume());
             ScheduleDisplayResumeRecovery();
             RefreshFoldersAfterDisplayResume();
         }
@@ -205,6 +207,13 @@ public sealed partial class WallpaperPlaybackCoordinator
         }
 
         ApplyVideoCoverageState();
+    }
+
+    public void RecoverWallpapersAfterDisplayConfigurationChange()
+    {
+        RecoverWallpapersAfterDisplayResume(ShouldRefreshMediaForDisplayResume());
+        ScheduleDisplayResumeRecovery();
+        RefreshFoldersAfterDisplayResume();
     }
 
     private void RecoverWallpapersAfterDisplayResume(bool refreshMedia)
@@ -288,6 +297,18 @@ public sealed partial class WallpaperPlaybackCoordinator
     {
         _displayResumeRecoveryAttemptsRemaining = 0;
         _displayResumeRecoveryTimer.Stop();
+    }
+
+    private bool ShouldRefreshMediaForDisplayResume()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now - _lastDisplayResumeMediaRefreshUtc < DisplayResumeMediaRefreshCooldown)
+        {
+            return false;
+        }
+
+        _lastDisplayResumeMediaRefreshUtc = now;
+        return true;
     }
 
     public void PauseOrResume(string monitorId, bool isPaused)

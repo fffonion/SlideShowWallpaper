@@ -23,6 +23,19 @@ public sealed class DisplayPowerPausePolicyTests
     }
 
     [Fact]
+    public void IsResumeEvent_WithResumeEvents_ReturnsTrue()
+    {
+        Assert.True(DisplayPowerPausePolicy.IsResumeEvent(18));
+        Assert.True(DisplayPowerPausePolicy.IsResumeEvent(7));
+    }
+
+    [Fact]
+    public void IsResumeEvent_WithDisplayPowerEvent_ReturnsFalse()
+    {
+        Assert.False(DisplayPowerPausePolicy.IsResumeEvent(32787));
+    }
+
+    [Fact]
     public void GetPauseState_WithDisplayOff_ReturnsTrue()
     {
         bool? result = DisplayPowerPausePolicy.GetPauseState(32787, ConsoleDisplayState, 0);
