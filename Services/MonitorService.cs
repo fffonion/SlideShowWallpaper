@@ -20,11 +20,12 @@ public sealed class MonitorService
 
             if (NativeMethods.GetMonitorInfo(hMonitor, ref info))
             {
-                string friendlyName = GetFriendlyName(info.szDevice);
+                DisplayIdentity identity = GetDisplayIdentity(info.szDevice);
                 monitors.Add(new MonitorProfile
                 {
-                    Id = string.IsNullOrWhiteSpace(info.szDevice) ? $"Monitor{index}" : info.szDevice,
-                    DisplayName = BuildDisplayName(info.szDevice, friendlyName),
+                    Id = ResolvePersistentId(info.szDevice, identity.DeviceId, identity.DeviceKey, index),
+                    DeviceName = info.szDevice,
+                    DisplayName = BuildDisplayName(info.szDevice, identity.FriendlyName),
                     OffsetX = 0,
                     OffsetY = 0,
                 });
@@ -40,6 +41,7 @@ public sealed class MonitorService
     public IReadOnlyDictionary<string, NativeMethods.RECT> GetMonitorRects()
     {
         var rects = new Dictionary<string, NativeMethods.RECT>(StringComparer.OrdinalIgnoreCase);
+        int index = 1;
 
         NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMonitor, IntPtr _, ref NativeMethods.RECT rect, IntPtr _) =>
         {
@@ -50,11 +52,14 @@ public sealed class MonitorService
 
             if (NativeMethods.GetMonitorInfo(hMonitor, ref info))
             {
-                rects[info.szDevice] = TryGetDisplayModeRect(info.szDevice, out NativeMethods.RECT modeRect)
+                DisplayIdentity identity = GetDisplayIdentity(info.szDevice);
+                string monitorId = ResolvePersistentId(info.szDevice, identity.DeviceId, identity.DeviceKey, index);
+                rects[monitorId] = TryGetDisplayModeRect(info.szDevice, out NativeMethods.RECT modeRect)
                     ? ToDesktopRect(modeRect)
                     : ToDesktopRect(info.rcMonitor);
             }
 
+            index++;
             return true;
         }, IntPtr.Zero);
 
@@ -66,9 +71,25 @@ public sealed class MonitorService
     public static IReadOnlyList<MonitorProfile> SortBySystemDisplayNumber(IEnumerable<MonitorProfile> monitors)
     {
         return monitors
-            .OrderBy(monitor => GetSystemDisplayNumber(monitor.Id) ?? int.MaxValue)
+            .OrderBy(monitor => GetSystemDisplayNumber(
+                string.IsNullOrWhiteSpace(monitor.DeviceName) ? monitor.Id : monitor.DeviceName) ?? int.MaxValue)
             .ThenBy(monitor => monitor.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    public static string ResolvePersistentId(string deviceName, string deviceId, string deviceKey, int fallbackIndex = 0)
+    {
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            return deviceId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(deviceKey))
+        {
+            return deviceKey.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(deviceName) ? $"Monitor{fallbackIndex}" : deviceName.Trim();
     }
 
     public static string BuildDisplayName(string deviceName, string friendlyName)
@@ -108,17 +129,21 @@ public sealed class MonitorService
             : null;
     }
 
-    private static string GetFriendlyName(string deviceName)
+    private static DisplayIdentity GetDisplayIdentity(string deviceName)
     {
+        string adapterDeviceName = GetAdapterDeviceName(deviceName);
         var displayDevice = new NativeMethods.DISPLAY_DEVICE
         {
             cb = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.DISPLAY_DEVICE>(),
         };
 
-        if (NativeMethods.EnumDisplayDevices(deviceName, 0, ref displayDevice, 0)
-            && !string.IsNullOrWhiteSpace(displayDevice.DeviceString))
+        if (NativeMethods.EnumDisplayDevices(
+            adapterDeviceName,
+            0,
+            ref displayDevice,
+            NativeMethods.EDD_GET_DEVICE_INTERFACE_NAME))
         {
-            return displayDevice.DeviceString;
+            return new DisplayIdentity(displayDevice.DeviceString, displayDevice.DeviceID, displayDevice.DeviceKey);
         }
 
         displayDevice = new NativeMethods.DISPLAY_DEVICE
@@ -126,13 +151,35 @@ public sealed class MonitorService
             cb = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.DISPLAY_DEVICE>(),
         };
 
-        if (NativeMethods.EnumDisplayDevices(null, 0, ref displayDevice, 0)
-            && !string.IsNullOrWhiteSpace(displayDevice.DeviceString))
+        if (NativeMethods.EnumDisplayDevices(deviceName, 0, ref displayDevice, 0))
         {
-            return displayDevice.DeviceString;
+            return new DisplayIdentity(displayDevice.DeviceString, displayDevice.DeviceID, displayDevice.DeviceKey);
         }
 
-        return string.Empty;
+        return new DisplayIdentity(string.Empty, string.Empty, string.Empty);
+    }
+
+    private static string GetAdapterDeviceName(string deviceName)
+    {
+        for (uint index = 0; ; index++)
+        {
+            var displayAdapter = new NativeMethods.DISPLAY_DEVICE
+            {
+                cb = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.DISPLAY_DEVICE>(),
+            };
+
+            if (!NativeMethods.EnumDisplayDevices(null, index, ref displayAdapter, 0))
+            {
+                break;
+            }
+
+            if (string.Equals(displayAdapter.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return displayAdapter.DeviceName;
+            }
+        }
+
+        return deviceName;
     }
 
     private static bool TryGetDisplayModeRect(string deviceName, out NativeMethods.RECT rect)
@@ -159,4 +206,6 @@ public sealed class MonitorService
         rect = default;
         return false;
     }
+
+    private readonly record struct DisplayIdentity(string FriendlyName, string DeviceId, string DeviceKey);
 }

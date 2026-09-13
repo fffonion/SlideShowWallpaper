@@ -83,6 +83,7 @@ public static partial class NativeMethods
     internal const int SWP_NOMOVE = 0x0002;
     internal const int SWP_NOSIZE = 0x0001;
     internal const int SWP_FRAMECHANGED = 0x0020;
+    internal const uint EDD_GET_DEVICE_INTERFACE_NAME = 0x00000001;
     internal static readonly IntPtr CLR_NONE = new(unchecked((int)0xFFFFFFFF));
     internal static readonly IntPtr HWND_BOTTOM = new(1);
 

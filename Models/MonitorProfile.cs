@@ -4,6 +4,8 @@ public sealed class MonitorProfile
 {
     public string Id { get; set; } = string.Empty;
 
+    public string DeviceName { get; set; } = string.Empty;
+
     public string DisplayName { get; set; } = string.Empty;
 
     public string FolderPath { get; set; } = string.Empty;

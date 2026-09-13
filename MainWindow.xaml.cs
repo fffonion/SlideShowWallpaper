@@ -287,10 +287,14 @@ public sealed partial class MainWindow : Window
     {
         WallpaperConfig config = _settingsStore.Load();
         IReadOnlyList<MonitorProfile> currentMonitors = _monitorService.GetCurrentMonitors();
-        foreach (MonitorProfile current in currentMonitors)
+        MonitorProfileReconciliation reconciliation = MonitorProfileReconciler.Reconcile(currentMonitors, config.Monitors);
+        if (reconciliation.MonitorIdChanges.TryGetValue(config.HardwareMonitor.TargetMonitorId, out string? targetMonitorId))
         {
-            MonitorProfile profile = config.Monitors.FirstOrDefault(saved => string.Equals(saved.Id, current.Id, StringComparison.OrdinalIgnoreCase)) ?? current;
-            profile.DisplayName = current.DisplayName;
+            config.HardwareMonitor.TargetMonitorId = targetMonitorId;
+        }
+
+        foreach (MonitorProfile profile in reconciliation.Profiles)
+        {
             if (!config.PlaybackEnabled)
             {
                 profile.IsStopped = true;

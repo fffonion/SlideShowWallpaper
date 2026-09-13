@@ -49,4 +49,37 @@ public sealed class MonitorDisplayNameTests
             monitor => Assert.Equal(@"\\.\DISPLAY10", monitor.Id),
             monitor => Assert.Equal("VirtualMonitor", monitor.Id));
     }
+
+    [Fact]
+    public void SortBySystemDisplayNumber_WithPersistentIds_UsesCurrentDeviceNames()
+    {
+        MonitorProfile[] monitors =
+        [
+            new() { Id = "monitor-path-b", DeviceName = @"\\.\DISPLAY2", DisplayName = "B" },
+            new() { Id = "monitor-path-a", DeviceName = @"\\.\DISPLAY1", DisplayName = "A" },
+        ];
+
+        IReadOnlyList<MonitorProfile> sorted = MonitorService.SortBySystemDisplayNumber(monitors);
+
+        Assert.Collection(
+            sorted,
+            monitor => Assert.Equal("monitor-path-a", monitor.Id),
+            monitor => Assert.Equal("monitor-path-b", monitor.Id));
+    }
+
+    [Theory]
+    [InlineData(@"\\.\DISPLAY1", @"\\?\DISPLAY#DEL40A9#1", "registry-key", @"\\?\DISPLAY#DEL40A9#1")]
+    [InlineData(@"\\.\DISPLAY1", "", "registry-key", "registry-key")]
+    [InlineData(@"\\.\DISPLAY1", "", "", @"\\.\DISPLAY1")]
+    [InlineData("", "", "", "Monitor3")]
+    public void ResolvePersistentId_UsesBestAvailableIdentity(
+        string deviceName,
+        string deviceId,
+        string deviceKey,
+        string expected)
+    {
+        string id = MonitorService.ResolvePersistentId(deviceName, deviceId, deviceKey, 3);
+
+        Assert.Equal(expected, id);
+    }
 }

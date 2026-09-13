@@ -81,6 +81,21 @@ public sealed class MainWindowSourceTests
     }
 
     [Fact]
+    public void LoadSettings_ReconcilesSavedProfilesToPersistentMonitorIds()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.xaml.cs"));
+        int methodStart = source.IndexOf("private void LoadSettings", StringComparison.Ordinal);
+        string method = source[
+            methodStart..
+            source.IndexOf("private readonly record struct SettingsRow", methodStart, StringComparison.Ordinal)];
+
+        Assert.Contains("MonitorProfileReconciler.Reconcile(currentMonitors, config.Monitors)", method);
+        Assert.Contains("reconciliation.MonitorIdChanges.TryGetValue(config.HardwareMonitor.TargetMonitorId", method);
+        Assert.Contains("config.HardwareMonitor.TargetMonitorId = targetMonitorId;", method);
+    }
+
+    [Fact]
     public void ProgramMain_StartsWinUiWithoutBrokerMode()
     {
         string root = FindProjectRoot();
