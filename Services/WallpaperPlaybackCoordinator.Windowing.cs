@@ -25,6 +25,11 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     private static void CloseWindowSafely(WallpaperWindow window)
     {
+        if (window.IsClosed)
+        {
+            return;
+        }
+
         try
         {
             window.Close();
@@ -42,7 +47,7 @@ public sealed partial class WallpaperPlaybackCoordinator
 
     private void EnsureWindow(MonitorProfile profile, bool applyProfile = true)
     {
-        if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+        if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window) || window.IsClosed)
         {
             window = new WallpaperWindow(profile);
             string monitorId = profile.Id;
@@ -135,6 +140,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private bool CanUpdateWindow(string monitorId, WallpaperWindow window)
     {
         return _playbackEnabled
+            && !window.IsClosed
             && _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
             && !profile.IsStopped
             && _windows.TryGetValue(monitorId, out WallpaperWindow? currentWindow)
@@ -198,13 +204,13 @@ public sealed partial class WallpaperPlaybackCoordinator
             bool shouldPause = _profiles.TryGetValue(monitorId, out MonitorProfile? profile)
                 && window.IsShowingWallpaper
                 && !profile.IsStopped
-                && _monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
-                && WindowCoveragePolicy.ShouldPauseVideo(
-                    profile.PauseVideoWhenOtherAppMaximized ? coverageWindows : [],
-                    monitorRect,
-                    Environment.ProcessId,
-                    _pauseVideoWhenDisplayOffOrSleeping,
-                    _isDisplayOffOrSleeping);
+                && (!_monitorRects.TryGetValue(monitorId, out Interop.NativeMethods.RECT monitorRect)
+                    || WindowCoveragePolicy.ShouldPauseVideo(
+                        profile.PauseVideoWhenOtherAppMaximized ? coverageWindows : [],
+                        monitorRect,
+                        Environment.ProcessId,
+                        _pauseVideoWhenDisplayOffOrSleeping,
+                        _isDisplayOffOrSleeping));
             window.SetVideoPausedByCoverage(shouldPause);
         }
     }

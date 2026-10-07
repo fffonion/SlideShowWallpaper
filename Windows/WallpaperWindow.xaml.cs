@@ -61,7 +61,9 @@ public sealed partial class WallpaperWindow : Window
 
     public event EventHandler<HardwareOverlayMovedEventArgs>? HardwareOverlayMoved;
 
-    public bool IsShowingWallpaper => _isShowingWallpaper;
+    public bool IsClosed => _isClosed;
+
+    public bool IsShowingWallpaper => !_isClosed && _isShowingWallpaper;
 
     public void ApplyProfile(MonitorProfile profile)
     {

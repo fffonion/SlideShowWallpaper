@@ -67,6 +67,18 @@ public sealed class DesktopHostServiceTests
         Assert.DoesNotContain("SW_SHOW);", method);
     }
 
+    [Fact]
+    public void HostOnDesktop_MissingPhysicalMonitor_ReturnsBeforeTouchingWindowOrShell()
+    {
+        string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Services", "DesktopHostService.cs"));
+        int guardIndex = source.IndexOf("if (!monitorRects.TryGetValue(monitorId", StringComparison.Ordinal);
+        int handleIndex = source.IndexOf("WindowNative.GetWindowHandle(window)", StringComparison.Ordinal);
+
+        Assert.True(guardIndex >= 0);
+        Assert.True(handleIndex > guardIndex);
+        Assert.Contains("return;", source[guardIndex..handleIndex]);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

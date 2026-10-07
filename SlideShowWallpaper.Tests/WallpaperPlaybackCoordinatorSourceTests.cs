@@ -222,6 +222,37 @@ public sealed class WallpaperPlaybackCoordinatorSourceTests
     }
 
     [Fact]
+    public void DisplayResumeRecovery_DefersMediaUntilPhysicalMonitorReturns()
+    {
+        string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Services", "WallpaperPlaybackCoordinator.cs"));
+        string method = ExtractMethod(source, "private void RecoverWallpapersAfterDisplayResume", "private async Task ShowCurrentOrNextAsync");
+
+        Assert.Contains("_displayMediaRecovery.Request(", method);
+        Assert.Contains("_displayMediaRecovery.Take(profile.Id, isMonitorAvailable: true)", method);
+        Assert.True(method.IndexOf("if (!_monitorRects.ContainsKey(profile.Id))", StringComparison.Ordinal)
+            < method.IndexOf("EnsureWindow(profile);", StringComparison.Ordinal));
+        Assert.Contains("!window.IsClosed", method);
+        Assert.Contains("timer.Stop();", method);
+    }
+
+    [Fact]
+    public void SessionReconnect_RegistersAndClearsStalePowerPauseThroughRecoveryPath()
+    {
+        string root = FindProjectRoot();
+        string tray = File.ReadAllText(Path.Combine(root, "Services", "TrayIconService.cs"));
+        string power = File.ReadAllText(Path.Combine(root, "Services", "DisplayPowerPauseService.cs"));
+        string resume = ExtractMethod(power, "public void ResumeAfterSessionReconnect", "private void Register(");
+
+        Assert.Contains("WTSRegisterSessionNotification(_windowHandle, 0)", tray);
+        Assert.Contains("WTSUnRegisterSessionNotification(_windowHandle)", tray);
+        Assert.Contains("NativeMethods.WM_WTSSESSION_CHANGE", tray);
+        Assert.Contains("DesktopSessionRecoveryPolicy.ShouldResumeDisplay(sessionEvent)", tray);
+        Assert.Contains("ResumeAfterSessionReconnect();", tray);
+        Assert.Contains("_hasPausedSinceStartup = false;", resume);
+        Assert.Contains("_pauseStateChanged(false);", resume);
+    }
+
+    [Fact]
     public void FolderAvailabilityRetry_RestoresCurrentMediaAfterFolderReturns()
     {
         string root = FindProjectRoot();

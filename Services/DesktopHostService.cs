@@ -8,6 +8,11 @@ public sealed class DesktopHostService
 {
     public void HostOnDesktop(Window window, string monitorId, IReadOnlyDictionary<string, NativeMethods.RECT> monitorRects)
     {
+        if (!monitorRects.TryGetValue(monitorId, out NativeMethods.RECT rect))
+        {
+            return;
+        }
+
         IntPtr hwnd = WindowNative.GetWindowHandle(window);
 
         DesktopHostTarget target = GetDesktopHostTarget();
@@ -23,13 +28,10 @@ public sealed class DesktopHostService
             }
         }
 
-        if (monitorRects.TryGetValue(monitorId, out NativeMethods.RECT rect))
-        {
-            int x = target.HostWindow == IntPtr.Zero ? rect.Left : rect.Left - hostRect.Left;
-            int y = target.HostWindow == IntPtr.Zero ? rect.Top : rect.Top - hostRect.Top;
-            NativeMethods.SetWindowPos(hwnd, target.InsertAfterWindow, x, y, rect.Width, rect.Height, CreatePositionFlags(target.InsertAfterWindow));
-            NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOWNA);
-        }
+        int x = target.HostWindow == IntPtr.Zero ? rect.Left : rect.Left - hostRect.Left;
+        int y = target.HostWindow == IntPtr.Zero ? rect.Top : rect.Top - hostRect.Top;
+        NativeMethods.SetWindowPos(hwnd, target.InsertAfterWindow, x, y, rect.Width, rect.Height, CreatePositionFlags(target.InsertAfterWindow));
+        NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOWNA);
     }
 
     public static uint CreatePositionFlags(IntPtr insertAfterWindow)

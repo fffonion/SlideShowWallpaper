@@ -3,6 +3,15 @@ namespace SlideShowWallpaper.Tests;
 public sealed class WallpaperWindowSourceTests
 {
     [Fact]
+    public void WallpaperWindow_ClosedWindow_IsNotReportedAsShowingWallpaper()
+    {
+        string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "Windows", "WallpaperWindow.xaml.cs"));
+
+        Assert.Contains("public bool IsClosed => _isClosed;", source);
+        Assert.Contains("public bool IsShowingWallpaper => !_isClosed && _isShowingWallpaper;", source);
+    }
+
+    [Fact]
     public void WallpaperWindow_UsesFillStretchForComputedElementSize()
     {
         string root = FindProjectRoot();

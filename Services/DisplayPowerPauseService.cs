@@ -65,6 +65,12 @@ internal sealed class DisplayPowerPauseService : IDisposable
         _disposed = true;
     }
 
+    public void ResumeAfterSessionReconnect()
+    {
+        _hasPausedSinceStartup = false;
+        _pauseStateChanged(false);
+    }
+
     private void Register(IntPtr windowHandle, Guid powerSettingGuid)
     {
         Guid guid = powerSettingGuid;

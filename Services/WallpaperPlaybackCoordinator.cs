@@ -25,6 +25,7 @@ public sealed partial class WallpaperPlaybackCoordinator
     private readonly Dictionary<string, int> _queueVersions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MonitorProfile> _profiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly MonitorProfileChangeTracker _profileChanges = new();
+    private readonly DisplayMediaRecoveryState _displayMediaRecovery = new();
     private IReadOnlyDictionary<string, Interop.NativeMethods.RECT> _monitorRects = new Dictionary<string, Interop.NativeMethods.RECT>();
     private HardwareOverlayWindow? _hardwareOverlayWindow;
     private ForegroundWindowInfo? _lastExternalForegroundWindow;
@@ -155,7 +156,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             }
 
             bool needsMedia = !_windows.TryGetValue(profile.Id, out WallpaperWindow? window) || !window.IsShowingWallpaper;
-            if (window is null)
+            if (window is null || window.IsClosed)
             {
                 EnsureWindow(profile);
             }
@@ -190,6 +191,10 @@ public sealed partial class WallpaperPlaybackCoordinator
     {
         bool stateChanged = _isDisplayOffOrSleeping != isPaused;
         _isDisplayOffOrSleeping = isPaused;
+        if (stateChanged)
+        {
+            AppLog.Write($"Display power pause changed: pid={Environment.ProcessId}, displayPaused={isPaused}");
+        }
         if (!isPaused)
         {
             RecoverWallpapersAfterDisplayResume(ShouldRefreshMediaForDisplayResume());
@@ -219,6 +224,12 @@ public sealed partial class WallpaperPlaybackCoordinator
     private void RecoverWallpapersAfterDisplayResume(bool refreshMedia)
     {
         _monitorRects = _monitorService.GetMonitorRects();
+        if (refreshMedia)
+        {
+            _displayMediaRecovery.Request(_profiles.Values.Where(profile => !profile.IsStopped).Select(profile => profile.Id));
+            AppLog.Write($"Display recovery requested: pid={Environment.ProcessId}, displayPaused={_isDisplayOffOrSleeping}, available={_monitorRects.Count}, configured={_profiles.Count}");
+        }
+
         foreach (MonitorProfile profile in _profiles.Values)
         {
             if (profile.IsStopped)
@@ -226,33 +237,38 @@ public sealed partial class WallpaperPlaybackCoordinator
                 continue;
             }
 
-            if (!_windows.TryGetValue(profile.Id, out WallpaperWindow? window))
+            if (!_monitorRects.ContainsKey(profile.Id))
             {
-                if (_queues.TryGetValue(profile.Id, out PlaybackQueue? existingQueue) && existingQueue.Count > 0)
+                if (_timers.TryGetValue(profile.Id, out DispatcherQueueTimer? timer))
                 {
-                    EnsureWindow(profile);
-                    ConfigureTimer(profile);
-                    if (refreshMedia)
-                    {
-                        _ = ShowCurrentOrNextAsync(profile, _windows[profile.Id], existingQueue);
-                    }
+                    timer.Stop();
                 }
-
                 continue;
             }
 
-            if (!window.IsShowingWallpaper && (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0))
+            bool hasWindow = _windows.TryGetValue(profile.Id, out WallpaperWindow? window) && !window.IsClosed;
+            bool hasMedia = hasWindow && window!.IsShowingWallpaper;
+            if (!hasMedia && (!_queues.TryGetValue(profile.Id, out PlaybackQueue? queue) || queue.Count == 0))
             {
                 continue;
             }
 
+            if (!hasWindow)
+            {
+                EnsureWindow(profile);
+            }
+
+            window = _windows[profile.Id];
             window.ShowWallpaperWindow();
             window.ApplyProfile(profile);
             window.SetForceMuted(_globalMute);
             _desktopHostService.HostOnDesktop(window, profile.Id, _monitorRects);
             ConfigureTimer(profile);
-            if (refreshMedia && _queues.TryGetValue(profile.Id, out PlaybackQueue? playbackQueue))
+            if (_queues.TryGetValue(profile.Id, out PlaybackQueue? playbackQueue)
+                && playbackQueue.Count > 0
+                && (_displayMediaRecovery.Take(profile.Id, isMonitorAvailable: true) || !hasMedia))
             {
+                AppLog.Write($"Restoring display media: pid={Environment.ProcessId}, monitor={profile.DisplayName}, index={playbackQueue.CurrentIndex}/{playbackQueue.Count}");
                 _ = ShowCurrentOrNextAsync(profile, window, playbackQueue);
             }
         }
@@ -335,7 +351,10 @@ public sealed partial class WallpaperPlaybackCoordinator
                 return;
             }
 
-            if (!_queues.TryGetValue(monitorId, out PlaybackQueue? queue) || !_windows.TryGetValue(monitorId, out WallpaperWindow? window))
+            if (!_monitorRects.ContainsKey(monitorId)
+                || !_queues.TryGetValue(monitorId, out PlaybackQueue? queue)
+                || !_windows.TryGetValue(monitorId, out WallpaperWindow? window)
+                || window.IsClosed)
             {
                 return;
             }
@@ -425,6 +444,7 @@ public sealed partial class WallpaperPlaybackCoordinator
         _queues.Clear();
         _queueVersions.Clear();
         _profiles.Clear();
+        _displayMediaRecovery.Clear();
         _profileChanges.Clear();
         _folderChangeWatcherService.Clear();
         StopAllFolderAvailabilityRetries();

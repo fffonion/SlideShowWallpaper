@@ -22,6 +22,7 @@ public sealed class TrayIconService : IDisposable
     private readonly Func<IReadOnlyList<MonitorProfile>> _profiles;
     private readonly NativeMethods.WindowProc _windowProc;
     private readonly DisplayPowerPauseService? _displayPowerPauseService;
+    private readonly bool _sessionNotificationsRegistered;
     private IntPtr _previousWindowProc;
     private IntPtr _iconHandle;
     private bool _disposed;
@@ -54,6 +55,12 @@ public sealed class TrayIconService : IDisposable
             _displayPowerPauseService = new DisplayPowerPauseService(_windowHandle, displayPowerPauseChanged);
         }
 
+        _sessionNotificationsRegistered = NativeMethods.WTSRegisterSessionNotification(_windowHandle, 0);
+        if (!_sessionNotificationsRegistered)
+        {
+            AppLog.Write($"Session notification registration failed: {System.Runtime.InteropServices.Marshal.GetLastWin32Error()}");
+        }
+
         AddIcon();
     }
 
@@ -73,6 +80,10 @@ public sealed class TrayIconService : IDisposable
         }
 
         _displayPowerPauseService?.Dispose();
+        if (_sessionNotificationsRegistered)
+        {
+            NativeMethods.WTSUnRegisterSessionNotification(_windowHandle);
+        }
         _disposed = true;
     }
 
@@ -115,6 +126,35 @@ public sealed class TrayIconService : IDisposable
         if (msg == NativeMethods.WM_DISPLAYCHANGE)
         {
             _displayConfigurationChanged();
+        }
+
+        if (msg == NativeMethods.WM_WTSSESSION_CHANGE)
+        {
+            int sessionEvent = wParam.ToInt32();
+            AppLog.Write($"Desktop session changed: event={sessionEvent}, session={lParam}, pid={Environment.ProcessId}");
+            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(() =>
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                if (DesktopSessionRecoveryPolicy.ShouldResumeDisplay(sessionEvent))
+                {
+                    if (_displayPowerPauseService is not null)
+                    {
+                        _displayPowerPauseService.ResumeAfterSessionReconnect();
+                    }
+                    else
+                    {
+                        _displayConfigurationChanged();
+                    }
+                }
+                else if (DesktopSessionRecoveryPolicy.ShouldRetryDisplay(sessionEvent))
+                {
+                    _displayConfigurationChanged();
+                }
+            });
         }
 
         if (msg == NativeMethods.WM_DESTROY)
