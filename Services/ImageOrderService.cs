@@ -7,6 +7,7 @@ public sealed class ImageOrderService
     private readonly object _sync = new();
     private readonly Random _random;
     private readonly Dictionary<string, Task<IReadOnlyList<ImageMetadata>>> _tasks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Task<IReadOnlyList<ImageMetadata>>> _dimensionRepairTasks = new(StringComparer.OrdinalIgnoreCase);
     private readonly MediaLibraryCacheService _mediaCache;
 
     public ImageOrderService()
@@ -59,8 +60,13 @@ public sealed class ImageOrderService
             return new ImageOrderLoadResult(await existing.WaitAsync(cancellationToken), LoadedFromCache: false);
         }
 
-        if (_mediaCache.TryLoad(folderPath, includeSubdirectories, out IReadOnlyList<ImageMetadata> cachedMedia))
+        if (_mediaCache.TryLoad(folderPath, includeSubdirectories, out IReadOnlyList<ImageMetadata> cachedMedia, out bool hasCurrentDimensions))
         {
+            if (!hasCurrentDimensions)
+            {
+                cachedMedia = await GetOrRepairCachedDimensionsAsync(folderPath, includeSubdirectories, cachedMedia).WaitAsync(cancellationToken);
+            }
+
             return new ImageOrderLoadResult(ApplyOrderAndFilter(cachedMedia, order, mediaFilter), LoadedFromCache: true);
         }
 
@@ -94,6 +100,7 @@ public sealed class ImageOrderService
         lock (_sync)
         {
             _tasks.Clear();
+            _dimensionRepairTasks.Clear();
         }
 
         _mediaCache.Clear();
@@ -134,13 +141,38 @@ public sealed class ImageOrderService
                 return existing;
             }
 
-            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(() => Scan(folderPath, order, mediaFilter, includeSubdirectories));
+            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(() => ScanAsync(folderPath, order, mediaFilter, includeSubdirectories));
             _tasks[key] = task;
             return task;
         }
     }
 
-    private IReadOnlyList<ImageMetadata> Scan(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, bool includeSubdirectories)
+    private Task<IReadOnlyList<ImageMetadata>> GetOrRepairCachedDimensionsAsync(
+        string folderPath,
+        bool includeSubdirectories,
+        IReadOnlyList<ImageMetadata> cachedMedia)
+    {
+        string key = CreateKey(folderPath, PlaybackOrder.NameAsc, PlaybackMediaFilter.ImagesAndVideos, includeSubdirectories);
+        lock (_sync)
+        {
+            if (_dimensionRepairTasks.TryGetValue(key, out Task<IReadOnlyList<ImageMetadata>>? existing)
+                && !existing.IsFaulted && !existing.IsCanceled)
+            {
+                return existing;
+            }
+
+            Task<IReadOnlyList<ImageMetadata>> task = Task.Run(async () =>
+            {
+                IReadOnlyList<ImageMetadata> updated = await RefreshDimensionsAsync(cachedMedia, []).ConfigureAwait(false);
+                _mediaCache.Save(folderPath, includeSubdirectories, updated);
+                return updated;
+            });
+            _dimensionRepairTasks[key] = task;
+            return task;
+        }
+    }
+
+    private async Task<IReadOnlyList<ImageMetadata>> ScanAsync(string folderPath, PlaybackOrder order, PlaybackMediaFilter mediaFilter, bool includeSubdirectories)
     {
         if (string.IsNullOrWhiteSpace(folderPath))
         {
@@ -154,9 +186,41 @@ public sealed class ImageOrderService
                 : [];
         }
 
+        _mediaCache.TryLoad(folderPath, includeSubdirectories, out IReadOnlyList<ImageMetadata> previous, out bool hasCurrentDimensions);
         IReadOnlyList<ImageMetadata> scanned = ImageLibrary.ScanFolderMetadata(folderPath, PlaybackOrder.NameAsc, includeSubdirectories);
+        scanned = await RefreshDimensionsAsync(scanned, hasCurrentDimensions ? previous : []).ConfigureAwait(false);
         _mediaCache.Save(folderPath, includeSubdirectories, scanned);
         return ApplyOrderAndFilter(scanned, order, mediaFilter);
+    }
+
+    private static async Task<IReadOnlyList<ImageMetadata>> RefreshDimensionsAsync(
+        IReadOnlyList<ImageMetadata> media,
+        IReadOnlyList<ImageMetadata> cachedMedia)
+    {
+        var cached = cachedMedia.ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
+        var updated = new List<ImageMetadata>(media.Count);
+        foreach (ImageMetadata item in media)
+        {
+            if (item.Kind != MediaKind.Image || string.Equals(Path.GetExtension(item.Path), ".ndf", StringComparison.OrdinalIgnoreCase))
+            {
+                updated.Add(item);
+                continue;
+            }
+
+            if (cached.TryGetValue(item.Path, out ImageMetadata? previous)
+                && previous.Length == item.Length
+                && previous.ModifiedUtc == item.ModifiedUtc
+                && previous.Width > 0 && previous.Height > 0)
+            {
+                updated.Add(item with { Width = previous.Width, Height = previous.Height });
+                continue;
+            }
+
+            (int width, int height) = await ImageDimensionReader.ReadAsync(item.Path).ConfigureAwait(false);
+            updated.Add(width > 0 && height > 0 ? item with { Width = width, Height = height } : item);
+        }
+
+        return updated;
     }
 
     private IReadOnlyList<ImageMetadata> ApplyOrderAndFilter(IReadOnlyList<ImageMetadata> media, PlaybackOrder order, PlaybackMediaFilter mediaFilter)

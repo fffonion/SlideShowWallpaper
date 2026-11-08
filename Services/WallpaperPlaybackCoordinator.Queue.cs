@@ -251,19 +251,19 @@ public sealed partial class WallpaperPlaybackCoordinator
         return new ImagePlaybackItem(path, ImageLibrary.IsSupportedVideoPath(path) ? MediaKind.Video : MediaKind.Image);
     }
 
-    private static bool IsAllowedByMediaFilter(string path, PlaybackMediaFilter mediaFilter)
+    private static async Task<bool> IsAllowedByMediaFilterAsync(string path, PlaybackMediaFilter mediaFilter)
     {
         return mediaFilter switch
         {
             PlaybackMediaFilter.ImagesOnly => ImageLibrary.IsSupportedImagePath(path),
-            PlaybackMediaFilter.PortraitImagesOnly => IsImageOrientation(path, requirePortrait: true),
-            PlaybackMediaFilter.LandscapeImagesOnly => IsImageOrientation(path, requirePortrait: false),
+            PlaybackMediaFilter.PortraitImagesOnly => await IsImageOrientationAsync(path, requirePortrait: true),
+            PlaybackMediaFilter.LandscapeImagesOnly => await IsImageOrientationAsync(path, requirePortrait: false),
             PlaybackMediaFilter.VideosOnly => ImageLibrary.IsSupportedVideoPath(path),
             _ => ImageLibrary.IsSupportedMediaPath(path),
         };
     }
 
-    private static bool IsImageOrientation(string path, bool requirePortrait)
+    private static async Task<bool> IsImageOrientationAsync(string path, bool requirePortrait)
     {
         if (!ImageLibrary.IsSupportedImagePath(path))
         {
@@ -277,11 +277,11 @@ public sealed partial class WallpaperPlaybackCoordinator
             width = info.Width;
             height = info.Height;
         }
-        else if (!ImageDimensionReader.TryRead(path, out width, out height))
+        else
         {
-            return false;
+            (width, height) = await Task.Run(() => ImageDimensionReader.ReadAsync(path));
         }
 
-        return requirePortrait ? height > width : width > height;
+        return width > 0 && height > 0 && (requirePortrait ? height > width : width > height);
     }
 }

@@ -77,7 +77,7 @@ public sealed partial class WallpaperPlaybackCoordinator
             || string.IsNullOrWhiteSpace(profile.FolderPath)
             || string.IsNullOrWhiteSpace(profile.SelectedImagePath)
             || !File.Exists(profile.SelectedImagePath)
-            || !IsAllowedByMediaFilter(profile.SelectedImagePath, profile.MediaFilter))
+            || !await IsAllowedByMediaFilterAsync(profile.SelectedImagePath, profile.MediaFilter))
         {
             return false;
         }

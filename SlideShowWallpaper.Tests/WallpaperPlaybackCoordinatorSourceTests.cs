@@ -5,6 +5,19 @@ namespace SlideShowWallpaper.Tests;
 public sealed class WallpaperPlaybackCoordinatorSourceTests
 {
     [Fact]
+    public void SelectedImageOrientation_UsesSameSystemDimensionReaderAsPlaylist()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "Services", "WallpaperPlaybackCoordinator.Queue.cs"));
+
+        Assert.Contains("await IsImageOrientationAsync(path, requirePortrait: true)", source);
+        Assert.Contains("await IsImageOrientationAsync(path, requirePortrait: false)", source);
+        Assert.Contains("ImageDimensionReader.ReadAsync(path)", source);
+        Assert.DoesNotContain("ImageDimensionReader.TryRead(path", source);
+        Assert.Contains("await IsAllowedByMediaFilterAsync(profile.SelectedImagePath, profile.MediaFilter)", ReadCoordinatorWindowingSource());
+    }
+
+    [Fact]
     public void ConfigureTimer_WithSingleLoop_ReturnsBeforeStartingTimer()
     {
         string source = ReadCoordinatorWindowingSource();

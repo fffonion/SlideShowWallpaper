@@ -5,6 +5,7 @@ namespace SlideShowWallpaper.Services;
 
 public sealed class MediaLibraryCacheService
 {
+    private const int CurrentDimensionsVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = false,
@@ -25,7 +26,13 @@ public sealed class MediaLibraryCacheService
 
     public bool TryLoad(string folderPath, bool includeSubdirectories, out IReadOnlyList<ImageMetadata> media)
     {
+        return TryLoad(folderPath, includeSubdirectories, out media, out _);
+    }
+
+    public bool TryLoad(string folderPath, bool includeSubdirectories, out IReadOnlyList<ImageMetadata> media, out bool hasCurrentDimensions)
+    {
         media = [];
+        hasCurrentDimensions = false;
         if (string.IsNullOrWhiteSpace(folderPath))
         {
             return false;
@@ -43,6 +50,7 @@ public sealed class MediaLibraryCacheService
             media = entry.Media
                 .Where(item => !string.IsNullOrWhiteSpace(item.Path))
                 .ToArray();
+            hasCurrentDimensions = entry.DimensionsVersion == CurrentDimensionsVersion;
             return true;
         }
     }
@@ -62,6 +70,7 @@ public sealed class MediaLibraryCacheService
                 FolderPath = NormalizeFolder(folderPath),
                 IncludeSubdirectories = includeSubdirectories,
                 SavedUtc = DateTime.UtcNow,
+                DimensionsVersion = CurrentDimensionsVersion,
                 Media = media.ToArray(),
             };
             SaveCache(cache);
@@ -163,6 +172,8 @@ public sealed class MediaLibraryCacheService
         public bool IncludeSubdirectories { get; set; }
 
         public DateTime SavedUtc { get; set; }
+
+        public int DimensionsVersion { get; set; }
 
         public ImageMetadata[] Media { get; set; } = [];
     }

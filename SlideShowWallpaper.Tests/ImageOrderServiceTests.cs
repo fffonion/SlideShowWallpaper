@@ -1,10 +1,108 @@
 using SlideShowWallpaper.Models;
 using SlideShowWallpaper.Services;
+using Windows.Graphics.Imaging;
 
 namespace SlideShowWallpaper.Tests;
 
 public sealed class ImageOrderServiceTests
 {
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_ConcurrentLegacyCacheLoads_KeepBackgroundScanSignal()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = await ImageTestFiles.CreateAsync(folder, "image.heic", BitmapEncoder.TiffEncoderId);
+        string cachePath = Path.Combine(folder, "cache.json");
+        var cache = new MediaLibraryCacheService(cachePath);
+        cache.Save(folder, false, [new ImageMetadata(path, "image.heic", DateTime.UtcNow, new FileInfo(path).Length)]);
+        MediaLibraryCacheServiceTests.RemoveDimensionsVersion(cachePath);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        Task<ImageOrderLoadResult> first = service.GetOrLoadOrderedImagesWithStatusAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.PortraitImagesOnly, false, CancellationToken.None);
+        Task<ImageOrderLoadResult> second = service.GetOrLoadOrderedImagesWithStatusAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.PortraitImagesOnly, false, CancellationToken.None);
+        ImageOrderLoadResult[] results = await Task.WhenAll(first, second);
+
+        Assert.All(results, result =>
+        {
+            Assert.True(result.LoadedFromCache);
+            Assert.Single(result.Images);
+        });
+    }
+
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_LegacyUnknownDimensions_RepairsBeforeOrientationFilter()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = await ImageTestFiles.CreateAsync(folder, "image.heic", BitmapEncoder.TiffEncoderId);
+        string cachePath = Path.Combine(folder, "cache.json");
+        var cache = new MediaLibraryCacheService(cachePath);
+        var file = new FileInfo(path);
+        cache.Save(folder, false, [new ImageMetadata(path, file.Name, file.LastWriteTimeUtc, file.Length)]);
+        MediaLibraryCacheServiceTests.RemoveDimensionsVersion(cachePath);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        ImageOrderLoadResult result = await service.GetOrLoadOrderedImagesWithStatusAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.PortraitImagesOnly, false, CancellationToken.None);
+
+        Assert.True(result.LoadedFromCache);
+        ImageMetadata image = Assert.Single(result.Images);
+        Assert.Equal(40, image.Width);
+        Assert.Equal(80, image.Height);
+        Assert.True(cache.TryLoad(folder, false, out IReadOnlyList<ImageMetadata> repaired, out bool hasCurrentDimensions));
+        Assert.True(hasCurrentDimensions);
+        Assert.Equal(40, Assert.Single(repaired).Width);
+    }
+
+    [Fact]
+    public async Task ReloadOrderedImagesAsync_WithRotatedJpeg_UsesDisplayOrientation()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        await ImageTestFiles.CreateAsync(folder, "rotated.jpg", BitmapEncoder.JpegEncoderId, orientation: 6);
+        var service = new ImageOrderService(new ZeroRandom(), new MediaLibraryCacheService(Path.Combine(folder, "cache.json")));
+
+        IReadOnlyList<ImageMetadata> media = await service.ReloadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.LandscapeImagesOnly, CancellationToken.None);
+
+        ImageMetadata image = Assert.Single(media);
+        Assert.Equal(80, image.Width);
+        Assert.Equal(40, image.Height);
+    }
+
+    [Fact]
+    public async Task GetOrLoadOrderedImagesAsync_LegacyRotatedDimensions_RepairsBeforeLandscapeFilter()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = await ImageTestFiles.CreateAsync(folder, "rotated.jpg", BitmapEncoder.JpegEncoderId, orientation: 6);
+        string cachePath = Path.Combine(folder, "cache.json");
+        var cache = new MediaLibraryCacheService(cachePath);
+        var file = new FileInfo(path);
+        cache.Save(folder, false, [new ImageMetadata(path, file.Name, file.LastWriteTimeUtc, file.Length, MediaKind.Image, 40, 80)]);
+        MediaLibraryCacheServiceTests.RemoveDimensionsVersion(cachePath);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        IReadOnlyList<ImageMetadata> media = await service.GetOrLoadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.LandscapeImagesOnly, CancellationToken.None);
+
+        ImageMetadata image = Assert.Single(media);
+        Assert.Equal(80, image.Width);
+        Assert.Equal(40, image.Height);
+    }
+
+    [Fact]
+    public async Task ReloadOrderedImagesAsync_UnchangedFile_ReusesCurrentCachedDimensions()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, "cached.heic");
+        await File.WriteAllBytesAsync(path, [0, 0]);
+        var file = new FileInfo(path);
+        var cache = new MediaLibraryCacheService(Path.Combine(folder, "cache.json"));
+        cache.Save(folder, false, [new ImageMetadata(path, file.Name, file.LastWriteTimeUtc, file.Length, MediaKind.Image, 40, 80)]);
+        var service = new ImageOrderService(new ZeroRandom(), cache);
+
+        IReadOnlyList<ImageMetadata> media = await service.ReloadOrderedImagesAsync(folder, PlaybackOrder.NameAsc, PlaybackMediaFilter.PortraitImagesOnly, CancellationToken.None);
+
+        ImageMetadata image = Assert.Single(media);
+        Assert.Equal(40, image.Width);
+        Assert.Equal(80, image.Height);
+    }
+
     [Fact]
     public async Task GetOrLoadOrderedImagesAsync_AfterReload_ReturnsSameRandomOrderWithoutSecondLoad()
     {

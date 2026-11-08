@@ -1,9 +1,72 @@
 using SlideShowWallpaper.Services;
+using Windows.Graphics.Imaging;
 
 namespace SlideShowWallpaper.Tests;
 
 public sealed class ImageDimensionReaderTests
 {
+    [Fact]
+    public async Task ReadAsync_WithSystemCodecFormat_ReadsDimensionsByContent()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = await ImageTestFiles.CreateAsync(folder, "image.heic", BitmapEncoder.TiffEncoderId);
+
+        Assert.False(ImageDimensionReader.TryRead(path, out _, out _));
+        (int width, int height) = await ImageDimensionReader.ReadAsync(path);
+
+        Assert.Equal(40, width);
+        Assert.Equal(80, height);
+    }
+
+    [Theory]
+    [InlineData(1, 40, 80)]
+    [InlineData(2, 40, 80)]
+    [InlineData(3, 40, 80)]
+    [InlineData(4, 40, 80)]
+    [InlineData(5, 80, 40)]
+    [InlineData(6, 80, 40)]
+    [InlineData(7, 80, 40)]
+    [InlineData(8, 80, 40)]
+    public async Task ReadAsync_WithExifOrientation_ReturnsDisplayDimensions(int orientation, int expectedWidth, int expectedHeight)
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        string path = await ImageTestFiles.CreateAsync(folder, "image.jpg", BitmapEncoder.JpegEncoderId, (ushort)orientation);
+
+        (int width, int height) = await ImageDimensionReader.ReadAsync(path);
+
+        Assert.Equal(expectedWidth, width);
+        Assert.Equal(expectedHeight, height);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithMissingFile_ReturnsUnknownDimensions()
+    {
+        (int width, int height) = await ImageDimensionReader.ReadAsync(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+
+        Assert.Equal(0, width);
+        Assert.Equal(0, height);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithInvalidData_ReturnsUnknownDimensions()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "SlideShowWallpaperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, "invalid.png");
+        await File.WriteAllBytesAsync(path, [0, 0]);
+
+        Assert.Equal((0, 0), await ImageDimensionReader.ReadAsync(path));
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithCanceledToken_ThrowsCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => ImageDimensionReader.ReadAsync("image.heic", cancellation.Token));
+    }
+
     [Fact]
     public void TryRead_WithPngHeader_ReturnsDimensions()
     {

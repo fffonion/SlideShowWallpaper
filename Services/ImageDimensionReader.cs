@@ -1,10 +1,43 @@
 using System.Buffers.Binary;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 
 namespace SlideShowWallpaper.Services;
 
 public static class ImageDimensionReader
 {
     private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+    public static async Task<(int Width, int Height)> ReadAsync(string path, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return (0, 0);
+        }
+
+        try
+        {
+            using FileStream stream = File.OpenRead(path);
+            using IRandomAccessStream randomAccessStream = stream.AsRandomAccessStream();
+            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(randomAccessStream).AsTask(cancellationToken).ConfigureAwait(false);
+            return (checked((int)decoder.OrientedPixelWidth), checked((int)decoder.OrientedPixelHeight));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            if (TryRead(path, out int width, out int height))
+            {
+                return (width, height);
+            }
+
+            AppLog.Write($"Unable to read image dimensions: {path}: {exception.Message}");
+            return (0, 0);
+        }
+    }
 
     public static bool TryRead(string path, out int width, out int height)
     {
