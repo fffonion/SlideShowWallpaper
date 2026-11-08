@@ -160,6 +160,7 @@ public sealed partial class MainWindow : Window
     private int _previewSessionVersion;
     private string? _selectedMonitorId;
     private HardwareMonitorSnapshot? _hardwareMonitorSnapshot;
+    private Task? _hardwareSnapshotRefreshTask;
     private bool _exitRequested;
     private bool _suppressPreviewSelection;
     private bool _isHardwareEditorSelected;

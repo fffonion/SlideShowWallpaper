@@ -8,6 +8,7 @@ namespace SlideShowWallpaper.Services;
 public sealed class HardwareMonitorBrokerClient : IDisposable
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly object _syncRoot = new();
     private Process? _brokerProcess;
@@ -207,18 +208,34 @@ public sealed class HardwareMonitorBrokerClient : IDisposable
 
     private HardwareMonitorBrokerResponse SendRequest(string command, IReadOnlyList<string>? sensorIds = null)
     {
-        using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.None);
-        client.Connect((int)ConnectTimeout.TotalMilliseconds);
+        // Hardware workers keep the synchronous client contract; transport waits are bounded and cancellable.
+        return SendRequestAsync(_pipeName, command, sensorIds, RequestTimeout).GetAwaiter().GetResult();
+    }
+
+    internal static async Task<HardwareMonitorBrokerResponse> SendRequestAsync(
+        string pipeName,
+        string command,
+        IReadOnlyList<string>? sensorIds,
+        TimeSpan requestTimeout,
+        CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(requestTimeout);
+        CancellationToken token = timeout.Token;
+        using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await client.ConnectAsync(ConnectTimeout, token).ConfigureAwait(false);
         using var input = new StreamReader(client, leaveOpen: true);
-        using var output = new StreamWriter(client, leaveOpen: true) { AutoFlush = true };
-        output.WriteLine(JsonSerializer.Serialize(
+        using var output = new StreamWriter(client, leaveOpen: true);
+        string requestJson = JsonSerializer.Serialize(
             new HardwareMonitorBrokerRequest
             {
                 Command = command,
                 SensorIds = sensorIds?.ToList() ?? [],
             },
-            JsonOptions));
-        string? responseJson = input.ReadLine();
+            JsonOptions);
+        await output.WriteLineAsync(requestJson.AsMemory(), token).ConfigureAwait(false);
+        await output.FlushAsync(token).ConfigureAwait(false);
+        string? responseJson = await input.ReadLineAsync(token).ConfigureAwait(false);
         return string.IsNullOrWhiteSpace(responseJson)
             ? new HardwareMonitorBrokerResponse { Error = "Hardware monitor broker returned an empty response." }
             : JsonSerializer.Deserialize<HardwareMonitorBrokerResponse>(responseJson, JsonOptions)

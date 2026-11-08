@@ -6,6 +6,9 @@ namespace SlideShowWallpaper.Services;
 public sealed class HardwareMonitorService : IDisposable
 {
     private readonly HardwareMonitorBrokerClient _brokerClient;
+    private HardwareMonitorSnapshot? _cachedSnapshot;
+
+    public HardwareMonitorSnapshot? CachedSnapshot => Volatile.Read(ref _cachedSnapshot);
 
     public HardwareMonitorService()
         : this(new HardwareMonitorBrokerClient())
@@ -42,7 +45,13 @@ public sealed class HardwareMonitorService : IDisposable
 
     public HardwareMonitorSnapshot GetSnapshot(HardwareMonitorConfig? config = null)
     {
-        return _brokerClient.GetSnapshot(config);
+        HardwareMonitorSnapshot snapshot = _brokerClient.GetSnapshot(config);
+        if (snapshot.Sensors.Count > 0)
+        {
+            Volatile.Write(ref _cachedSnapshot, snapshot);
+        }
+
+        return snapshot;
     }
 
     public void Dispose()

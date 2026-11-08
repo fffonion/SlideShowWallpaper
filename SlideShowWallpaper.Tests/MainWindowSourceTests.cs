@@ -3,6 +3,33 @@ namespace SlideShowWallpaper.Tests;
 public sealed class MainWindowSourceTests
 {
     [Fact]
+    public void SettingsAndEditorNavigation_DoNotSynchronouslyReadHardware()
+    {
+        string root = FindProjectRoot();
+        string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
+        string settingsPage = source[source.IndexOf("private UIElement BuildAppSettingsPage", StringComparison.Ordinal)..source.IndexOf("private FrameworkElement CreateAutostartControls", StringComparison.Ordinal)];
+        string cachedRefresh = source[source.IndexOf("private void RefreshHardwareSnapshot()", StringComparison.Ordinal)..source.IndexOf("private Task RefreshHardwareSnapshotAsync", StringComparison.Ordinal)];
+
+        Assert.DoesNotContain("RefreshHardwareSnapshot", settingsPage);
+        Assert.DoesNotContain("GetSnapshot(", settingsPage);
+        Assert.Contains("_hardwareMonitorService.CachedSnapshot", cachedRefresh);
+        Assert.DoesNotContain("GetSnapshot(", cachedRefresh);
+        Assert.Contains("await Task.Run(() => _hardwareMonitorService.GetSnapshot())", source);
+    }
+
+    [Fact]
+    public void SensorDialog_ShowsLoadingBeforeBackgroundSnapshotAndIgnoresClosedDialog()
+    {
+        string source = File.ReadAllText(Path.Combine(FindProjectRoot(), "MainWindow.Settings.cs"));
+        string method = source[source.IndexOf("private async Task ShowHardwareSensorSelectionDialogAsync", StringComparison.Ordinal)..source.IndexOf("private FrameworkElement CreateHardwareSensorSelectionList", StringComparison.Ordinal)];
+
+        Assert.Contains("new ProgressRing", method);
+        Assert.Contains("await RefreshHardwareSnapshotAsync();", method);
+        Assert.Contains("if (isOpen)", method);
+        Assert.Contains("dialog.Closed += (_, _) => isOpen = false;", method);
+    }
+
+    [Fact]
     public void Constructor_WithStartInTray_SchedulesBackgroundMemoryTrimAfterApplyingSettings()
     {
         string root = FindProjectRoot();
@@ -183,12 +210,13 @@ public sealed class MainWindowSourceTests
         string root = FindProjectRoot();
         string source = File.ReadAllText(Path.Combine(root, "MainWindow.Settings.cs"));
         string method = source[
-            source.IndexOf("private void RestartHardwareBrokerAsAdministrator", StringComparison.Ordinal)..
+            source.IndexOf("private async Task RestartHardwareBrokerAsAdministratorAsync", StringComparison.Ordinal)..
             source.IndexOf("private static FrameworkElement CreateHardwareSensorSelectionContent", StringComparison.Ordinal)];
 
         Assert.Contains("_hardwareMonitorService.SetBrokerElevation(true);", method);
         Assert.Contains("_hardwareMonitorService.StopBroker();", method);
-        Assert.Contains("RefreshHardwareSnapshot();", method);
+        Assert.Contains("await RefreshHardwareSnapshotAsync();", method);
+        Assert.Contains("await Task.Run(() =>", method);
         Assert.Contains("refreshRequested?.Invoke();", method);
         Assert.DoesNotContain("_administratorRestartService.TryRestart()", method);
         Assert.DoesNotContain("ExitApplication();", method);
@@ -1236,7 +1264,7 @@ public sealed class MainWindowSourceTests
 
         Assert.Contains("new ContentDialog", method);
         Assert.Contains("XamlRoot = Root.XamlRoot", method);
-        Assert.Contains("CreateHardwareSensorSelectionList(config, ReloadDialogSensors)", method);
+        Assert.Contains("CreateHardwareSensorSelectionList(config, () => _ = ReloadDialogSensorsAsync())", method);
         Assert.Contains("CloseButtonText = LocalizedStrings.Get(\"DialogClose\")", method);
     }
 

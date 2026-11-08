@@ -19,7 +19,6 @@ public sealed partial class MainWindow
     private UIElement BuildAppSettingsPage()
     {
         HardwareMonitorConfig hardwareMonitorConfig = _viewModel.HardwareMonitor;
-        RefreshHardwareSnapshot();
         EnsureDefaultHardwareSensors(hardwareMonitorConfig);
 
         var root = new Grid
@@ -561,18 +560,21 @@ public sealed partial class MainWindow
     private async Task ShowHardwareSensorSelectionDialogAsync(HardwareMonitorConfig config)
     {
         ContentControl? contentHost = null;
-        void ReloadDialogSensors()
+        bool isOpen = false;
+        async Task ReloadDialogSensorsAsync()
         {
-            RefreshHardwareSnapshot();
-            if (contentHost is not null)
+            var loading = new ProgressRing { IsActive = true, Width = 32, Height = 32 };
+            AutomationProperties.SetName(loading, LocalizedStrings.Get("RefreshHardwareSensors"));
+            contentHost!.Content = loading;
+            await RefreshHardwareSnapshotAsync();
+            if (isOpen)
             {
-                contentHost.Content = CreateHardwareSensorSelectionList(config, ReloadDialogSensors);
+                contentHost.Content = CreateHardwareSensorSelectionList(config, () => _ = ReloadDialogSensorsAsync());
             }
         }
 
         contentHost = new ContentControl
         {
-            Content = CreateHardwareSensorSelectionList(config, ReloadDialogSensors),
             MinWidth = 560,
         };
 
@@ -584,6 +586,12 @@ public sealed partial class MainWindow
             CloseButtonText = LocalizedStrings.Get("DialogClose"),
             DefaultButton = ContentDialogButton.Close,
         };
+        dialog.Opened += async (_, _) =>
+        {
+            isOpen = true;
+            await ReloadDialogSensorsAsync();
+        };
+        dialog.Closed += (_, _) => isOpen = false;
         await dialog.ShowAsync();
     }
 
@@ -707,7 +715,7 @@ public sealed partial class MainWindow
         }
 
         searchBox.TextChanged += (_, _) => RenderSensorList();
-        refreshButton.Click += (_, _) =>
+        refreshButton.Click += async (_, _) =>
         {
             if (refreshRequested is not null)
             {
@@ -715,7 +723,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            RefreshHardwareSnapshot();
+            await RefreshHardwareSnapshotAsync();
             RenderTabs(_selectedMonitorId);
         };
         selectAllButton.Click += (_, _) =>
@@ -778,25 +786,39 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
         };
         AutomationProperties.SetName(restartButton, LocalizedStrings.Get("HardwareMonitorRestartBrokerAsAdministrator"));
-        restartButton.Click += (_, _) => RestartHardwareBrokerAsAdministrator(refreshRequested);
+        restartButton.Click += async (_, _) =>
+        {
+            restartButton.IsEnabled = false;
+            try
+            {
+                await RestartHardwareBrokerAsAdministratorAsync(refreshRequested);
+            }
+            finally
+            {
+                restartButton.IsEnabled = true;
+            }
+        };
         Grid.SetColumn(restartButton, 1);
         grid.Children.Add(restartButton);
         return grid;
     }
 
-    private void RestartHardwareBrokerAsAdministrator(Action? refreshRequested)
+    private async Task RestartHardwareBrokerAsAdministratorAsync(Action? refreshRequested)
     {
         try
         {
-            _hardwareMonitorService.SetBrokerElevation(true);
-            _hardwareMonitorService.StopBroker();
+            await Task.Run(() =>
+            {
+                _hardwareMonitorService.SetBrokerElevation(true);
+                _hardwareMonitorService.StopBroker();
+            });
             refreshRequested?.Invoke();
             if (refreshRequested is not null)
             {
                 return;
             }
 
-            RefreshHardwareSnapshot();
+            await RefreshHardwareSnapshotAsync();
             RenderTabs(_selectedMonitorId);
         }
         catch (Exception exception)
@@ -2335,9 +2357,22 @@ public sealed partial class MainWindow
 
     private void RefreshHardwareSnapshot()
     {
+        _hardwareMonitorSnapshot = _hardwareMonitorService.CachedSnapshot ?? _hardwareMonitorSnapshot;
+    }
+
+    private Task RefreshHardwareSnapshotAsync()
+    {
+        return _hardwareSnapshotRefreshTask is { IsCompleted: false }
+            ? _hardwareSnapshotRefreshTask
+            : _hardwareSnapshotRefreshTask = LoadHardwareSnapshotAsync();
+    }
+
+    private async Task LoadHardwareSnapshotAsync()
+    {
         try
         {
-            _hardwareMonitorSnapshot = _hardwareMonitorService.GetSnapshot();
+            HardwareMonitorSnapshot snapshot = await Task.Run(() => _hardwareMonitorService.GetSnapshot());
+            _hardwareMonitorSnapshot = snapshot.Sensors.Count > 0 ? snapshot : _hardwareMonitorService.CachedSnapshot ?? snapshot;
         }
         catch (Exception exception)
         {
